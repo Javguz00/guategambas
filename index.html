@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GuateGambas | Gambas Ornamentales</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Config Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5',
+            accent: '#22c55e'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- HEADER -->
+  <header class="bg-white shadow-md fixed w-full z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-primary">GuateGambas</h1>
+      <nav class="space-x-6 hidden md:block">
+        <a href="#catalogo" class="hover:text-primary">Catálogo</a>
+        <a href="#como-pedir" class="hover:text-primary">Cómo pedir</a>
+        <a href="#contacto" class="hover:text-primary">Contacto</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="pt-32 pb-20 bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+    <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-10 items-center">
+      <div>
+        <h2 class="text-4xl md:text-5xl font-extrabold mb-6">Gambas ornamentales
+          <span class="block text-accent">Neocaridina & Caridina</span>
+        </h2>
+        <p class="text-lg mb-8">Calidad, genética y asesoría para acuarios en Guatemala.</p>
+        <a href="#catalogo" class="bg-accent text-gray-900 px-6 py-3 rounded-xl font-semibold hover:opacity-90">Ver catálogo</a>
+      </div>
+      <div class="hidden md:block">
+        <img src="https://images.unsplash.com/photo-1617196037304-4db5e8e2cfa6" alt="Gambas" class="rounded-2xl shadow-2xl">
+      </div>
+    </div>
+  </section>
+
+  <!-- CATALOGO -->
+  <section id="catalogo" class="py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <h3 class="text-3xl font-bold mb-12 text-center">Catálogo disponible</h3>
+
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
+
+        <!-- CARD -->
+        <div class="bg-white rounded-2xl shadow p-6">
+          <img src="https://images.unsplash.com/photo-1587300003388-59208cc962cb" class="rounded-xl mb-4" />
+          <h4 class="text-xl font-semibold">Blue Bolt</h4>
+          <p class="text-sm text-gray-600 mb-3">Caridina logemanni</p>
+          <ul class="text-sm mb-4">
+            <li>pH: 5.5 - 6.2</li>
+            <li>TDS: 90 - 130</li>
+            <li>Temp: 20 - 23°C</li>
+          </ul>
+          <button onclick="pedirWhatsApp('Blue Bolt')" class="w-full bg-primary text-white py-2 rounded-xl hover:opacity-90">Pedir por WhatsApp</button>
+        </div>
+
+        <!-- CARD -->
+        <div class="bg-white rounded-2xl shadow p-6">
+          <img src="https://images.unsplash.com/photo-1590080877777-7b2d1a4c3a3b" class="rounded-xl mb-4" />
+          <h4 class="text-xl font-semibold">Golden Bee</h4>
+          <p class="text-sm text-gray-600 mb-3">Caridina dennerli</p>
+          <ul class="text-sm mb-4">
+            <li>pH: 5.8 - 6.5</li>
+            <li>TDS: 100 - 150</li>
+            <li>Temp: 20 - 24°C</li>
+          </ul>
+          <button onclick="pedirWhatsApp('Sulawesi White socks')" class="w-full bg-primary text-white py-2 rounded-xl hover:opacity-90">Pedir por WhatsApp</button>
+        </div>
+
+        <!-- CARD -->
+        <div class="bg-white rounded-2xl shadow p-6">
+          <img src="https://images.unsplash.com/photo-1602526216034-2c0b8f3c2dcb" class="rounded-xl mb-4" />
+          <h4 class="text-xl font-semibold">Red Cherry</h4>
+          <p class="text-sm text-gray-600 mb-3">Neocaridina davidi</p>
+          <ul class="text-sm mb-4">
+            <li>pH: 6.5 - 7.5</li>
+            <li>TDS: 180 - 250</li>
+            <li>Temp: 22 - 26°C</li>
+          </ul>
+          <button onclick="pedirWhatsApp('Red Cherry')" class="w-full bg-primary text-white py-2 rounded-xl hover:opacity-90">Pedir por WhatsApp</button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- COMO PEDIR -->
+  <section id="como-pedir" class="bg-gray-100 py-20">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+      <h3 class="text-3xl font-bold mb-10">Cómo pedir</h3>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-white p-6 rounded-2xl shadow">🦐 Elige tus gambas</div>
+        <div class="bg-white p-6 rounded-2xl shadow">💬 Escríbenos por WhatsApp</div>
+        <div class="bg-white p-6 rounded-2xl shadow">📦 Coordinamos entrega</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer id="contacto" class="bg-gray-900 text-gray-300 py-10">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+      <p class="mb-2">📍 Guatemala</p>
+      <p class="mb-4">Pedidos y consultas por WhatsApp</p>
+      <a href="https://wa.me/502XXXXXXXX" class="text-accent font-semibold">Escríbenos ahora</a>
+      <p class="text-sm mt-6">© 2026 GuateGambas</p>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script>
+    function pedirWhatsApp(producto) {
+      const telefono = '50243132549';
+      const mensaje = `Hola, estoy interesado en ${producto}. ¿Me das información?`;
+      const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+    }
+  </script>
+
+</body>
+</html>
