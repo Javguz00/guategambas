@@ -10,6 +10,23 @@ const btnInstagramFeed = document.getElementById("btn-instagram-feed");
 const btnCatalogo = document.getElementById("btn-catalogo");
 const btnContacto = document.getElementById("btn-contacto");
 
+// Cart elements
+const cartBtn = document.getElementById("cart-btn");
+const cartSidebar = document.getElementById("cart-sidebar");
+const cartClose = document.getElementById("cart-close");
+const cartItemsContainer = document.getElementById("cart-items");
+const cartCountEl = document.getElementById("cart-count");
+const cartTotalEl = document.getElementById("cart-total");
+const checkoutBtn = document.getElementById("checkout-btn");
+
+// Lightbox elements
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightbox-img");
+const lightboxClose = document.getElementById("lightbox-close");
+
+// Cart state
+let cart = JSON.parse(localStorage.getItem("guategambasCart") || "[]");
+
 const responses = [
   {
     match: ["precio", "costo", "vale"],
@@ -34,6 +51,57 @@ const responses = [
 ];
 
 const instagramUrl = "https://instagram.com/guategambas";
+
+// Cart functions
+function updateCart() {
+  cartCountEl.textContent = cart.length;
+  cartItemsContainer.innerHTML = "";
+  
+  if (cart.length === 0) {
+    cartItemsContainer.innerHTML = '<p style="text-align: center; color: var(--muted);">Tu carrito está vacío</p>';
+    checkoutBtn.disabled = true;
+  } else {
+    checkoutBtn.disabled = false;
+    cart.forEach((item, index) => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "cart-item";
+      itemEl.innerHTML = `
+        <div class="cart-item-header">
+          <strong>${item.name}</strong>
+          <button class="cart-item-remove" data-index="${index}">&times;</button>
+        </div>
+        <p style="color: var(--muted); font-size: 0.9rem;">${item.desc}</p>
+        <p style="color: var(--accent); font-weight: 700;">Q ${item.price.toFixed(2)}</p>
+      `;
+      cartItemsContainer.appendChild(itemEl);
+    });
+  }
+  
+  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  cartTotalEl.textContent = `Q ${total.toFixed(2)}`;
+  localStorage.setItem("guategambasCart", JSON.stringify(cart));
+}
+
+function addToCart(species, pack, price, name, desc) {
+  cart.push({ species, pack, price, name, desc });
+  updateCart();
+  cartSidebar.classList.add("active");
+}
+
+function removeFromCart(index) {
+  cart.splice(index, 1);
+  updateCart();
+}
+
+// Lightbox functions
+function openLightbox(src) {
+  lightboxImg.src = src;
+  lightbox.classList.add("active");
+}
+
+function closeLightbox() {
+  lightbox.classList.remove("active");
+}
 
 function addMessage(text, type) {
   const bubble = document.createElement("div");
@@ -111,3 +179,56 @@ btnContacto.addEventListener("click", () => {
 });
 
 addMessage("Hola 👋 Soy el bot de GuateGambas. Pregunta por Bloody Mary, Golden Bee o Sulawesi.", "chat-bot");
+
+// Cart event listeners
+cartBtn.addEventListener("click", () => {
+  cartSidebar.classList.add("active");
+});
+
+cartClose.addEventListener("click", () => {
+  cartSidebar.classList.remove("active");
+});
+
+cartItemsContainer.addEventListener("click", (e) => {
+  if (e.target.classList.contains("cart-item-remove")) {
+    const index = parseInt(e.target.dataset.index);
+    removeFromCart(index);
+  }
+});
+
+checkoutBtn.addEventListener("click", () => {
+  if (cart.length > 0) {
+    alert(`Pedido de ${cart.length} pack(s) por Q ${cart.reduce((sum, item) => sum + item.price, 0).toFixed(2)}. Te contactaremos por WhatsApp.`);
+    cart = [];
+    updateCart();
+    cartSidebar.classList.remove("active");
+  }
+});
+
+// Add to cart buttons
+document.querySelectorAll(".add-to-cart").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    const card = e.target.closest(".pack-card");
+    const species = card.dataset.species;
+    const pack = card.dataset.pack;
+    const price = parseFloat(card.dataset.price);
+    const name = card.querySelector("h3").textContent;
+    const desc = card.querySelector(".pack-desc").textContent;
+    addToCart(species, pack, price, name, desc);
+  });
+});
+
+// Gallery lightbox
+document.querySelectorAll(".gallery-img").forEach((img) => {
+  img.addEventListener("click", () => {
+    openLightbox(img.src);
+  });
+});
+
+lightboxClose.addEventListener("click", closeLightbox);
+lightbox.addEventListener("click", (e) => {
+  if (e.target === lightbox) closeLightbox();
+});
+
+// Initialize cart
+updateCart();

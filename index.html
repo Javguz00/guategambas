@@ -20,11 +20,15 @@
         <a href="#proyecto">Proyecto</a>
         <a href="#especies">Especies</a>
         <a href="#galeria">Galería</a>
-        <a href="#instagram">Instagram</a>
-        <a href="#pedidos">Pedidos</a>
+        <a href="#packs">Packs</a>
         <a href="#contacto">Contacto</a>
       </nav>
-      <button class="cta" id="cta-instagram">Instagram</button>
+      <div class="header-actions">
+        <button class="cta" id="cta-instagram">Instagram</button>
+        <button class="cart-btn" id="cart-btn">
+          🛒 <span class="cart-count" id="cart-count">0</span>
+        </button>
+      </div>
     </header>
 
     <main>
@@ -122,34 +126,61 @@
 
       <section class="section" id="galeria">
         <div class="section-title">
-          <h2>Galería de fotos y videos</h2>
-          <p>Selección visual de líneas y escenas de acuario.</p>
+          <h2>Galería por especie</h2>
+          <p>Explora cada línea con fotos reales del proyecto.</p>
         </div>
-        <div class="media-grid">
-          <div class="media-card photo">
-            <span>Bloody Mary · Macro</span>
-            <small>Foto</small>
+        
+        <div class="species-gallery">
+          <h3 class="gallery-species-title">Bloody Mary</h3>
+          <div class="photo-grid" id="gallery-bloody-mary">
+            <img src="Fotos/BloodyMary/20251009_210314.jpg" alt="Bloody Mary 1" class="gallery-img" />
+            <img src="Fotos/BloodyMary/20251115_160225.jpg" alt="Bloody Mary 2" class="gallery-img" />
+            <img src="Fotos/BloodyMary/20251115_160333.jpg" alt="Bloody Mary 3" class="gallery-img" />
           </div>
-          <div class="media-card photo">
-            <span>Golden Bee · Detalle</span>
-            <small>Foto</small>
+        </div>
+
+        <div class="species-gallery">
+          <h3 class="gallery-species-title">Golden Bee</h3>
+          <div class="photo-grid" id="gallery-golden-bee">
+            <div class="placeholder-img">Golden Bee · Próximamente</div>
           </div>
-          <div class="media-card photo">
-            <span>Sulawesi White Socks · Fondo</span>
-            <small>Foto</small>
+        </div>
+
+        <div class="species-gallery">
+          <h3 class="gallery-species-title">Sulawesi White Socks</h3>
+          <div class="photo-grid" id="gallery-white-socks">
+            <div class="placeholder-img">White Socks · Próximamente</div>
           </div>
-          <div class="media-card video">
-            <span>Reel · Alimentación</span>
-            <small>Video</small>
-          </div>
-          <div class="media-card video">
-            <span>Reel · Mantenimiento</span>
-            <small>Video</small>
-          </div>
-          <div class="media-card video">
-            <span>Reel · Cambios de color</span>
-            <small>Video</small>
-          </div>
+        </div>
+      </section>
+
+      <section class="section" id="packs">
+        <div class="section-title">
+          <h2>Packs disponibles</h2>
+          <p>Elige tu pack y agrégalo al carrito.</p>
+        </div>
+        <div class="packs-grid">
+          <article class="pack-card" data-species="bloody-mary" data-pack="5" data-price="150">
+            <span class="pack-badge">Popular</span>
+            <h3>Bloody Mary · Pack 5</h3>
+            <p class="pack-price">Q 150.00</p>
+            <p class="pack-desc">5 gambas Neocaridina davidi · Descardes de calidad</p>
+            <button class="add-to-cart">Agregar al carrito</button>
+          </article>
+          <article class="pack-card" data-species="bloody-mary" data-pack="10" data-price="280">
+            <span class="pack-badge">Ahorro</span>
+            <h3>Bloody Mary · Pack 10</h3>
+            <p class="pack-price">Q 280.00</p>
+            <p class="pack-desc">10 gambas Neocaridina davidi · Mayor variedad</p>
+            <button class="add-to-cart">Agregar al carrito</button>
+          </article>
+          <article class="pack-card" data-species="bloody-mary" data-pack="20" data-price="500">
+            <span class="pack-badge">Pro</span>
+            <h3>Bloody Mary · Pack 20</h3>
+            <p class="pack-price">Q 500.00</p>
+            <p class="pack-desc">20 gambas Neocaridina davidi · Colonia inicial</p>
+            <button class="add-to-cart">Agregar al carrito</button>
+          </article>
         </div>
       </section>
 
@@ -268,9 +299,31 @@
     </main>
 
     <footer class="footer">
-      <span>© 2026 GuateGambas. Portafolio moderno.</span>
+      <span>© 2026 GuateGambas. Proyecto de portafolio.</span>
       <span>Hecho con pasión por el acuarismo.</span>
     </footer>
+
+    <!-- Modal Lightbox -->
+    <div class="lightbox" id="lightbox">
+      <span class="lightbox-close" id="lightbox-close">&times;</span>
+      <img src="" alt="" id="lightbox-img" />
+    </div>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cart-sidebar">
+      <div class="cart-header">
+        <h3>Carrito de compras</h3>
+        <button class="cart-close" id="cart-close">&times;</button>
+      </div>
+      <div class="cart-items" id="cart-items"></div>
+      <div class="cart-footer">
+        <div class="cart-total">
+          <span>Total:</span>
+          <span id="cart-total">Q 0.00</span>
+        </div>
+        <button class="checkout-btn" id="checkout-btn">Proceder al checkout</button>
+      </div>
+    </div>
 
     <script src="script.js"></script>
   </body>
