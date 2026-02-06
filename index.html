@@ -1,138 +1,229 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GuateGambas | Gambas Ornamentales</title>
-
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Config Tailwind -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#4f46e5',
-            accent: '#22c55e'
-          }
-        }
-      }
-    }
-  </script>
-</head>
-<body class="bg-gray-50 text-gray-800">
-
-  <!-- HEADER -->
-  <header class="bg-white shadow-md fixed w-full z-50">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-primary">GuateGambas</h1>
-      <nav class="space-x-6 hidden md:block">
-        <a href="#catalogo" class="hover:text-primary">Catálogo</a>
-        <a href="#como-pedir" class="hover:text-primary">Cómo pedir</a>
-        <a href="#contacto" class="hover:text-primary">Contacto</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GuateGambas | Neocaridinas & Caridinas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+    <header class="site-header">
+      <div class="logo">Guate<span>Gambas</span></div>
+      <nav class="nav">
+        <a href="#proyecto">Proyecto</a>
+        <a href="#galeria">Galería</a>
+        <a href="#pedidos">Pedidos</a>
+        <a href="#chatbot">Chatbot</a>
+        <a href="#contacto">Contacto</a>
       </nav>
-    </div>
-  </header>
+      <button class="cta" id="cta-instagram">Instagram</button>
+    </header>
 
-  <!-- HERO -->
-  <section class="pt-32 pb-20 bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
-    <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-10 items-center">
-      <div>
-        <h2 class="text-4xl md:text-5xl font-extrabold mb-6">Gambas ornamentales
-          <span class="block text-accent">Neocaridina & Caridina</span>
-        </h2>
-        <p class="text-lg mb-8">Calidad, genética y asesoría para acuarios en Guatemala.</p>
-        <a href="#catalogo" class="bg-accent text-gray-900 px-6 py-3 rounded-xl font-semibold hover:opacity-90">Ver catálogo</a>
-      </div>
-      <div class="hidden md:block">
-        <img src="https://images.unsplash.com/photo-1617196037304-4db5e8e2cfa6" alt="Gambas" class="rounded-2xl shadow-2xl">
-      </div>
-    </div>
-  </section>
-
-  <!-- CATALOGO -->
-  <section id="catalogo" class="py-20">
-    <div class="max-w-7xl mx-auto px-6">
-      <h3 class="text-3xl font-bold mb-12 text-center">Catálogo disponible</h3>
-
-      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
-
-        <!-- CARD -->
-        <div class="bg-white rounded-2xl shadow p-6">
-          <img src="https://images.unsplash.com/photo-1587300003388-59208cc962cb" class="rounded-xl mb-4" />
-          <h4 class="text-xl font-semibold">Blue Bolt</h4>
-          <p class="text-sm text-gray-600 mb-3">Caridina logemanni</p>
-          <ul class="text-sm mb-4">
-            <li>pH: 5.5 - 6.2</li>
-            <li>TDS: 90 - 130</li>
-            <li>Temp: 20 - 23°C</li>
-          </ul>
-          <button onclick="pedirWhatsApp('Blue Bolt')" class="w-full bg-primary text-white py-2 rounded-xl hover:opacity-90">Pedir por WhatsApp</button>
+    <main>
+      <section class="hero">
+        <div class="hero-content">
+          <p class="eyebrow">Portafolio moderno · Guatemala</p>
+          <h1>Neocaridinas & Caridinas con un toque premium.</h1>
+          <p class="subtext">
+            Un proyecto dedicado a gambas de calidad, acuarismo responsable y
+            experiencias visuales. Pedidos fáciles, catálogo vivo y asistencia
+            instantánea.
+          </p>
+          <div class="hero-actions">
+            <button class="primary" id="btn-pedidos">Hacer pedido</button>
+            <button class="ghost" id="btn-chat">Abrir chatbot</button>
+          </div>
+          <div class="badges">
+            <span>🌿 Agua estable</span>
+            <span>🧪 Genéticas selectas</span>
+            <span>🚚 Entregas locales</span>
+          </div>
         </div>
-
-        <!-- CARD -->
-        <div class="bg-white rounded-2xl shadow p-6">
-          <img src="https://images.unsplash.com/photo-1590080877777-7b2d1a4c3a3b" class="rounded-xl mb-4" />
-          <h4 class="text-xl font-semibold">Golden Bee</h4>
-          <p class="text-sm text-gray-600 mb-3">Caridina dennerli</p>
-          <ul class="text-sm mb-4">
-            <li>pH: 5.8 - 6.5</li>
-            <li>TDS: 100 - 150</li>
-            <li>Temp: 20 - 24°C</li>
+        <div class="hero-card">
+          <div class="card-header">
+            <h3>Catálogo destacado</h3>
+            <span class="tag">Disponible</span>
+          </div>
+          <ul class="card-list">
+            <li>
+              <strong>Neocaridina Sakura</strong>
+              <span>Rojo intenso · 1.5-2cm</span>
+            </li>
+            <li>
+              <strong>Caridina Crystal Red</strong>
+              <span>Grado SS · 1.8-2.3cm</span>
+            </li>
+            <li>
+              <strong>Neocaridina Blue Dream</strong>
+              <span>Azul profundo · 1.5-2cm</span>
+            </li>
           </ul>
-          <button onclick="pedirWhatsApp('Sulawesi White socks')" class="w-full bg-primary text-white py-2 rounded-xl hover:opacity-90">Pedir por WhatsApp</button>
+          <div class="card-footer">
+            <span>Actualizado hoy</span>
+            <button class="tiny" id="btn-catalogo">Ver catálogo</button>
+          </div>
         </div>
+      </section>
 
-        <!-- CARD -->
-        <div class="bg-white rounded-2xl shadow p-6">
-          <img src="https://images.unsplash.com/photo-1602526216034-2c0b8f3c2dcb" class="rounded-xl mb-4" />
-          <h4 class="text-xl font-semibold">Red Cherry</h4>
-          <p class="text-sm text-gray-600 mb-3">Neocaridina davidi</p>
-          <ul class="text-sm mb-4">
-            <li>pH: 6.5 - 7.5</li>
-            <li>TDS: 180 - 250</li>
-            <li>Temp: 22 - 26°C</li>
-          </ul>
-          <button onclick="pedirWhatsApp('Red Cherry')" class="w-full bg-primary text-white py-2 rounded-xl hover:opacity-90">Pedir por WhatsApp</button>
+      <section class="section" id="proyecto">
+        <div class="section-title">
+          <h2>Primer proyecto del portafolio</h2>
+          <p>
+            Página de Instagram + web para pedidos, soporte y comunidad de
+            gambas.
+          </p>
         </div>
+        <div class="grid-3">
+          <article class="feature">
+            <h3>Instagram activo</h3>
+            <p>
+              Historias diarias, tips de cuidado y novedades en líneas de
+              reproducción.
+            </p>
+          </article>
+          <article class="feature">
+            <h3>Pedidos en línea</h3>
+            <p>
+              Cotiza rápido, selecciona variedad y coordina entrega sin
+              complicaciones.
+            </p>
+          </article>
+          <article class="feature">
+            <h3>Chatbot asistente</h3>
+            <p>
+              Respuestas instantáneas para disponibilidad, parámetros y
+              recomendaciones.
+            </p>
+          </article>
+        </div>
+      </section>
 
-      </div>
-    </div>
-  </section>
+      <section class="section" id="galeria">
+        <div class="section-title">
+          <h2>Galería viva</h2>
+          <p>Una vista rápida de variedades y ambientes.</p>
+        </div>
+        <div class="gallery">
+          <div class="gallery-card">
+            <span>Crystal Red</span>
+          </div>
+          <div class="gallery-card">
+            <span>Blue Dream</span>
+          </div>
+          <div class="gallery-card">
+            <span>Golden Bee</span>
+          </div>
+          <div class="gallery-card">
+            <span>Sakura Red</span>
+          </div>
+        </div>
+      </section>
 
-  <!-- COMO PEDIR -->
-  <section id="como-pedir" class="bg-gray-100 py-20">
-    <div class="max-w-7xl mx-auto px-6 text-center">
-      <h3 class="text-3xl font-bold mb-10">Cómo pedir</h3>
-      <div class="grid md:grid-cols-3 gap-8">
-        <div class="bg-white p-6 rounded-2xl shadow">🦐 Elige tus gambas</div>
-        <div class="bg-white p-6 rounded-2xl shadow">💬 Escríbenos por WhatsApp</div>
-        <div class="bg-white p-6 rounded-2xl shadow">📦 Coordinamos entrega</div>
-      </div>
-    </div>
-  </section>
+      <section class="section" id="pedidos">
+        <div class="section-title">
+          <h2>Pedidos y cotizaciones</h2>
+          <p>Completa el formulario y te respondemos en minutos.</p>
+        </div>
+        <form class="order-form" id="order-form">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="nombre">Nombre</label>
+              <input id="nombre" name="nombre" type="text" required />
+            </div>
+            <div class="form-field">
+              <label for="whatsapp">WhatsApp</label>
+              <input id="whatsapp" name="whatsapp" type="tel" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="tipo">Tipo de gamba</label>
+              <select id="tipo" name="tipo" required>
+                <option value="">Selecciona una variedad</option>
+                <option>Neocaridina Sakura</option>
+                <option>Neocaridina Blue Dream</option>
+                <option>Caridina Crystal Red</option>
+                <option>Caridina Golden Bee</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cantidad">Cantidad</label>
+              <input id="cantidad" name="cantidad" type="number" min="1" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="ciudad">Ciudad</label>
+              <input id="ciudad" name="ciudad" type="text" required />
+            </div>
+            <div class="form-field">
+              <label for="entrega">Tipo de entrega</label>
+              <select id="entrega" name="entrega" required>
+                <option value="">Selecciona una opción</option>
+                <option>Entrega local</option>
+                <option>Pickup</option>
+                <option>Envio refrigerado</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="mensaje">Detalles adicionales</label>
+            <textarea id="mensaje" name="mensaje" rows="4"></textarea>
+          </div>
+          <button class="primary" type="submit">Enviar pedido</button>
+          <p class="form-note" id="form-note"></p>
+        </form>
+      </section>
 
-  <!-- FOOTER -->
-  <footer id="contacto" class="bg-gray-900 text-gray-300 py-10">
-    <div class="max-w-7xl mx-auto px-6 text-center">
-      <p class="mb-2">📍 Guatemala</p>
-      <p class="mb-4">Pedidos y consultas por WhatsApp</p>
-      <a href="https://wa.me/502XXXXXXXX" class="text-accent font-semibold">Escríbenos ahora</a>
-      <p class="text-sm mt-6">© 2026 GuateGambas</p>
-    </div>
-  </footer>
+      <section class="section" id="chatbot">
+        <div class="section-title">
+          <h2>Chatbot GuateGambas</h2>
+          <p>Una demo de asistencia automática integrada en la web.</p>
+        </div>
+        <div class="chatbot">
+          <div class="chat-window" id="chat-window"></div>
+          <div class="chat-input">
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="Escribe tu consulta..."
+            />
+            <button class="primary" id="chat-send">Enviar</button>
+          </div>
+        </div>
+      </section>
 
-  <!-- JS -->
-  <script>
-    function pedirWhatsApp(producto) {
-      const telefono = '50243132549';
-      const mensaje = `Hola, estoy interesado en ${producto}. ¿Me das información?`;
-      const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
-      window.open(url, '_blank');
-    }
-  </script>
+      <section class="section" id="contacto">
+        <div class="section-title">
+          <h2>Contacto directo</h2>
+          <p>Listos para ayudarte a crear tu acuario.</p>
+        </div>
+        <div class="contact-card">
+          <div>
+            <h3>GuateGambas</h3>
+            <p>Ciudad de Guatemala</p>
+          </div>
+          <div>
+            <p>📞 +502 0000-0000</p>
+            <p>✉️ hola@guategambas.com</p>
+          </div>
+          <button class="ghost" id="btn-contacto">Hablar ahora</button>
+        </div>
+      </section>
+    </main>
 
-</body>
+    <footer class="footer">
+      <span>© 2026 GuateGambas. Portafolio moderno.</span>
+      <span>Hecho con pasión por el acuarismo.</span>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
 </html>
