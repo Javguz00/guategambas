@@ -1,12 +1,28 @@
 # GuateGambas
 
-Portafolio moderno con el primer proyecto: página de Instagram + web para gambas neocaridinas y caridinas, con pedidos y chatbot demo.
+Sitio web del proyecto GuateGambas, enfocado en las especies **Bloody Mary**, **Golden Bee** y **Sulawesi White Socks**. Presenta contenido visual, pedidos y novedades de Instagram.
 
-## ✅ Lo que incluye
-- Landing moderna con secciones clave
-- Formulario de pedidos (frontend) con guardado local
-- Chatbot demo con respuestas rápidas
-- Diseño responsive y elegante
+## ✨ Funcionalidades
+- Secciones dedicadas a especies con nombre científico
+- Galería de fotos y videos con enfoque visual
+- Módulo de novedades de Instagram (cards destacadas)
+- Formulario de pedidos con guardado local
+- Chatbot demo para consultas rápidas
+
+## 🧬 Especies destacadas
+- **Bloody Mary** — *Neocaridina davidi*
+- **Golden Bee** — *Caridina logemanni*
+- **Sulawesi White Socks** — *Caridina dennerli*
+
+## 🛠️ Tecnologías
+- **HTML5**
+- **CSS3** (estilo moderno, paleta Bloody Mary)
+- **JavaScript** (interacciones y guardado local)
+
+## ⚙️ Configuración rápida
+Edita estos valores si deseas personalizar:
+- Instagram: `instagramUrl` en `script.js`
+- Contacto: sección `#contacto` en `index.html`
 
 ## 🚀 Cómo abrirlo
 Solo necesitas un navegador.
@@ -20,12 +36,6 @@ python -m http.server 5500
 ```
 
 Luego visita: `http://localhost:5500`
-
-## 🧠 Próximos pasos sugeridos
-- Conectar pedidos a WhatsApp Business API
-- Backend para stock y catálogo dinámico
-- Chatbot real con IA y panel admin
-- Integrar Instagram Feed
 
 ## 📂 Estructura
 - `index.html`

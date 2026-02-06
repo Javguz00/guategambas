@@ -6,6 +6,7 @@ const chatInput = document.getElementById("chat-input");
 const btnPedidos = document.getElementById("btn-pedidos");
 const btnChat = document.getElementById("btn-chat");
 const btnInstagram = document.getElementById("cta-instagram");
+const btnInstagramFeed = document.getElementById("btn-instagram-feed");
 const btnCatalogo = document.getElementById("btn-catalogo");
 const btnContacto = document.getElementById("btn-contacto");
 
@@ -13,12 +14,12 @@ const responses = [
   {
     match: ["precio", "costo", "vale"],
     reply:
-      "Los precios dependen de la variedad y cantidad. ¿Qué gamba te interesa?",
+      "Los precios dependen de la variedad y cantidad. ¿Buscas Bloody Mary, Golden Bee o Sulawesi?",
   },
   {
     match: ["disponible", "stock"],
     reply:
-      "Hoy tenemos Sakura, Blue Dream y Crystal Red. ¿Quieres reservar?",
+      "Actualmente disponibles: descardes de Bloody Mary. Pregunta por próximas líneas.",
   },
   {
     match: ["envio", "entrega"],
@@ -28,9 +29,11 @@ const responses = [
   {
     match: ["parametros", "ph", "gh", "kh"],
     reply:
-      "Neocaridinas: pH 6.8-7.4 · GH 6-8. Caridinas: pH 6.0-6.6 · GH 4-6.",
+      "Bloody Mary: pH 6.8-7.4 · GH 6-8. Golden Bee y Sulawesi: pH 6.0-6.6 · GH 4-6.",
   },
 ];
+
+const instagramUrl = "https://instagram.com/guategambas";
 
 function addMessage(text, type) {
   const bubble = document.createElement("div");
@@ -91,7 +94,11 @@ btnChat.addEventListener("click", () => {
 });
 
 btnInstagram.addEventListener("click", () => {
-  window.open("https://instagram.com", "_blank");
+  window.open(instagramUrl, "_blank");
+});
+
+btnInstagramFeed.addEventListener("click", () => {
+  window.open(instagramUrl, "_blank");
 });
 
 btnCatalogo.addEventListener("click", () => {
@@ -103,4 +110,4 @@ btnContacto.addEventListener("click", () => {
   window.location.href = "mailto:hola@guategambas.com";
 });
 
-addMessage("Hola 👋 Soy el bot de GuateGambas. ¿En qué te ayudo?", "chat-bot");
+addMessage("Hola 👋 Soy el bot de GuateGambas. Pregunta por Bloody Mary, Golden Bee o Sulawesi.", "chat-bot");
