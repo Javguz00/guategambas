@@ -1,43 +1,49 @@
-# GuateGambas
+# GuateGambas - Full Stack Portfolio Project
 
-Sitio web del proyecto GuateGambas, enfocado en las especies **Bloody Mary**, **Golden Bee** y **Sulawesi White Socks**. Presenta contenido visual, pedidos y novedades de Instagram.
+Proyecto orientado a portafolio profesional para practicar frontend, backend, APIs, pedidos y CI/CD.
 
-## ✨ Funcionalidades
-- Secciones dedicadas a especies con nombre científico
-- Galería de fotos y videos con enfoque visual
-- Módulo de novedades de Instagram (cards destacadas)
-- Formulario de pedidos con guardado local
-- Chatbot demo para consultas rápidas
+## Objetivo
+Construir una tienda y vitrina digital enfocada en:
+- Bloody Mary (Neocaridina davidi)
+- Golden Bee (Caridina logemanni)
+- Tibee (hibrido Caridina)
 
-## 🧬 Especies destacadas
-- **Bloody Mary** — *Neocaridina davidi*
-- **Golden Bee** — *Caridina logemanni*
-- **Sulawesi White Socks** — *Caridina dennerli*
+## Stack
+- Next.js 15 (App Router)
+- React 19 + TypeScript
+- API Routes (backend en el mismo proyecto)
+- Persistencia de pedidos en `data/orders.json` (fase actual)
+- GitHub Actions para CI
 
-## 🛠️ Tecnologías
-- **HTML5**
-- **CSS3** (estilo moderno, paleta Bloody Mary)
-- **JavaScript** (interacciones y guardado local)
+## Funcionalidades implementadas
+- Catalogo por especies con galeria de fotos y enlaces de video
+- Packs de venta con carrito de compras
+- Formulario de pedidos conectado a backend (`POST /api/orders`)
+- Endpoint para publicaciones/redes (`GET /api/social`)
+- Endpoint para especies y packs (`GET /api/species`)
+- Pipeline CI (lint + build)
 
-## ⚙️ Configuración rápida
-Edita estos valores si deseas personalizar:
-- Instagram: `instagramUrl` en `script.js`
-- Contacto: sección `#contacto` en `index.html`
-
-## 🚀 Cómo abrirlo
-Solo necesitas un navegador.
-
+## Ejecutar local
 ```powershell
-# Opción 1: abrir directo
-Start-Process .\index.html
-
-# Opción 2: servidor local rápido (si tienes Python)
-python -m http.server 5500
+npm install
+npm run dev
 ```
+Abre `http://localhost:3000`.
 
-Luego visita: `http://localhost:5500`
+## Endpoints
+- `GET /api/species`
+- `GET /api/social`
+- `GET /api/orders`
+- `POST /api/orders`
 
-## 📂 Estructura
-- `index.html`
-- `styles.css`
-- `script.js`
+## CI/CD
+Flujo en `.github/workflows/ci.yml`:
+- Instala dependencias
+- Ejecuta lint
+- Ejecuta build
+
+## Roadmap siguiente fase
+- Migrar pedidos a base de datos real (PostgreSQL/MongoDB)
+- Login admin y panel de gestion de pedidos
+- Integracion real de Instagram Graph API
+- Deploy automatico (Vercel + GitHub)
