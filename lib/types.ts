@@ -22,6 +22,7 @@ export interface SocialPost {
   type: "reel" | "post";
   title: string;
   url: string;
+  thumbnailUrl?: string;
   publishedAt: string;
 }
 

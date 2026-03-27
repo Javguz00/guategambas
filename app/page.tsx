@@ -111,6 +111,7 @@ export default function HomePage() {
             <a href="#packs">Packs</a>
             <a href="#pedidos">Pedidos</a>
             <a href="#social">Social</a>
+            <a href="/admin">Admin</a>
           </nav>
           <a href={instagramProfile} target="_blank" rel="noreferrer">
             <button className="secondary">Instagram</button>
@@ -223,6 +224,11 @@ export default function HomePage() {
           <div className="social-list">
             {posts.map((post) => (
               <article key={post.id} className="card">
+                {post.thumbnailUrl ? (
+                  <div className="social-thumb">
+                    <Image src={post.thumbnailUrl} alt={post.title} width={640} height={360} />
+                  </div>
+                ) : null}
                 <span className="badge">{post.type}</span>
                 <h3>{post.title}</h3>
                 <p className="muted">Publicado: {post.publishedAt}</p>

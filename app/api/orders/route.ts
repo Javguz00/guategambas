@@ -1,51 +1,63 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { NextResponse } from "next/server";
-import { Order } from "@/lib/types";
+import { prisma } from "@/lib/prisma";
 
-const ordersPath = path.join(process.cwd(), "data", "orders.json");
-
-async function readOrders(): Promise<Order[]> {
-  try {
-    const raw = await fs.readFile(ordersPath, "utf-8");
-    const parsed = JSON.parse(raw) as Order[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+function buildDate(value: string | null) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
 }
 
-async function writeOrders(orders: Order[]) {
-  await fs.mkdir(path.dirname(ordersPath), { recursive: true });
-  await fs.writeFile(ordersPath, JSON.stringify(orders, null, 2), "utf-8");
-}
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const city = url.searchParams.get("city")?.trim();
+  const from = buildDate(url.searchParams.get("from"));
+  const to = buildDate(url.searchParams.get("to"));
 
-export async function GET() {
-  const orders = await readOrders();
+  const orders = await prisma.order.findMany({
+    where: {
+      ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
+      ...(from || to
+        ? {
+            createdAt: {
+              ...(from ? { gte: from } : {}),
+              ...(to ? { lte: to } : {})
+            }
+          }
+        : {})
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+
   return NextResponse.json({ orders });
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Omit<Order, "id" | "createdAt">;
+  const body = (await request.json()) as {
+    customerName: string;
+    whatsapp: string;
+    city: string;
+    notes?: string;
+    items: Array<{ packId: string; quantity: number }>;
+    total: number;
+  };
 
   if (!body.customerName || !body.whatsapp || !body.city || !Array.isArray(body.items) || body.items.length === 0) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
   }
 
-  const orders = await readOrders();
-  const newOrder: Order = {
-    id: `ord-${Date.now()}`,
-    customerName: body.customerName,
-    whatsapp: body.whatsapp,
-    city: body.city,
-    notes: body.notes || "",
-    items: body.items,
-    total: Number(body.total || 0),
-    createdAt: new Date().toISOString()
-  };
+  const order = await prisma.order.create({
+    data: {
+      customerName: body.customerName,
+      whatsapp: body.whatsapp,
+      city: body.city,
+      notes: body.notes || "",
+      items: body.items,
+      total: Number(body.total || 0)
+    }
+  });
 
-  orders.push(newOrder);
-  await writeOrders(orders);
-
-  return NextResponse.json({ ok: true, order: newOrder }, { status: 201 });
+  return NextResponse.json({ ok: true, order }, { status: 201 });
 }
