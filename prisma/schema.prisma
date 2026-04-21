@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  DELIVERED
+}
+
 model Order {
   id           String   @id @default(cuid())
   customerName String
@@ -15,5 +21,6 @@ model Order {
   notes        String?
   items        Json
   total        Float
+  status       OrderStatus @default(PENDING)
   createdAt    DateTime @default(now())
 }

@@ -1,47 +1,179 @@
-import { Pack, SocialPost, Species } from "@/lib/types";
+import { Product, SocialPost } from "@/lib/types";
 
 export const instagramProfile = "https://instagram.com/guategambas";
 
-export const speciesCatalog: Species[] = [
+export const products: Product[] = [
   {
-    key: "bloody-mary",
+    id: "bloody-mary",
     name: "Bloody Mary",
-    scientificName: "Neocaridina davidi",
-    description: "Linea roja intensa para acuarios plantados.",
-    photos: [
-      "/photos/bloody-mary/20251009_210314.jpg",
-      "/photos/bloody-mary/20251115_160225.jpg",
-      "/photos/bloody-mary/20251115_160333.jpg"
+    category: "camarones",
+    description: "Neocaridina roja intensa, ideal para iniciar o ampliar colonias.",
+    highlight: "Lanzamiento",
+    note: "Promocion 5 + 1 por lanzamiento.",
+    variants: [
+      {
+        id: "bm-5",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 150,
+        highlight: "Precio base"
+      },
+      {
+        id: "bm-5-plus-1",
+        label: "Promo 5 + 1",
+        unitLabel: "6 unidades",
+        price: 150,
+        highlight: "Oferta lanzamiento"
+      }
     ],
-    videos: ["https://instagram.com/reel/demo-bloody-1"]
+    media: {
+      photos: [],
+      videos: []
+    }
   },
   {
-    key: "golden-bee",
+    id: "cherry",
+    name: "Cherry",
+    category: "camarones",
+    description: "Linea Cherry para acuarios comunitarios y plantados.",
+    highlight: "Entrada",
+    note: "Disponible por unidad y pack promocional.",
+    variants: [
+      {
+        id: "cherry-unit",
+        label: "Unidad",
+        unitLabel: "1 unidad",
+        price: 15
+      },
+      {
+        id: "cherry-pack-10",
+        label: "Pack 10",
+        unitLabel: "10 unidades",
+        price: 100,
+        highlight: "Oferta"
+      }
+    ],
+    media: {
+      photos: [],
+      videos: []
+    }
+  },
+  {
+    id: "golden-bee",
     name: "Golden Bee",
-    scientificName: "Caridina logemanni",
-    description: "Patron elegante dorado para gambarios especializados.",
-    photos: [],
-    videos: ["https://instagram.com/reel/demo-golden-1"]
+    category: "camarones",
+    description: "Caridina selecta con patron dorado para gambarios dedicados.",
+    highlight: "Selecta",
+    note: "Venta por pack de 5.",
+    variants: [
+      {
+        id: "gb-pack-5",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      }
+    ],
+    media: {
+      photos: [],
+      videos: []
+    }
   },
   {
-    key: "tibee",
-    name: "Tibee",
-    scientificName: "Hibrido Caridina",
-    description: "Cruce selecto con patrones unicos y alta demanda.",
-    photos: [
-      "/photos/tibee/20251012_203538.jpg",
-      "/photos/tibee/20251012_204454.jpg",
-      "/photos/tibee/20251012_204521.jpg"
+    id: "fluval-stratum",
+    name: "Fluval Stratum",
+    category: "insumos",
+    description: "Sustrato activo para gambario, formato por libra.",
+    highlight: "Stock real",
+    note: "Actualmente hay 5 libras disponibles.",
+    variants: [
+      {
+        id: "stratum-lb",
+        label: "Libra",
+        unitLabel: "1 libra",
+        price: 59,
+        stockAvailable: 5,
+        lowStockThreshold: 3
+      }
     ],
-    videos: ["https://instagram.com/reel/demo-tibee-1"]
+    media: {
+      photos: [],
+      videos: []
+    }
+  },
+  {
+    id: "salty-shrimp-gh",
+    name: "Salty Shrimp GH+",
+    category: "insumos",
+    description: "Porciones para garrafon de agua desmineralizada en sistemas de caridinas.",
+    highlight: "Ajuste",
+    variants: [
+      {
+        id: "gh-single",
+        label: "Porcion individual",
+        unitLabel: "1 porcion",
+        price: 10
+      },
+      {
+        id: "gh-pack-3",
+        label: "Pack 3",
+        unitLabel: "3 porciones",
+        price: 25,
+        highlight: "Ahorro"
+      }
+    ],
+    media: {
+      photos: [],
+      videos: []
+    }
+  },
+  {
+    id: "sponge-filter",
+    name: "Filtro de pulmon",
+    category: "insumos",
+    description: "Filtro de pulmon con material Bio Beds y bolitas hollow para bacterias.",
+    highlight: "Equipo",
+    note: "No incluye bomba oxigenadora.",
+    variants: [
+      {
+        id: "filter-kit",
+        label: "Kit completo",
+        unitLabel: "1 kit",
+        price: 125
+      }
+    ],
+    media: {
+      photos: [],
+      videos: []
+    }
+  },
+  {
+    id: "catappa-leaves",
+    name: "Hojas de catappa",
+    category: "insumos",
+    description: "Hojas para acondicionamiento natural y taninos en el gambario.",
+    highlight: "Natural",
+    note: "2 bolsas de 10 por Q50 con envio incluido a zonas aledanas.",
+    variants: [
+      {
+        id: "catappa-unit",
+        label: "Unidad",
+        unitLabel: "1 hoja",
+        price: 3.5
+      },
+      {
+        id: "catappa-2bags",
+        label: "2 bolsas de 10",
+        unitLabel: "20 hojas",
+        price: 50,
+        highlight: "Envio incluido",
+        shippingNote: "En zonas aledanas"
+      }
+    ],
+    media: {
+      photos: [],
+      videos: []
+    }
   }
-];
-
-export const packs: Pack[] = [
-  { id: "bm-5", species: "bloody-mary", label: "Pack 5", quantity: 5, price: 150 },
-  { id: "bm-10", species: "bloody-mary", label: "Pack 10", quantity: 10, price: 280 },
-  { id: "gb-5", species: "golden-bee", label: "Pack 5", quantity: 5, price: 220 },
-  { id: "tb-5", species: "tibee", label: "Pack 5", quantity: 5, price: 260 }
 ];
 
 export const socialPosts: SocialPost[] = [
@@ -62,7 +194,7 @@ export const socialPosts: SocialPost[] = [
   {
     id: "3",
     type: "reel",
-    title: "Tibee pattern update",
+    title: "Inventario y mantenimiento",
     url: instagramProfile,
     publishedAt: "2026-03-15"
   }

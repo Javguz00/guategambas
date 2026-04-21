@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { speciesCatalog, packs } from "@/lib/data";
+import { products } from "@/lib/data";
 
 export async function GET() {
-  return NextResponse.json({ species: speciesCatalog, packs });
+  return NextResponse.json({ products });
 }

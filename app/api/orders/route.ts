@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const allowedStatus = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
+
+type ApiOrderItem = {
+  productId: string;
+  variantId: string;
+  name: string;
+  variantLabel: string;
+  category: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
+};
+
 function buildDate(value: string | null) {
   if (!value) return undefined;
   const date = new Date(value);
@@ -40,12 +53,28 @@ export async function POST(request: Request) {
     whatsapp: string;
     city: string;
     notes?: string;
-    items: Array<{ packId: string; quantity: number }>;
+    items: ApiOrderItem[];
     total: number;
   };
 
   if (!body.customerName || !body.whatsapp || !body.city || !Array.isArray(body.items) || body.items.length === 0) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+  }
+
+  const invalidItem = body.items.find(
+    (item) =>
+      !item.productId ||
+      !item.variantId ||
+      !item.name ||
+      !item.variantLabel ||
+      !item.category ||
+      !item.unit ||
+      Number(item.unitPrice) <= 0 ||
+      Number(item.quantity) <= 0
+  );
+
+  if (invalidItem) {
+    return NextResponse.json({ error: "Items invalidos en el pedido" }, { status: 400 });
   }
 
   const order = await prisma.order.create({
@@ -60,4 +89,21 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({ ok: true, order }, { status: 201 });
+}
+
+export async function PATCH(request: Request) {
+  const body = (await request.json()) as { id?: string; status?: string };
+
+  if (!body.id || !body.status || !allowedStatus.includes(body.status as (typeof allowedStatus)[number])) {
+    return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
+  }
+
+  const order = await prisma.order.update({
+    where: { id: body.id },
+    data: {
+      status: body.status as "PENDING" | "CONFIRMED" | "DELIVERED"
+    }
+  });
+
+  return NextResponse.json({ ok: true, order });
 }

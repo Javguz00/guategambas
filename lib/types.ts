@@ -1,20 +1,31 @@
-export type SpeciesKey = "bloody-mary" | "golden-bee" | "tibee";
+export type ProductCategory = "camarones" | "insumos";
+export type OrderStatus = "PENDING" | "CONFIRMED" | "DELIVERED";
 
-export interface Species {
-  key: SpeciesKey;
-  name: string;
-  scientificName: string;
-  description: string;
+export interface ProductVariant {
+  id: string;
+  label: string;
+  unitLabel: string;
+  price: number;
+  highlight?: string;
+  stockAvailable?: number;
+  lowStockThreshold?: number;
+  shippingNote?: string;
+}
+
+export interface ProductMedia {
   photos: string[];
   videos: string[];
 }
 
-export interface Pack {
+export interface Product {
   id: string;
-  species: SpeciesKey;
-  label: string;
-  quantity: number;
-  price: number;
+  name: string;
+  category: ProductCategory;
+  variants: ProductVariant[];
+  description: string;
+  highlight?: string;
+  note?: string;
+  media?: ProductMedia;
 }
 
 export interface SocialPost {
@@ -27,7 +38,13 @@ export interface SocialPost {
 }
 
 export interface OrderItem {
-  packId: string;
+  productId: string;
+  variantId: string;
+  name: string;
+  variantLabel: string;
+  category: ProductCategory;
+  unit: string;
+  unitPrice: number;
   quantity: number;
 }
 
@@ -39,5 +56,6 @@ export interface Order {
   notes?: string;
   items: OrderItem[];
   total: number;
+  status: OrderStatus;
   createdAt: string;
 }

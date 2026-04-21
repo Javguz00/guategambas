@@ -2,14 +2,28 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+const statusOptions = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
+type OrderStatus = (typeof statusOptions)[number];
+
 type Order = {
   id: string;
   customerName: string;
   whatsapp: string;
   city: string;
   notes?: string;
-  items: Array<{ packId: string; quantity: number }>;
+  items: Array<{
+    productId?: string;
+    variantId?: string;
+    packId?: string;
+    name?: string;
+    variantLabel?: string;
+    category?: string;
+    unit?: string;
+    unitPrice?: number;
+    quantity: number;
+  }>;
   total: number;
+  status: OrderStatus;
   createdAt: string;
 };
 
@@ -20,6 +34,7 @@ export default function AdminPage() {
   const [to, setTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState("");
 
   async function loadOrders(filters?: { city?: string; from?: string; to?: string }) {
     setLoading(true);
@@ -54,6 +69,35 @@ export default function AdminPage() {
     () => orders.reduce((sum, order) => sum + Number(order.total || 0), 0),
     [orders]
   );
+
+  function formatOrderItem(item: Order["items"][number]) {
+    const baseName = item.name || item.productId || item.packId || "Producto";
+    if (!item.variantLabel) return baseName;
+    return `${baseName} - ${item.variantLabel}`;
+  }
+
+  async function updateOrderStatus(id: string, status: OrderStatus) {
+    setUpdatingId(id);
+    try {
+      const response = await fetch("/api/orders", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ id, status })
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo actualizar estado");
+      }
+
+      setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));
+    } catch {
+      setError("No se pudo actualizar estado del pedido.");
+    } finally {
+      setUpdatingId("");
+    }
+  }
 
   return (
     <main className="container section">
@@ -104,13 +148,27 @@ export default function AdminPage() {
                 <p className="muted">
                   {order.city} · {order.whatsapp}
                 </p>
+                <p className="muted">Estado: {order.status}</p>
                 <p className="muted">Fecha: {new Date(order.createdAt).toLocaleString()}</p>
                 <p>Total: Q {Number(order.total || 0).toFixed(2)}</p>
+                <div className="actions">
+                  {statusOptions.map((status) => (
+                    <button
+                      key={`${order.id}-${status}`}
+                      type="button"
+                      className={status === order.status ? "secondary" : ""}
+                      disabled={updatingId === order.id || status === order.status}
+                      onClick={() => updateOrderStatus(order.id, status)}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
                 <ul>
                   {Array.isArray(order.items)
                     ? order.items.map((item, idx) => (
                         <li key={`${order.id}-${idx}`}>
-                          {item.packId} x {item.quantity}
+                          {formatOrderItem(item)} x {item.quantity}
                         </li>
                       ))
                     : null}

@@ -1,12 +1,16 @@
 # GuateGambas - Full Stack Portfolio Project
 
-Proyecto orientado a portafolio profesional para practicar frontend, backend, APIs, pedidos y CI/CD.
+Proyecto de portafolio orientado a una tienda digital de gambas ornamentales e insumos para gambario.
 
 ## Objetivo
-Construir una tienda y vitrina digital enfocada en:
-- Bloody Mary (Neocaridina davidi)
-- Golden Bee (Caridina logemanni)
-- Tibee (hibrido Caridina)
+Construir una vitrina y sistema de pedidos enfocado en tu inventario actual:
+- Bloody Mary
+- Cherry
+- Golden Bee
+- Sustrato por porciones
+- Salty Shrimp por porciones
+- Filtros de pulmón
+- Hojas de catappa
 
 ## Stack
 - Next.js 15 (App Router)
@@ -17,21 +21,30 @@ Construir una tienda y vitrina digital enfocada en:
 - Vercel para CD
 
 ## Funcionalidades implementadas
-- Catalogo por especies con galeria de fotos y enlaces de video
-- Packs de venta con carrito de compras
+- Catalogo por productos y secciones
+- Carrito de compras para pedidos
 - Formulario de pedidos conectado a backend (`POST /api/orders`)
-- Endpoint para publicaciones/redes (`GET /api/social`)
-- Endpoint para especies y packs (`GET /api/species`)
+- Endpoint para pedidos (`GET /api/orders`)
+- Endpoint para inventario (`GET /api/species`)
 - Panel admin para ver y filtrar pedidos (`/admin`)
 - Pipeline CI (lint + build)
 - CD a Vercel en push a `main`
 
+## Productos actuales
+- Bloody Mary
+- Cherry
+- Golden Bee
+- Sustrato por porciones
+- Salty Shrimp por porciones
+- Filtros de pulmón
+- Hojas de catappa
+
 ## Variables de entorno
 1. Copia `.env.example` a `.env`.
 2. Configura:
-	- `DATABASE_URL`
-	- `INSTAGRAM_ACCESS_TOKEN`
-	- `INSTAGRAM_BUSINESS_ACCOUNT_ID`
+   - `DATABASE_URL`
+   - `INSTAGRAM_ACCESS_TOKEN`
+   - `INSTAGRAM_BUSINESS_ACCOUNT_ID`
 
 Para GitHub Actions (secrets del repo):
 - `VERCEL_TOKEN`
@@ -50,9 +63,9 @@ Abre `http://localhost:3000`.
 
 ## Endpoints
 - `GET /api/species`
-- `GET /api/social`
 - `GET /api/orders`
 - `POST /api/orders`
+- `GET /api/social`
 
 ### Filtros de admin
 - `GET /api/orders?city=guatemala`
@@ -72,6 +85,6 @@ Flujo en `.github/workflows/cd-vercel.yml`:
 
 ## Roadmap siguiente fase
 - Autenticacion para `/admin`
-- Webhooks de Instagram para actualizaciones en tiempo real
-- Inventario y estados de pedido
+- Inventario por stock real
+- Estados de pedido (`pending`, `confirmed`, `delivered`)
 - Notificaciones por WhatsApp/Email
