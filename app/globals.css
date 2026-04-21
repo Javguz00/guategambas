@@ -1,11 +1,11 @@
 :root {
-  --bg: #0e0a0d;
-  --surface: #1a1217;
-  --surface-soft: #251720;
-  --primary: #e3364f;
-  --secondary: #f2b24d;
-  --text: #f9eef1;
-  --muted: #c8b3bb;
+  --bg: #041a24;
+  --surface: #092737;
+  --surface-soft: #12384d;
+  --primary: #2dd4bf;
+  --secondary: #f7b955;
+  --text: #ebf8ff;
+  --muted: #a7c8d6;
   --border: rgba(255, 255, 255, 0.1);
 }
 
@@ -15,8 +15,12 @@
 
 body {
   margin: 0;
-  font-family: "Segoe UI", sans-serif;
-  background: radial-gradient(circle at top, #40131e 0%, var(--bg) 45%);
+  font-family: "Nunito Sans", "Trebuchet MS", sans-serif;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(45, 212, 191, 0.22), transparent 35%),
+    radial-gradient(circle at 85% 8%, rgba(247, 185, 85, 0.18), transparent 30%),
+    radial-gradient(circle at 50% 120%, rgba(59, 130, 246, 0.2), transparent 48%),
+    linear-gradient(180deg, #03202e 0%, #041520 55%, #031018 100%);
   color: var(--text);
 }
 
@@ -38,7 +42,7 @@ a {
   top: 0;
   z-index: 20;
   backdrop-filter: blur(8px);
-  background: rgba(14, 10, 13, 0.8);
+  background: rgba(2, 18, 28, 0.82);
   border-bottom: 1px solid var(--border);
 }
 
@@ -51,6 +55,7 @@ a {
 
 .brand {
   font-weight: 800;
+  font-family: "Sora", "Nunito Sans", sans-serif;
   letter-spacing: 0.5px;
 }
 
@@ -116,6 +121,10 @@ a {
   letter-spacing: 0.08em;
 }
 
+.variant-picker-card {
+  margin-top: 8px;
+}
+
 .section {
   padding: 44px 0;
 }
@@ -163,7 +172,7 @@ a {
 
 .product-card {
   border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(26, 18, 23, 0.95), rgba(37, 23, 32, 0.88));
+  background: linear-gradient(180deg, rgba(9, 39, 55, 0.94), rgba(18, 56, 77, 0.9));
   border-radius: 18px;
   padding: 16px;
   display: grid;
@@ -182,7 +191,7 @@ a {
 }
 
 .product-price {
-  color: #ffd28d;
+  color: #ffd996;
   font-weight: 800;
 }
 
@@ -194,7 +203,7 @@ a {
 
 .product-note {
   margin: 0;
-  color: #f4c7d1;
+  color: #bfe9f8;
   font-size: 0.92rem;
 }
 
@@ -202,7 +211,7 @@ a {
   margin: 0;
   display: inline-block;
   border: 1px solid rgba(242, 178, 77, 0.35);
-  background: rgba(242, 178, 77, 0.14);
+  background: rgba(242, 178, 77, 0.18);
   color: #ffd28d;
   border-radius: 999px;
   padding: 4px 10px;
@@ -221,6 +230,27 @@ a {
   justify-content: space-between;
   gap: 8px;
   color: var(--muted);
+}
+
+.qty-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  background: rgba(4, 26, 36, 0.75);
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.qty-control span {
+  min-width: 22px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.qty-control button {
+  min-width: 34px;
+  padding: 8px 10px;
 }
 
 .hero {
@@ -343,7 +373,7 @@ button {
   border: none;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: #1b0b10;
+  color: #032030;
   font-weight: 700;
   padding: 10px 14px;
   cursor: pointer;
@@ -449,7 +479,7 @@ button.secondary {
   z-index: 31;
   text-decoration: none;
   border: 1px solid rgba(242, 178, 77, 0.4);
-  background: rgba(26, 18, 23, 0.96);
+  background: rgba(5, 33, 44, 0.95);
   color: #ffd28d;
   border-radius: 999px;
   padding: 10px 14px;
@@ -471,7 +501,7 @@ button.secondary {
   max-height: 92vh;
   overflow: auto;
   border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(26, 18, 23, 0.98), rgba(37, 23, 32, 0.96));
+  background: linear-gradient(180deg, rgba(8, 33, 46, 0.98), rgba(16, 51, 69, 0.96));
   border-radius: 18px;
   padding: 18px;
   display: grid;
@@ -499,6 +529,36 @@ button.secondary {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.carousel-stage {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(5, 20, 28, 0.8);
+}
+
+.carousel-stage img,
+.carousel-stage video {
+  width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  display: block;
+}
+
+.carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.carousel-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 @media (max-width: 900px) {
@@ -532,5 +592,9 @@ button.secondary {
 
   .nav {
     display: none;
+  }
+
+  .hero {
+    padding-top: 28px;
   }
 }

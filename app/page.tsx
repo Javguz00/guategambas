@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Image from "next/image";
 import { products } from "@/lib/data";
 import { OrderItem, Product, ProductVariant } from "@/lib/types";
 
@@ -10,65 +11,38 @@ interface CartLine {
   qty: number;
 }
 
+interface MediaSlide {
+  type: "photo" | "video";
+  src: string;
+}
+
+const WHATSAPP_NUMBER = "50243132549";
+
 export default function HomePage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(() =>
+    products.reduce<Record<string, string>>((acc, product) => {
+      acc[product.id] = product.variants[0]?.id || "";
+      return acc;
+    }, {})
+  );
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
-  const [quickViewVariantId, setQuickViewVariantId] = useState<string | null>(null);
-
-  const progressCards = useMemo(
-    () => [
-      {
-        label: "Catalogo vivo",
-        value: `${products.length} productos`,
-        detail: "Bloody Mary, Cherry, Golden Bee e insumos"
-      },
-      {
-        label: "Pedidos activos",
-        value: "Formulario funcional",
-        detail: "Carrito fijo, checkout guiado y envio a la API"
-      },
-      {
-        label: "Back office",
-        value: "Estados de pedido",
-        detail: "PENDING, CONFIRMED y DELIVERED desde admin"
-      }
-    ],
-    []
-  );
-
-  const ideaCards = useMemo(
-    () => [
-      {
-        title: "Inventario con stock real",
-        description: "Stock visible por producto y alerta visual cuando quedan pocas unidades."
-      },
-      {
-        title: "Pedidos con estados",
-        description: "Cada pedido inicia en PENDING y se actualiza a CONFIRMED o DELIVERED."
-      },
-      {
-        title: "Contacto rapido",
-        description: "Boton directo a WhatsApp para cerrar compras en minutos."
-      },
-      {
-        title: "Vista rapida",
-        description: "Cada producto tiene una vista con espacio para galeria de fotos y videos."
-      }
-    ],
-    []
-  );
+  const [quickViewSlide, setQuickViewSlide] = useState(0);
 
   const quickViewProduct = useMemo(
     () => products.find((item) => item.id === quickViewProductId) || null,
     [quickViewProductId]
   );
 
-  const quickViewVariant = useMemo(() => {
-    if (!quickViewProduct || !quickViewVariantId) return null;
-    return quickViewProduct.variants.find((variant) => variant.id === quickViewVariantId) || null;
-  }, [quickViewProduct, quickViewVariantId]);
+  const quickViewSlides = useMemo<MediaSlide[]>(() => {
+    if (!quickViewProduct?.media) return [];
+    return [
+      ...quickViewProduct.media.photos.map((src) => ({ type: "photo" as const, src })),
+      ...quickViewProduct.media.videos.map((src) => ({ type: "video" as const, src }))
+    ];
+  }, [quickViewProduct]);
 
   const cartDetail = useMemo(() => {
     return cart
@@ -96,30 +70,46 @@ export default function HomePage() {
   );
 
   const whatsappHref = useMemo(() => {
-    const lines = cartDetail.map(
-      (item) => `- ${item.product.name} (${item.variant.label}) x ${item.qty}`
-    );
-    const text = lines.length > 0
-      ? `Hola GuateGambas, quiero cotizar:%0A${lines.join("%0A")}%0A%0ATotal estimado: Q ${total.toFixed(2)}`
-      : "Hola GuateGambas, quiero informacion de disponibilidad y precios.";
-    return `https://wa.me/?text=${text}`;
+    const lines = cartDetail.map((item) => `${item.product.name} - ${item.variant.label} x ${item.qty}`);
+    const text = lines.length
+      ? `Hola, quiero confirmar este pedido:\n${lines.join("\n")}\n\nTotal estimado: Q ${total.toFixed(2)}`
+      : "Hola, quiero informacion de disponibilidad y precios.";
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
   }, [cartDetail, total]);
 
   const catalogSections = useMemo(
     () => [
       {
-        id: "camarones",
-        title: "Camarones",
-        description: "Bloody Mary, Cherry y Golden Bee disponibles para venta."
+        id: "neocaridinas",
+        title: "Neocaridinas",
+        description: "Lineas resistentes para acuarios plantados y comunitarios."
+      },
+      {
+        id: "caridinas",
+        title: "Caridinas",
+        description: "Seleccion orientada a proyectos de parametros estables."
       },
       {
         id: "insumos",
         title: "Insumos",
-        description: "Sustrato, Salty Shrimp, filtros de pulmón y hojas de catappa."
+        description: "Sustratos, mineralizacion, filtracion y acondicionadores."
       }
     ],
     []
   );
+
+  function getSelectedVariant(product: Product) {
+    const selected = selectedVariants[product.id];
+    return product.variants.find((variant) => variant.id === selected) || product.variants[0];
+  }
+
+  function setSelectedVariant(productId: string, variantId: string) {
+    setSelectedVariants((prev) => ({ ...prev, [productId]: variantId }));
+  }
+
+  function getCartQty(productId: string, variantId: string) {
+    return cart.find((item) => item.productId === productId && item.variantId === variantId)?.qty || 0;
+  }
 
   function addProduct(productId: string, variantId: string) {
     setCart((prev) => {
@@ -148,28 +138,32 @@ export default function HomePage() {
     });
   }
 
-  function removeProduct(productId: string, variantId: string) {
-    setCart((prev) => prev.filter((item) => !(item.productId === productId && item.variantId === variantId)));
+  function decreaseProduct(productId: string, variantId: string) {
+    setCart((prev) => {
+      const current = prev.find((item) => item.productId === productId && item.variantId === variantId);
+      if (!current) return prev;
+      if (current.qty <= 1) {
+        return prev.filter((item) => !(item.productId === productId && item.variantId === variantId));
+      }
+      return prev.map((item) =>
+        item.productId === productId && item.variantId === variantId
+          ? { ...item, qty: item.qty - 1 }
+          : item
+      );
+    });
   }
 
   function openQuickView(product: Product) {
     setQuickViewProductId(product.id);
-    setQuickViewVariantId(product.variants[0]?.id || null);
+    setQuickViewSlide(0);
   }
 
   function closeQuickView() {
     setQuickViewProductId(null);
-    setQuickViewVariantId(null);
+    setQuickViewSlide(0);
   }
 
-  function minPrice(product: Product) {
-    return Math.min(...product.variants.map((variant) => variant.price));
-  }
-
-  function productStockAlert(product: Product) {
-    const limited = product.variants.filter((variant) => typeof variant.stockAvailable === "number");
-    if (limited.length === 0) return null;
-    const variant = limited[0];
+  function productStockAlert(variant: ProductVariant) {
     if (typeof variant.stockAvailable !== "number") return null;
     if (variant.stockAvailable <= 0) return "Agotado";
     if (typeof variant.lowStockThreshold === "number" && variant.stockAvailable <= variant.lowStockThreshold) {
@@ -220,7 +214,7 @@ export default function HomePage() {
         throw new Error("Error al crear pedido");
       }
 
-      setMessage("Pedido registrado correctamente. Estado inicial: PENDING.");
+      setMessage("Pedido recibido correctamente. Si deseas, puedes confirmarlo tambien por WhatsApp.");
       setCart([]);
       event.currentTarget.reset();
     } catch {
@@ -234,7 +228,7 @@ export default function HomePage() {
     <>
       <header className="header">
         <div className="container header-inner">
-          <div className="brand">Guate<span>Gambas</span></div>
+          <div className="brand">Guate<span>Shrimp</span></div>
           <nav className="nav">
             <a href="#catalogo">Catálogo</a>
             <a href="#checkout">Checkout</a>
@@ -245,61 +239,28 @@ export default function HomePage() {
 
       <main className="container with-floating-cart">
         <section className="hero">
-          <span className="badge">Portafolio en construccion</span>
-          <h1>Lo que llevamos hasta hoy: inventario real, pedidos y una base lista para crecer</h1>
+          <span className="badge">Catálogo en línea</span>
+          <h1>Neocaridinas, caridinas e insumos con pedido directo y checkout rápido</h1>
           <p>
-            Esta portada resume el estado actual del proyecto para que puedas ver rapido el avance, detectar huecos y decidir que ideas sumar despues.
+            Selecciona cada producto por su opción disponible, agrega cantidades y confirma tu compra por checkout o por WhatsApp.
           </p>
-          <div className="hero-summary">
-            {progressCards.map((card) => (
-              <article key={card.label} className="summary-card">
-                <span className="summary-label">{card.label}</span>
-                <strong>{card.value}</strong>
-                <p>{card.detail}</p>
-              </article>
-            ))}
-          </div>
           <div className="hero-tags">
-            <span>Inventario real</span>
-            <span>Pedidos en linea</span>
+            <span>Stock actualizado</span>
+            <span>Opciones por producto</span>
             <span>Carrito fijo</span>
-            <span>Admin interno</span>
-            <span>CI/CD listo</span>
-            <span>Neon + Prisma</span>
+            <span>Checkout inmediato</span>
+            <span>WhatsApp directo</span>
           </div>
-        </section>
-
-        <section className="section">
-          <div className="section-head">
-            <div>
-              <h2>Estado del proyecto</h2>
-              <p className="muted">Una vista rapida de lo que ya existe y de lo que conviene pensar para la siguiente fase.</p>
-            </div>
-          </div>
-          <div className="feature-grid">
-            <article className="card feature-card accent">
-              <span className="badge">Listo</span>
-              <h3>Catalogo y carrito</h3>
-              <p className="muted">Los productos ya estan organizados por categoria y se agregan al carrito antes de confirmar el pedido.</p>
-            </article>
-            <article className="card feature-card">
-              <span className="badge">Listo</span>
-              <h3>API de pedidos</h3>
-              <p className="muted">Los pedidos se registran en la base de datos y quedan disponibles para revisarlos en el panel admin.</p>
-            </article>
-            <article className="card feature-card">
-              <span className="badge">Base</span>
-              <h3>Infraestructura</h3>
-              <p className="muted">El proyecto ya cuenta con despliegue, CI/CD y esquema de datos preparado para seguir creciendo.</p>
-            </article>
-          </div>
+          <a className="quick-link" href={whatsappHref} target="_blank" rel="noreferrer">
+            Contactar por WhatsApp
+          </a>
         </section>
 
         <section id="catalogo" className="section">
           <div className="section-head">
             <div>
               <h2>Catálogo disponible</h2>
-              <p className="muted">Selecciona los productos y agrégalos al carrito para cotizar tu pedido.</p>
+              <p className="muted">Selecciona la opcion del producto, agrégalo al carrito y ajusta cantidades con los controles.</p>
             </div>
           </div>
 
@@ -316,55 +277,66 @@ export default function HomePage() {
                   .filter((product) => product.category === section.id)
                   .map((product) => (
                     <article key={product.id} className="product-card">
-                      <div className="product-card-top">
-                        <span className="badge">{product.highlight || product.variants[0]?.unitLabel}</span>
-                        <span className="product-price">Desde Q {minPrice(product).toFixed(2)}</span>
-                      </div>
-                      <h3>{product.name}</h3>
-                      <p className="muted">{product.description}</p>
-                      <p className="product-meta">Opciones: {product.variants.length}</p>
-                      {product.note ? <p className="product-note">{product.note}</p> : null}
-                      {productStockAlert(product) ? <p className="stock-chip">{productStockAlert(product)}</p> : null}
-                      <ul className="variant-list">
-                        {product.variants.map((variant) => (
-                          <li key={variant.id}>
-                            <span>
-                              {variant.label} ({variant.unitLabel})
-                            </span>
-                            <strong>Q {variant.price.toFixed(2)}</strong>
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="actions">
-                        <button type="button" onClick={() => addProduct(product.id, product.variants[0].id)}>
-                          Agregar opcion principal
-                        </button>
-                        <button type="button" className="secondary" onClick={() => openQuickView(product)}>
-                          Vista rapida
-                        </button>
-                      </div>
+                      {(() => {
+                        const selectedVariant = getSelectedVariant(product);
+                        const selectedQty = getCartQty(product.id, selectedVariant.id);
+                        return (
+                          <>
+                            <div className="product-card-top">
+                              <span className="badge">{product.highlight || "Disponible"}</span>
+                              <span className="product-price">Q {selectedVariant.price.toFixed(2)}</span>
+                            </div>
+                            <h3>{product.name}</h3>
+                            <p className="muted">{product.description}</p>
+                            {product.note ? <p className="product-note">{product.note}</p> : null}
+                            <div className="variant-picker variant-picker-card">
+                              {product.variants.map((variant) => (
+                                <button
+                                  key={variant.id}
+                                  type="button"
+                                  className={selectedVariant.id === variant.id ? "secondary" : ""}
+                                  onClick={() => setSelectedVariant(product.id, variant.id)}
+                                >
+                                  {variant.label} - Q {variant.price.toFixed(2)}
+                                </button>
+                              ))}
+                            </div>
+                            <p className="product-meta">{selectedVariant.unitLabel}</p>
+                            {productStockAlert(selectedVariant) ? (
+                              <p className="stock-chip">{productStockAlert(selectedVariant)}</p>
+                            ) : null}
+                            <div className="actions">
+                              {selectedQty === 0 ? (
+                                <button type="button" onClick={() => addProduct(product.id, selectedVariant.id)}>
+                                  Agregar al carrito
+                                </button>
+                              ) : (
+                                <div className="qty-control">
+                                  <button
+                                    type="button"
+                                    className="secondary"
+                                    onClick={() => decreaseProduct(product.id, selectedVariant.id)}
+                                  >
+                                    -
+                                  </button>
+                                  <span>{selectedQty}</span>
+                                  <button type="button" onClick={() => addProduct(product.id, selectedVariant.id)}>
+                                    +
+                                  </button>
+                                </div>
+                              )}
+                              <button type="button" className="secondary" onClick={() => openQuickView(product)}>
+                                Ver multimedia
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </article>
                   ))}
               </div>
             </div>
           ))}
-        </section>
-
-        <section className="section">
-          <div className="section-head">
-            <div>
-              <h2>Ideas para la siguiente fase</h2>
-              <p className="muted">Aqui puedes ver el tipo de mejoras que tendria sentido priorizar despues de esta base.</p>
-            </div>
-          </div>
-          <div className="idea-grid">
-            {ideaCards.map((idea) => (
-              <article key={idea.title} className="card idea-card">
-                <h3>{idea.title}</h3>
-                <p className="muted">{idea.description}</p>
-              </article>
-            ))}
-          </div>
         </section>
 
         <section id="checkout" className="section">
@@ -379,12 +351,12 @@ export default function HomePage() {
                 {isSubmitting ? "Enviando..." : "Confirmar Pedido"}
               </button>
               {message ? <p className="muted">{message}</p> : null}
-              <p className="muted">Al confirmar se registra en estado PENDING y luego lo actualizas en admin.</p>
+              <p className="muted">Tu pedido queda registrado y se confirma por contacto directo.</p>
             </form>
 
             <article className="card">
               <h3>Contacto rapido</h3>
-              <p className="muted">Si prefieres cerrar por chat, envianos el carrito por WhatsApp.</p>
+              <p className="muted">Si prefieres cerrar por chat, envia el detalle directamente al 43132549.</p>
               <a className="quick-link" href={whatsappHref} target="_blank" rel="noreferrer">
                 Enviar carrito por WhatsApp
               </a>
@@ -406,15 +378,16 @@ export default function HomePage() {
                   <p className="muted">{item.variant.label}</p>
                 </div>
                 <div className="floating-cart-line">
-                  <span>x {item.qty}</span>
-                  <span>Q {item.subTotal.toFixed(2)}</span>
                   <button
                     type="button"
                     className="secondary"
-                    onClick={() => removeProduct(item.product.id, item.variant.id)}
+                    onClick={() => decreaseProduct(item.product.id, item.variant.id)}
                   >
-                    Quitar
+                    -
                   </button>
+                  <span>{item.qty}</span>
+                  <button type="button" onClick={() => addProduct(item.product.id, item.variant.id)}>+</button>
+                  <span>Q {item.subTotal.toFixed(2)}</span>
                 </div>
               </li>
             ))}
@@ -427,7 +400,7 @@ export default function HomePage() {
       </aside>
 
       <a className="whatsapp-float" href={whatsappHref} target="_blank" rel="noreferrer">
-        WhatsApp
+        WhatsApp 43132549
       </a>
 
       {quickViewProduct ? (
@@ -441,57 +414,87 @@ export default function HomePage() {
             </div>
             <p className="muted">{quickViewProduct.description}</p>
             <div className="modal-media">
-              <div className="card">
-                <h4>Galeria de fotos</h4>
-                {quickViewProduct.media?.photos.length ? (
-                  <ul>
-                    {quickViewProduct.media.photos.map((photo) => (
-                      <li key={photo}>{photo}</li>
+              {quickViewSlides.length ? (
+                <>
+                  <div className="carousel-stage">
+                    {quickViewSlides[quickViewSlide]?.type === "photo" ? (
+                      <Image
+                        src={quickViewSlides[quickViewSlide].src}
+                        alt={quickViewProduct.name}
+                        width={960}
+                        height={540}
+                        sizes="(max-width: 900px) 92vw, 800px"
+                      />
+                    ) : (
+                      <video controls src={quickViewSlides[quickViewSlide].src} />
+                    )}
+                  </div>
+                  <div className="carousel-controls">
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() =>
+                        setQuickViewSlide((prev) =>
+                          prev === 0 ? quickViewSlides.length - 1 : prev - 1
+                        )
+                      }
+                    >
+                      Anterior
+                    </button>
+                    <span>
+                      {quickViewSlide + 1} / {quickViewSlides.length}
+                    </span>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() =>
+                        setQuickViewSlide((prev) =>
+                          prev === quickViewSlides.length - 1 ? 0 : prev + 1
+                        )
+                      }
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                  <div className="carousel-thumbs">
+                    {quickViewSlides.map((slide, index) => (
+                      <button
+                        key={`${slide.src}-${index}`}
+                        type="button"
+                        className={index === quickViewSlide ? "secondary" : ""}
+                        onClick={() => setQuickViewSlide(index)}
+                      >
+                        {slide.type === "photo" ? `Foto ${index + 1}` : `Video ${index + 1}`}
+                      </button>
                     ))}
-                  </ul>
-                ) : (
-                  <p className="muted">Pendiente de subir fotos.</p>
-                )}
-              </div>
+                  </div>
+                </>
+              ) : (
+                <p className="muted">Proximamente, ya ire subiendo fotos y videos para este producto.</p>
+              )}
               <div className="card">
-                <h4>Videos</h4>
-                {quickViewProduct.category === "camarones" ? (
-                  quickViewProduct.media?.videos.length ? (
-                    <ul>
-                      {quickViewProduct.media.videos.map((video) => (
-                        <li key={video}>{video}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="muted">Pendiente de subir videos.</p>
-                  )
-                ) : (
-                  <p className="muted">Este producto no requiere video por ahora.</p>
-                )}
+                <h4>Opciones disponibles</h4>
+                <div className="variant-picker">
+                  {quickViewProduct.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      className={selectedVariants[quickViewProduct.id] === variant.id ? "secondary" : ""}
+                      onClick={() => setSelectedVariant(quickViewProduct.id, variant.id)}
+                    >
+                      {variant.label} - Q {variant.price.toFixed(2)}
+                    </button>
+                  ))}
+                </div>
+                <div className="actions">
+                  <button
+                    type="button"
+                    onClick={() => addProduct(quickViewProduct.id, getSelectedVariant(quickViewProduct).id)}
+                  >
+                    Agregar al carrito
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="variant-picker">
-              {quickViewProduct.variants.map((variant) => (
-                <button
-                  key={variant.id}
-                  type="button"
-                  className={quickViewVariantId === variant.id ? "secondary" : ""}
-                  onClick={() => setQuickViewVariantId(variant.id)}
-                >
-                  {variant.label} - Q {variant.price.toFixed(2)}
-                </button>
-              ))}
-            </div>
-            <div className="actions">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!quickViewVariant) return;
-                  addProduct(quickViewProduct.id, quickViewVariant.id);
-                }}
-              >
-                Agregar al carrito
-              </button>
             </div>
           </article>
         </div>

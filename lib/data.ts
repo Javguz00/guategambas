@@ -6,17 +6,17 @@ export const products: Product[] = [
   {
     id: "bloody-mary",
     name: "Bloody Mary",
-    category: "camarones",
-    description: "Neocaridina roja intensa, ideal para iniciar o ampliar colonias.",
-    highlight: "Lanzamiento",
-    note: "Promocion 5 + 1 por lanzamiento.",
+    category: "neocaridinas",
+    description: "Linea roja intensa de Neocaridina para acuarios plantados y comunitarios.",
+    highlight: "Disponible",
+    note: "Promocion activa por lanzamiento.",
     variants: [
       {
-        id: "bm-5",
-        label: "Pack 5",
-        unitLabel: "5 unidades",
-        price: 150,
-        highlight: "Precio base"
+        id: "bm-unit",
+        label: "Unidad",
+        unitLabel: "1 unidad",
+        price: 25,
+        highlight: "Desde Q25"
       },
       {
         id: "bm-5-plus-1",
@@ -27,15 +27,19 @@ export const products: Product[] = [
       }
     ],
     media: {
-      photos: [],
+      photos: [
+        "/photos/bloody-mary/20251009_210314.jpg",
+        "/photos/bloody-mary/20251115_160225.jpg",
+        "/photos/bloody-mary/20251115_160333.jpg"
+      ],
       videos: []
     }
   },
   {
     id: "cherry",
     name: "Cherry",
-    category: "camarones",
-    description: "Linea Cherry para acuarios comunitarios y plantados.",
+    category: "neocaridinas",
+    description: "Neocaridina Cherry para colonias estables y de facil mantenimiento.",
     highlight: "Entrada",
     note: "Disponible por unidad y pack promocional.",
     variants: [
@@ -61,8 +65,8 @@ export const products: Product[] = [
   {
     id: "golden-bee",
     name: "Golden Bee",
-    category: "camarones",
-    description: "Caridina selecta con patron dorado para gambarios dedicados.",
+    category: "caridinas",
+    description: "Caridina selecta con patron dorado para proyectos especializados.",
     highlight: "Selecta",
     note: "Venta por pack de 5.",
     variants: [
@@ -82,7 +86,7 @@ export const products: Product[] = [
     id: "fluval-stratum",
     name: "Fluval Stratum",
     category: "insumos",
-    description: "Sustrato activo para gambario, formato por libra.",
+    description: "Sustrato activo para estabilidad de parametros en acuarios de invertebrados.",
     highlight: "Stock real",
     note: "Actualmente hay 5 libras disponibles.",
     variants: [
@@ -104,7 +108,7 @@ export const products: Product[] = [
     id: "salty-shrimp-gh",
     name: "Salty Shrimp GH+",
     category: "insumos",
-    description: "Porciones para garrafon de agua desmineralizada en sistemas de caridinas.",
+    description: "Mineralizador GH+ para preparar agua desmineralizada en sistemas de caridinas.",
     highlight: "Ajuste",
     variants: [
       {
@@ -130,7 +134,7 @@ export const products: Product[] = [
     id: "sponge-filter",
     name: "Filtro de pulmon",
     category: "insumos",
-    description: "Filtro de pulmon con material Bio Beds y bolitas hollow para bacterias.",
+    description: "Sistema de filtracion con material Bio Beds y bolitas hollow para bacterias.",
     highlight: "Equipo",
     note: "No incluye bomba oxigenadora.",
     variants: [
@@ -150,7 +154,7 @@ export const products: Product[] = [
     id: "catappa-leaves",
     name: "Hojas de catappa",
     category: "insumos",
-    description: "Hojas para acondicionamiento natural y taninos en el gambario.",
+    description: "Aporte natural de taninos para acondicionamiento de agua.",
     highlight: "Natural",
     note: "2 bolsas de 10 por Q50 con envio incluido a zonas aledanas.",
     variants: [
