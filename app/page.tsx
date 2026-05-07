@@ -255,34 +255,34 @@ export default function HomePage() {
         <section className="hero">
           <div className="hero-bar">
             <div>
-              <span className="badge">Catálogo listo para vender</span>
-              <h1>Compra simple, rápida y clara.</h1>
+              <span className="badge">Venta directa</span>
+              <h1>Elige, agrega y compra sin rodeos.</h1>
             </div>
             <a className="quick-link" href={whatsappHref} target="_blank" rel="noreferrer">
-              Pedir por WhatsApp
+              Comprar por WhatsApp
             </a>
           </div>
           <div className="hero-summary">
             <article className="summary-card accent-card">
-              <span className="summary-label">Stock</span>
-              <strong>Productos con variantes y precios visibles</strong>
-              <p>La compra se arma desde la misma ficha, sin pasos extra.</p>
+              <span className="summary-label">Compra clara</span>
+              <strong>Precios y variantes visibles desde el inicio</strong>
+              <p>Todo lo importante está a la vista para decidir rápido.</p>
             </article>
             <article className="summary-card">
-              <span className="summary-label">Comodidad</span>
-              <strong>Carrito fijo y pedido directo</strong>
-              <p>El usuario ve lo que lleva comprado y pasa al checkout cuando quiera.</p>
+              <span className="summary-label">Pedido cómodo</span>
+              <strong>Carrito fijo, checkout corto y WhatsApp directo</strong>
+              <p>Comprar queda en pocos pasos y sin fricción.</p>
             </article>
             <article className="summary-card">
-              <span className="summary-label">Atajos</span>
-              <strong>Secciones claras para navegar rápido</strong>
-              <p>Caridinas, neocaridinas, suplementos y accesorios separados.</p>
+              <span className="summary-label">Navegación</span>
+              <strong>Secciones separadas para moverse más rápido</strong>
+              <p>Caridinas, neocaridinas, suplementos y accesorios ordenados.</p>
             </article>
           </div>
           <div className="hero-tags hero-tags-tight">
-            <a href="#catalogo">Ver catálogo</a>
-            <a href="#checkout">Ir a comprar</a>
-            <a href="/admin">Panel admin</a>
+            <a href="#catalogo">Explorar productos</a>
+            <a href="#checkout">Finalizar pedido</a>
+            <a href="/admin">Administración</a>
           </div>
         </section>
 
@@ -300,8 +300,8 @@ export default function HomePage() {
         <section id="catalogo" className="section">
           <div className="section-head">
             <div>
-              <h2>Catálogo</h2>
-              <p className="muted">Explora por categoría, elige una variante y agrégala al carrito.</p>
+              <h2>Productos disponibles</h2>
+              <p className="muted">Selecciona una categoría, elige variante y agrégala al carrito.</p>
             </div>
           </div>
 
@@ -312,7 +312,7 @@ export default function HomePage() {
                   <h3>{section.title}</h3>
                   <p className="muted">{section.description}</p>
                 </div>
-                <span className="group-count">{categoryAnchors.find((item) => item.id === section.id)?.count} items</span>
+                <span className="group-count">{categoryAnchors.find((item) => item.id === section.id)?.count} productos</span>
               </div>
               <div className="product-grid">
                 {products
@@ -382,25 +382,25 @@ export default function HomePage() {
         </section>
 
         <section id="checkout" className="section">
-          <h2>Checkout</h2>
+          <h2>Finalizar pedido</h2>
           <div className="checkout-grid">
             <form className="card order-form" onSubmit={submitOrder}>
-              <input name="customerName" placeholder="Nombre" required />
-              <input name="whatsapp" placeholder="WhatsApp" required />
-              <input name="city" placeholder="Ciudad" required />
-              <textarea name="notes" rows={4} placeholder="Notas (opcional): zona, horario, referencia" />
+              <input name="customerName" placeholder="Tu nombre" required />
+              <input name="whatsapp" placeholder="Tu WhatsApp" required />
+              <input name="city" placeholder="Ciudad o zona" required />
+              <textarea name="notes" rows={4} placeholder="Notas de entrega, horario o referencia" />
               <button type="submit" disabled={isSubmitting || cartDetail.length === 0}>
-                {isSubmitting ? "Enviando..." : "Confirmar Pedido"}
+                {isSubmitting ? "Enviando..." : "Confirmar pedido"}
               </button>
               {message ? <p className="muted">{message}</p> : null}
-              <p className="muted">Tu pedido queda registrado y se confirma por contacto directo.</p>
+              <p className="muted">Tu pedido queda registrado y te respondemos por contacto directo.</p>
             </form>
 
             <article className="card">
-              <h3>Contacto rapido</h3>
-              <p className="muted">Si prefieres cerrar por chat, envia el detalle directamente al 43132549.</p>
+              <h3>Compra asistida</h3>
+              <p className="muted">Si prefieres cerrar por chat, envía el carrito directo al 43132549.</p>
               <a className="quick-link" href={whatsappHref} target="_blank" rel="noreferrer">
-                Enviar carrito por WhatsApp
+                Enviar pedido por WhatsApp
               </a>
             </article>
           </div>
@@ -408,9 +408,9 @@ export default function HomePage() {
       </main>
 
       <aside className="floating-cart card">
-        <h3>Carrito ({totalItems})</h3>
+        <h3>Tu carrito ({totalItems})</h3>
         {cartDetail.length === 0 ? (
-          <p className="muted">Agrega productos para iniciar tu pedido.</p>
+          <p className="muted">Agrega productos para empezar a comprar.</p>
         ) : (
           <ul>
             {cartDetail.map((item) => (
@@ -435,9 +435,9 @@ export default function HomePage() {
             ))}
           </ul>
         )}
-        <p className="cart-total">Total: Q {total.toFixed(2)}</p>
+        <p className="cart-total">Total estimado: Q {total.toFixed(2)}</p>
         <a className="checkout-link" href="#checkout">
-          Ir al checkout
+          Ir a finalizar
         </a>
       </aside>
 

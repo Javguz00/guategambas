@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
+import { sanitizeOrderPayload } from "@/lib/security";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    console.log("[test-orders] received payload:", JSON.stringify(body));
+    const sanitized = sanitizeOrderPayload(await request.json());
 
-    // Basic validation similar to real endpoint
-    if (!body.customerName || !body.whatsapp || !body.city || !Array.isArray(body.items) || body.items.length === 0) {
+    if (!sanitized) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
 
     const fakeOrder = {
       id: `test_${Date.now()}`,
-      ...body,
+      ...sanitized,
       createdAt: new Date().toISOString()
     };
 

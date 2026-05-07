@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { sanitizeOrderPayload } from "@/lib/security";
 
 const allowedStatus = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
-
-type ApiOrderItem = {
-  productId: string;
-  variantId: string;
-  name: string;
-  variantLabel: string;
-  category: string;
-  unit: string;
-  unitPrice: number;
-  quantity: number;
-};
 
 function buildDate(value: string | null) {
   if (!value) return undefined;
@@ -48,43 +39,20 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as {
-    customerName: string;
-    whatsapp: string;
-    city: string;
-    notes?: string;
-    items: ApiOrderItem[];
-    total: number;
-  };
+  const sanitized = sanitizeOrderPayload(await request.json());
 
-  if (!body.customerName || !body.whatsapp || !body.city || !Array.isArray(body.items) || body.items.length === 0) {
+  if (!sanitized) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
-  }
-
-  const invalidItem = body.items.find(
-    (item) =>
-      !item.productId ||
-      !item.variantId ||
-      !item.name ||
-      !item.variantLabel ||
-      !item.category ||
-      !item.unit ||
-      Number(item.unitPrice) <= 0 ||
-      Number(item.quantity) <= 0
-  );
-
-  if (invalidItem) {
-    return NextResponse.json({ error: "Items invalidos en el pedido" }, { status: 400 });
   }
 
   const order = await prisma.order.create({
     data: {
-      customerName: body.customerName,
-      whatsapp: body.whatsapp,
-      city: body.city,
-      notes: body.notes || "",
-      items: body.items,
-      total: Number(body.total || 0)
+      customerName: sanitized.customerName,
+      whatsapp: sanitized.whatsapp,
+      city: sanitized.city,
+      notes: sanitized.notes,
+      items: sanitized.items as unknown as Prisma.InputJsonValue,
+      total: sanitized.total
     }
   });
 
