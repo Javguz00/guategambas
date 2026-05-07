@@ -24,9 +24,12 @@ export interface SanitizedOrderPayload {
   customerName: string;
   whatsapp: string;
   city: string;
+  departamento?: string;
+  paymentMethod: "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA";
   notes: string;
   items: SanitizedOrderItem[];
   total: number;
+  shippingCost: number;
 }
 
 export function cleanText(value: unknown, maxLength: number) {
@@ -84,16 +87,27 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
     customerName?: unknown;
     whatsapp?: unknown;
     city?: unknown;
+    departamento?: unknown;
+    paymentMethod?: unknown;
     notes?: unknown;
     items?: unknown;
     total?: unknown;
+    shippingCost?: unknown;
   };
 
   const customerName = cleanText(candidate.customerName, 80);
   const whatsapp = normalizeWhatsapp(candidate.whatsapp);
   const city = cleanText(candidate.city, 80);
+  const departamento = cleanText(candidate.departamento, 80) || undefined;
   const notes = cleanText(candidate.notes, 240);
   const total = normalizeNumber(candidate.total);
+  const shippingCost = normalizeNumber(candidate.shippingCost) || 0;
+
+  // Validar paymentMethod
+  const paymentMethod = candidate.paymentMethod as unknown;
+  if (paymentMethod !== "DEPOSITO_PREVIO" && paymentMethod !== "PAGO_CONTRAENTREGA") {
+    return null;
+  }
 
   if (!customerName || !whatsapp || !city || !Array.isArray(candidate.items) || candidate.items.length === 0) {
     return null;
@@ -112,8 +126,11 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
     customerName,
     whatsapp,
     city,
+    departamento,
+    paymentMethod: paymentMethod as "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA",
     notes,
     items: items as SanitizedOrderItem[],
-    total
+    total,
+    shippingCost
   };
 }

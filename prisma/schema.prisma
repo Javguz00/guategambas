@@ -13,14 +13,32 @@ enum OrderStatus {
   DELIVERED
 }
 
+enum PaymentMethod {
+  DEPOSITO_PREVIO
+  PAGO_CONTRAENTREGA
+}
+
 model Order {
-  id           String   @id @default(cuid())
-  customerName String
-  whatsapp     String
-  city         String
-  notes        String?
-  items        Json
-  total        Float
-  status       OrderStatus @default(PENDING)
-  createdAt    DateTime @default(now())
+  id              String        @id @default(cuid())
+  customerName    String
+  whatsapp        String
+  city            String
+  departamento    String?
+  paymentMethod   PaymentMethod @default(PAGO_CONTRAENTREGA)
+  notes           String?
+  items           Json
+  total           Float
+  shippingCost    Float         @default(0)
+  status          OrderStatus   @default(PENDING)
+  createdAt       DateTime      @default(now())
+}
+
+model CatalogVariantState {
+  productId      String
+  variantId      String
+  stockAvailable Int?
+  isActive       Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+
+  @@id([productId, variantId])
 }

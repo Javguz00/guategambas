@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import "./theme.css";
 
 export const metadata: Metadata = {
-  title: "GuateGambas | E-commerce Demo",
-  description: "Proyecto de portafolio con frontend, backend y pedidos para gambas ornamentales."
+  title: "GuateGambas | Catálogo y pedidos",
+  description: "Catálogo de gambas ornamentales y accesorios con pedido por WhatsApp y panel privado."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

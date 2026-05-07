@@ -1,9 +1,11 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { products } from "@/lib/data";
 import { OrderItem, Product, ProductVariant } from "@/lib/types";
+import { getVariantAvailabilityLabel, getVariantMedia } from "@/lib/catalog";
+import { calculateShipping } from "@/lib/shipping";
 
 interface CartLine {
   productId: string;
@@ -22,6 +24,9 @@ export default function HomePage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [catalogProducts, setCatalogProducts] = useState(products);
+  const [departamento, setDepartamento] = useState("Guatemala");
+  const [paymentMethod, setPaymentMethod] = useState<"DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA">("PAGO_CONTRAENTREGA");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(() =>
     products.reduce<Record<string, string>>((acc, product) => {
       acc[product.id] = product.variants[0]?.id || "";
@@ -32,22 +37,40 @@ export default function HomePage() {
   const [quickViewSlide, setQuickViewSlide] = useState(0);
 
   const quickViewProduct = useMemo(
-    () => products.find((item) => item.id === quickViewProductId) || null,
-    [quickViewProductId]
+    () => catalogProducts.find((item) => item.id === quickViewProductId) || null,
+    [catalogProducts, quickViewProductId]
   );
 
-  const quickViewSlides = useMemo<MediaSlide[]>(() => {
-    if (!quickViewProduct?.media) return [];
-    return [
-      ...quickViewProduct.media.photos.map((src) => ({ type: "photo" as const, src })),
-      ...quickViewProduct.media.videos.map((src) => ({ type: "video" as const, src }))
-    ];
-  }, [quickViewProduct]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalog() {
+      try {
+        const response = await fetch("/api/catalog");
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { products?: Product[] };
+        if (!cancelled && Array.isArray(data.products)) {
+          setCatalogProducts(data.products);
+        }
+      } catch {
+        if (!cancelled) {
+          setCatalogProducts(products);
+        }
+      }
+    }
+
+    void loadCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const cartDetail = useMemo(() => {
     return cart
       .map((line) => {
-        const found = products.find((product) => product.id === line.productId);
+        const found = catalogProducts.find((product) => product.id === line.productId);
         if (!found) return null;
         const foundVariant = found.variants.find((variant) => variant.id === line.variantId);
         if (!foundVariant) return null;
@@ -60,22 +83,34 @@ export default function HomePage() {
         };
       })
       .filter(Boolean) as Array<{ product: Product; variant: ProductVariant; qty: number; subTotal: number }>;
-  }, [cart]);
+  }, [cart, catalogProducts]);
 
   const total = useMemo(() => cartDetail.reduce((acc, item) => acc + item.subTotal, 0), [cartDetail]);
+
+  const shippingInfo = useMemo(() => {
+    const cartItems = cartDetail.map((item) => ({
+      productId: item.product.id,
+      variantId: item.variant.id,
+      quantity: item.qty,
+      price: item.variant.price
+    }));
+
+    return calculateShipping({
+      departamento,
+      paymentMethod,
+      orderTotal: total,
+      cartItems
+    });
+  }, [departamento, paymentMethod, total, cartDetail]);
+
+  const finalTotal = useMemo(() => total + (shippingInfo.isValid ? shippingInfo.shippingCost : 0), [total, shippingInfo]);
 
   const totalItems = useMemo(
     () => cartDetail.reduce((acc, item) => acc + item.qty, 0),
     [cartDetail]
   );
 
-  const whatsappHref = useMemo(() => {
-    const lines = cartDetail.map((item) => `${item.product.name} - ${item.variant.label} x ${item.qty}`);
-    const text = lines.length
-      ? `Hola, quiero confirmar este pedido:\n${lines.join("\n")}\n\nTotal estimado: Q ${total.toFixed(2)}`
-      : "Hola, quiero informacion de disponibilidad y precios.";
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
-  }, [cartDetail, total]);
+  const contactWhatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`;
 
   const catalogSections = useMemo(
     () => [
@@ -107,15 +142,29 @@ export default function HomePage() {
     () =>
       catalogSections.map((section) => ({
         ...section,
-        count: products.filter((product) => product.category === section.id).length
+        count: catalogProducts.filter((product) => product.category === section.id).length
       })),
-    [catalogSections]
+    [catalogSections, catalogProducts]
   );
 
-  function getSelectedVariant(product: Product) {
-    const selected = selectedVariants[product.id];
-    return product.variants.find((variant) => variant.id === selected) || product.variants[0];
-  }
+  const getSelectedVariant = useCallback(
+    (product: Product) => {
+      const selected = selectedVariants[product.id];
+      return product.variants.find((variant) => variant.id === selected) || product.variants[0];
+    },
+    [selectedVariants]
+  );
+
+  const quickViewSlides = useMemo<MediaSlide[]>(() => {
+    if (!quickViewProduct) return [];
+    const selectedVariant = getSelectedVariant(quickViewProduct);
+    const media = getVariantMedia(quickViewProduct, selectedVariant);
+    if (!media) return [];
+    return [
+      ...media.photos.map((src) => ({ type: "photo" as const, src })),
+      ...media.videos.map((src) => ({ type: "video" as const, src }))
+    ];
+  }, [quickViewProduct, getSelectedVariant]);
 
   function setSelectedVariant(productId: string, variantId: string) {
     setSelectedVariants((prev) => ({ ...prev, [productId]: variantId }));
@@ -128,7 +177,7 @@ export default function HomePage() {
   function addProduct(productId: string, variantId: string) {
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === productId && item.variantId === variantId);
-      const product = products.find((item) => item.id === productId);
+      const product = catalogProducts.find((item) => item.id === productId);
       const variant = product?.variants.find((item) => item.id === variantId);
 
       if (!product || !variant) {
@@ -136,7 +185,7 @@ export default function HomePage() {
       }
 
       const nextQty = (existing?.qty || 0) + 1;
-      if (typeof variant.stockAvailable === "number" && nextQty > variant.stockAvailable) {
+      if (variant.isActive === false || (typeof variant.stockAvailable === "number" && nextQty > variant.stockAvailable)) {
         setMessage(`Sin stock suficiente para ${product.name} - ${variant.label}.`);
         return prev;
       }
@@ -178,12 +227,7 @@ export default function HomePage() {
   }
 
   function productStockAlert(variant: ProductVariant) {
-    if (typeof variant.stockAvailable !== "number") return null;
-    if (variant.stockAvailable <= 0) return "Agotado";
-    if (typeof variant.lowStockThreshold === "number" && variant.stockAvailable <= variant.lowStockThreshold) {
-      return `Pocas unidades: ${variant.stockAvailable}`;
-    }
-    return `Disponibles: ${variant.stockAvailable}`;
+    return getVariantAvailabilityLabel(variant);
   }
 
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
@@ -195,24 +239,59 @@ export default function HomePage() {
       return;
     }
 
+    // Validar que la orden sea válida (no tiene gambitas en inter-departamental)
+    if (!shippingInfo.isValid) {
+      setMessage(shippingInfo.message || "No se puede completar este pedido.");
+      return;
+    }
+
     const form = new FormData(event.currentTarget);
+    const customerName = String(form.get("customerName") || "");
+    const customerWhatsapp = String(form.get("whatsapp") || "");
+    const city = String(form.get("city") || "");
+    const notes = String(form.get("notes") || "");
+    const items = cartDetail.map<OrderItem>((item) => ({
+      productId: item.product.id,
+      variantId: item.variant.id,
+      name: item.product.name,
+      variantLabel: item.variant.label,
+      category: item.product.category,
+      unit: item.variant.unitLabel,
+      unitPrice: item.variant.price,
+      quantity: item.qty
+    }));
+
     const payload = {
-      customerName: String(form.get("customerName") || ""),
-      whatsapp: String(form.get("whatsapp") || ""),
-      city: String(form.get("city") || ""),
-      notes: String(form.get("notes") || ""),
-      items: cartDetail.map<OrderItem>((item) => ({
-        productId: item.product.id,
-        variantId: item.variant.id,
-        name: item.product.name,
-        variantLabel: item.variant.label,
-        category: item.product.category,
-        unit: item.variant.unitLabel,
-        unitPrice: item.variant.price,
-        quantity: item.qty
-      })),
-      total
+      customerName,
+      whatsapp: customerWhatsapp,
+      city,
+      departamento,
+      paymentMethod,
+      notes,
+      items,
+      total,
+      shippingCost: shippingInfo.shippingCost
     };
+
+    const shippingLine = shippingInfo.shippingCost > 0 ? `Envío FORZA Delivery (+3.8%): Q ${shippingInfo.shippingCost.toFixed(2)}` : "Envío: Incluido / Deposito previo";
+
+    const whatsappLines = [
+      "Hola, quiero confirmar este pedido:",
+      ...cartDetail.map((item) => `${item.product.name} - ${item.variant.label} x ${item.qty}`),
+      "",
+      `Cliente: ${customerName}`,
+      `WhatsApp: ${customerWhatsapp}`,
+      `Ciudad: ${city}`,
+      `Departamento: ${departamento}`,
+      `Método de pago: ${paymentMethod === "DEPOSITO_PREVIO" ? "Depósito previo" : "Pago contra entrega"}`,
+      notes ? `Notas: ${notes}` : "",
+      "---",
+      `Subtotal: Q ${total.toFixed(2)}`,
+      shippingLine,
+      `Total: Q ${finalTotal.toFixed(2)}`
+    ].filter(Boolean);
+
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappLines.join("\n"))}`;
 
     setIsSubmitting(true);
     try {
@@ -228,9 +307,16 @@ export default function HomePage() {
         throw new Error("Error al crear pedido");
       }
 
-      setMessage("Pedido recibido correctamente. Si deseas, puedes confirmarlo tambien por WhatsApp.");
+      const popup = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+      if (!popup) {
+        window.location.assign(whatsappUrl);
+      }
+
+      setMessage("Pedido listo. Se abrió WhatsApp con tu resumen y el pedido quedó registrado.");
       setCart([]);
       event.currentTarget.reset();
+      setDepartamento("Guatemala");
+      setPaymentMethod("PAGO_CONTRAENTREGA");
     } catch {
       setMessage("No se pudo enviar el pedido. Intenta de nuevo.");
     } finally {
@@ -242,10 +328,10 @@ export default function HomePage() {
     <>
       <header className="header">
         <div className="container header-inner">
-          <div className="brand">Guate<span>Shrimp</span></div>
+          <div className="brand">Guate<span>Gambas</span></div>
           <nav className="nav">
             <a href="#catalogo">Catálogo</a>
-            <a href="#checkout">Checkout</a>
+            <a href="#checkout">Pedido</a>
             <a href="/admin">Admin</a>
           </nav>
         </div>
@@ -256,27 +342,27 @@ export default function HomePage() {
           <div className="hero-bar">
             <div>
               <span className="badge">Venta directa</span>
-              <h1>Elige, agrega y compra sin rodeos.</h1>
+              <h1>Gambas y accesorios para tu acuario.</h1>
             </div>
-            <a className="quick-link" href={whatsappHref} target="_blank" rel="noreferrer">
-              Comprar por WhatsApp
+            <a className="quick-link" href="#catalogo">
+              Ver catálogo
             </a>
           </div>
           <div className="hero-summary">
             <article className="summary-card accent-card">
-              <span className="summary-label">Compra clara</span>
-              <strong>Precios y variantes visibles desde el inicio</strong>
-              <p>Todo lo importante está a la vista para decidir rápido.</p>
+              <span className="summary-label">Ubicación</span>
+              <strong>Zona 8 - Entrega y compra en local</strong>
+              <p>Retira tus pedidos directamente en nuestras instalaciones en Ciudad de Guatemala.</p>
             </article>
             <article className="summary-card">
-              <span className="summary-label">Pedido cómodo</span>
-              <strong>Carrito fijo, checkout corto y WhatsApp directo</strong>
-              <p>Comprar queda en pocos pasos y sin fricción.</p>
+              <span className="summary-label">Envío gratis</span>
+              <strong>Costo Q 0 con compras desde Q 50</strong>
+              <p>Entrega rápida a domicilio en zona 8 y alrededores sin costo adicional.</p>
             </article>
             <article className="summary-card">
-              <span className="summary-label">Navegación</span>
-              <strong>Secciones separadas para moverse más rápido</strong>
-              <p>Caridinas, neocaridinas, suplementos y accesorios ordenados.</p>
+              <span className="summary-label">Pedido seguro</span>
+              <strong>Confirma por WhatsApp, paga al retirar</strong>
+              <p>Proceso simple: agrega al carrito, confirma por WhatsApp y completa tu compra.</p>
             </article>
           </div>
           <div className="hero-tags hero-tags-tight">
@@ -306,7 +392,7 @@ export default function HomePage() {
           </div>
 
           {catalogSections.map((section) => (
-            <div key={section.id} className="catalog-group">
+            <div key={section.id} id={section.id} className="catalog-group">
               <div className="catalog-group-head">
                 <div>
                   <h3>{section.title}</h3>
@@ -315,17 +401,24 @@ export default function HomePage() {
                 <span className="group-count">{categoryAnchors.find((item) => item.id === section.id)?.count} productos</span>
               </div>
               <div className="product-grid">
-                {products
+                {catalogProducts
                   .filter((product) => product.category === section.id)
                   .map((product) => (
                     <article key={product.id} className="product-card">
                       {(() => {
                         const selectedVariant = getSelectedVariant(product);
                         const selectedQty = getCartQty(product.id, selectedVariant.id);
+                        const stockLabel = getVariantAvailabilityLabel(selectedVariant);
+                        const stockAvailable = selectedVariant.stockAvailable;
+                        const canAdd =
+                          selectedVariant.isActive !== false &&
+                          (typeof stockAvailable !== "number" || stockAvailable > selectedQty);
                         return (
                           <>
                             <div className="product-card-top">
-                              <span className="badge badge-soft">{product.highlight || "Disponible"}</span>
+                              <span className={`badge badge-soft ${stockLabel === "Agotado" || stockLabel === "No disponible" ? "badge-danger" : ""}`}>
+                                {stockLabel}
+                              </span>
                               <span className="product-price">Q {selectedVariant.price.toFixed(2)}</span>
                             </div>
                             <h3>{product.name}</h3>
@@ -336,7 +429,8 @@ export default function HomePage() {
                                 <button
                                   key={variant.id}
                                   type="button"
-                                  className={selectedVariant.id === variant.id ? "secondary" : ""}
+                                  className={selectedVariant.id === variant.id ? "variant-button active" : "variant-button"}
+                                  aria-pressed={selectedVariant.id === variant.id}
                                   onClick={() => setSelectedVariant(product.id, variant.id)}
                                 >
                                   {variant.label} - Q {variant.price.toFixed(2)}
@@ -349,8 +443,8 @@ export default function HomePage() {
                             ) : null}
                             <div className="actions">
                               {selectedQty === 0 ? (
-                                <button type="button" onClick={() => addProduct(product.id, selectedVariant.id)}>
-                                  Agregar al carrito
+                                <button type="button" disabled={!canAdd} onClick={() => addProduct(product.id, selectedVariant.id)}>
+                                  {canAdd ? "Agregar al carrito" : "Agotado"}
                                 </button>
                               ) : (
                                 <div className="qty-control">
@@ -362,7 +456,7 @@ export default function HomePage() {
                                     -
                                   </button>
                                   <span>{selectedQty}</span>
-                                  <button type="button" onClick={() => addProduct(product.id, selectedVariant.id)}>
+                                  <button type="button" disabled={!canAdd} onClick={() => addProduct(product.id, selectedVariant.id)}>
                                     +
                                   </button>
                                 </div>
@@ -388,20 +482,80 @@ export default function HomePage() {
               <input name="customerName" placeholder="Tu nombre" required />
               <input name="whatsapp" placeholder="Tu WhatsApp" required />
               <input name="city" placeholder="Ciudad o zona" required />
+              
+              <fieldset>
+                <legend>Departamento</legend>
+                <select value={departamento} onChange={(e) => setDepartamento(e.target.value)} required>
+                  <option value="Guatemala">Guatemala (sin cargo)</option>
+                  <option value="Alta Verapaz">Alta Verapaz</option>
+                  <option value="Baja Verapaz">Baja Verapaz</option>
+                  <option value="Chimaltenango">Chimaltenango</option>
+                  <option value="Chiquimula">Chiquimula</option>
+                  <option value="El Progreso">El Progreso</option>
+                  <option value="Escuintla">Escuintla</option>
+                  <option value="Huehuetenango">Huehuetenango</option>
+                  <option value="Izabal">Izabal</option>
+                  <option value="Jalapa">Jalapa</option>
+                  <option value="Jutiapa">Jutiapa</option>
+                  <option value="Petén">Petén</option>
+                  <option value="Quetzaltenango">Quetzaltenango</option>
+                  <option value="Quiché">Quiché</option>
+                  <option value="Retalhuleu">Retalhuleu</option>
+                  <option value="Sacatepéquez">Sacatepéquez</option>
+                  <option value="San Marcos">San Marcos</option>
+                  <option value="Santa Rosa">Santa Rosa</option>
+                  <option value="Santiago Sacatepéquez">Santiago Sacatepéquez</option>
+                  <option value="Sololá">Sololá</option>
+                  <option value="Suchitepéquez">Suchitepéquez</option>
+                  <option value="Totonicapán">Totonicapán</option>
+                  <option value="Zacapa">Zacapa</option>
+                </select>
+              </fieldset>
+
+              <fieldset>
+                <legend>Forma de pago</legend>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="DEPOSITO_PREVIO"
+                      checked={paymentMethod === "DEPOSITO_PREVIO"}
+                      onChange={() => setPaymentMethod("DEPOSITO_PREVIO")}
+                    />
+                    Depósito previo (precio catálogo)
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="PAGO_CONTRAENTREGA"
+                      checked={paymentMethod === "PAGO_CONTRAENTREGA"}
+                      onChange={() => setPaymentMethod("PAGO_CONTRAENTREGA")}
+                    />
+                    Pago contra entrega
+                  </label>
+                </div>
+              </fieldset>
+
+              {shippingInfo.message && (
+                <div style={{ padding: "0.75rem", borderRadius: "0.5rem", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}>
+                  {shippingInfo.message}
+                </div>
+              )}
+
               <textarea name="notes" rows={4} placeholder="Notas de entrega, horario o referencia" />
               <button type="submit" disabled={isSubmitting || cartDetail.length === 0}>
-                {isSubmitting ? "Enviando..." : "Confirmar pedido"}
+                {isSubmitting ? "Enviando por WhatsApp..." : "Enviar pedido por WhatsApp"}
               </button>
               {message ? <p className="muted">{message}</p> : null}
-              <p className="muted">Tu pedido queda registrado y te respondemos por contacto directo.</p>
+              <p className="muted">El pedido se abre en WhatsApp con tu resumen y también queda registrado.</p>
             </form>
 
             <article className="card">
               <h3>Compra asistida</h3>
-              <p className="muted">Si prefieres cerrar por chat, envía el carrito directo al 43132549.</p>
-              <a className="quick-link" href={whatsappHref} target="_blank" rel="noreferrer">
-                Enviar pedido por WhatsApp
-              </a>
+              <p className="muted">Si prefieres cerrar por chat, usa el botón de pedido o escríbenos al 43132549.</p>
+              <p className="muted">Atención directa por WhatsApp para confirmaciones y dudas.</p>
             </article>
           </div>
         </section>
@@ -435,13 +589,21 @@ export default function HomePage() {
             ))}
           </ul>
         )}
-        <p className="cart-total">Total estimado: Q {total.toFixed(2)}</p>
+        <p className="cart-total">Subtotal: Q {total.toFixed(2)}</p>
+        {shippingInfo.shippingCost > 0 && (
+          <p className="cart-total" style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+            Envío (+3.8%): Q {shippingInfo.shippingCost.toFixed(2)}
+          </p>
+        )}
+        <p className="cart-total" style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+          Total: Q {finalTotal.toFixed(2)}
+        </p>
         <a className="checkout-link" href="#checkout">
-          Ir a finalizar
+          Finalizar pedido
         </a>
       </aside>
 
-      <a className="whatsapp-float" href={whatsappHref} target="_blank" rel="noreferrer">
+      <a className="whatsapp-float" href={contactWhatsappHref} target="_blank" rel="noreferrer">
         WhatsApp 43132549
       </a>
 

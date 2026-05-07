@@ -10,6 +10,8 @@ export interface ProductVariant {
   stockAvailable?: number;
   lowStockThreshold?: number;
   shippingNote?: string;
+  isActive?: boolean;
+  media?: ProductMedia;
 }
 
 export interface ProductMedia {

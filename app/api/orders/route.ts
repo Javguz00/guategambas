@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { sanitizeOrderPayload } from "@/lib/security";
 
 const allowedStatus = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
@@ -13,6 +14,10 @@ function buildDate(value: string | null) {
 }
 
 export async function GET(request: Request) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   const url = new URL(request.url);
   const city = url.searchParams.get("city")?.trim();
   const from = buildDate(url.searchParams.get("from"));
@@ -50,9 +55,12 @@ export async function POST(request: Request) {
       customerName: sanitized.customerName,
       whatsapp: sanitized.whatsapp,
       city: sanitized.city,
+      departamento: sanitized.departamento,
+      paymentMethod: sanitized.paymentMethod,
       notes: sanitized.notes,
       items: sanitized.items as unknown as Prisma.InputJsonValue,
-      total: sanitized.total
+      total: sanitized.total,
+      shippingCost: sanitized.shippingCost
     }
   });
 
@@ -60,6 +68,10 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   const body = (await request.json()) as { id?: string; status?: string };
 
   if (!body.id || !body.status || !allowedStatus.includes(body.status as (typeof allowedStatus)[number])) {

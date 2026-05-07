@@ -58,22 +58,24 @@ export const products: Product[] = [
 
   // Neocaridinas
   {
-    id: "bloody-mary-alto",
-    name: "Bloody Mary (Alto grado)",
+    id: "bloody-mary",
+    name: "Bloody Mary",
     category: "neocaridinas",
-    description: "Neocaridina Bloody Mary de alta calidad. Pack de 5.",
+    description: "Selecciona el grado para ver precio, disponibilidad y multimedia.",
     variants: [
-      { id: "bm-alto-5", label: "Pack 5", unitLabel: "5 unidades", price: 200 }
-    ],
-    media: { photos: ["/photos/bloody-mary/20251009_210314.jpg"], videos: [] }
-  },
-  {
-    id: "bloody-mary-normal",
-    name: "Bloody Mary (Grado normal)",
-    category: "neocaridinas",
-    description: "Bloody Mary - grado estándar. Pack de 5.",
-    variants: [
-      { id: "bm-normal-5", label: "Pack 5", unitLabel: "5 unidades", price: 125 }
+      {
+        id: "bm-alto-5",
+        label: "Alto grado",
+        unitLabel: "5 unidades",
+        price: 200,
+        media: { photos: ["/photos/bloody-mary/20251009_210314.jpg"], videos: [] }
+      },
+      {
+        id: "bm-normal-5",
+        label: "Grado normal",
+        unitLabel: "5 unidades",
+        price: 125
+      }
     ],
     media: { photos: [], videos: [] }
   },
@@ -84,7 +86,7 @@ export const products: Product[] = [
     description: "Neocaridina Green Jade. Venta por unidad o pack de 5.",
     variants: [
       { id: "green-jade-unit", label: "Unidad", unitLabel: "1 unidad", price: 125 },
-      { id: "green-jade-5", label: "Pack 5", unitLabel: "5 unidades", price: 600 }
+      { id: "green-jade-5", label: "Pack 5", unitLabel: "5 unidades", price: 600, stockAvailable: 2, lowStockThreshold: 1 }
     ],
     media: { photos: [], videos: [] }
   },
@@ -116,7 +118,7 @@ export const products: Product[] = [
     description: "Neocaridina Cherries. Venta por unidad y promoción por 10.",
     variants: [
       { id: "cherries-unit", label: "Unidad", unitLabel: "1 unidad", price: 15 },
-      { id: "cherries-10", label: "Promo 10", unitLabel: "10 unidades", price: 125 }
+      { id: "cherries-10", label: "Promo 10", unitLabel: "10 unidades", price: 125, stockAvailable: 5 }
     ],
     media: { photos: [], videos: [] }
   },
@@ -206,19 +208,14 @@ export const products: Product[] = [
     media: { photos: [], videos: [] }
   },
   {
-    id: "bomba-sobo-1",
-    name: "Bomba de aire Sobo - 1 salida",
+    id: "bomba-sobo",
+    name: "Bomba de aire Sobo",
     category: "accesorios",
-    description: "Bomba de aire Sobo, una salida.",
-    variants: [{ id: "sobo-1", label: "1 salida", unitLabel: "1 pz", price: 45 }],
-    media: { photos: [], videos: [] }
-  },
-  {
-    id: "bomba-sobo-2",
-    name: "Bomba de aire Sobo - 2 salidas",
-    category: "accesorios",
-    description: "Bomba de aire Sobo con 2 salidas.",
-    variants: [{ id: "sobo-2", label: "2 salidas", unitLabel: "1 pz", price: 70 }],
+    description: "Bomba de aire Sobo de calidad, elige el número de salidas según tu necesidad.",
+    variants: [
+      { id: "sobo-1-salida", label: "1 salida", unitLabel: "1 pz", price: 45 },
+      { id: "sobo-2-salidas", label: "2 salidas", unitLabel: "1 pz", price: 70 }
+    ],
     media: { photos: [], videos: [] }
   },
   {
