@@ -1,4 +1,4 @@
-export type ProductCategory = "neocaridinas" | "caridinas" | "insumos";
+export type ProductCategory = "neocaridinas" | "caridinas" | "insumos" | "suplementos" | "accesorios";
 export type OrderStatus = "PENDING" | "CONFIRMED" | "DELIVERED";
 
 export interface ProductVariant {

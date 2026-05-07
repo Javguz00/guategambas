@@ -82,17 +82,22 @@ export default function HomePage() {
       {
         id: "neocaridinas",
         title: "Neocaridinas",
-        description: "Lineas resistentes para acuarios plantados y comunitarios."
+        description: "Líneas resistentes y variadas para acuarios plantados."
       },
       {
         id: "caridinas",
         title: "Caridinas",
-        description: "Seleccion orientada a proyectos de parametros estables."
+        description: "Selección de caridinas para coleccionistas y proyectos especializados."
       },
       {
-        id: "insumos",
-        title: "Insumos",
-        description: "Sustratos, mineralizacion, filtracion y acondicionadores."
+        id: "suplementos",
+        title: "Suplementos",
+        description: "Aditivos, bacterias y polvos para mantenimiento y salud de colonias."
+      },
+      {
+        id: "accesorios",
+        title: "Accesorios",
+        description: "Equipos, sustratos, redes y accesorios esenciales."
       }
     ],
     []
