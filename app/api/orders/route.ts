@@ -50,6 +50,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
   }
 
+  await prisma.customer.upsert({
+    where: { whatsapp: sanitized.whatsapp },
+    create: {
+      fullName: sanitized.customerName,
+      whatsapp: sanitized.whatsapp,
+      department: sanitized.departamento || null,
+      notes: sanitized.notes || null
+    },
+    update: {
+      fullName: sanitized.customerName,
+      department: sanitized.departamento || null,
+      notes: sanitized.notes || null
+    }
+  });
+
   const order = await prisma.order.create({
     data: {
       customerName: sanitized.customerName,
@@ -57,6 +72,8 @@ export async function POST(request: Request) {
       city: sanitized.city,
       departamento: sanitized.departamento,
       paymentMethod: sanitized.paymentMethod,
+      paymentStatus: "PENDING",
+      paymentProvider: sanitized.paymentMethod === "TARJETA_CUBO" ? "CUBO" : "MANUAL",
       notes: sanitized.notes,
       items: sanitized.items as unknown as Prisma.InputJsonValue,
       total: sanitized.total,

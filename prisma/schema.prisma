@@ -16,21 +16,74 @@ enum OrderStatus {
 enum PaymentMethod {
   DEPOSITO_PREVIO
   PAGO_CONTRAENTREGA
+  TARJETA_CUBO
+}
+
+enum PaymentStatus {
+  DRAFT
+  PENDING
+  PAID
+  FAILED
+  CANCELED
 }
 
 model Order {
-  id              String        @id @default(cuid())
-  customerName    String
-  whatsapp        String
-  city            String
-  departamento    String?
-  paymentMethod   PaymentMethod @default(PAGO_CONTRAENTREGA)
-  notes           String?
-  items           Json
-  total           Float
-  shippingCost    Float         @default(0)
-  status          OrderStatus   @default(PENDING)
-  createdAt       DateTime      @default(now())
+  id             String        @id @default(cuid())
+  customerName   String
+  whatsapp       String
+  city           String
+  departamento   String?
+  paymentMethod  PaymentMethod @default(PAGO_CONTRAENTREGA)
+  paymentStatus  PaymentStatus @default(PENDING)
+  paymentProvider String?
+  paymentReference String?
+  notes          String?
+  items          Json
+  total          Float
+  shippingCost   Float         @default(0)
+  status         OrderStatus   @default(PENDING)
+  createdAt      DateTime      @default(now())
+}
+
+model Customer {
+  id            String   @id @default(cuid())
+  fullName      String
+  whatsapp      String   @unique
+  email         String?
+  department    String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CRMProduct {
+  id            String   @id @default(cuid())
+  name          String
+  category      String
+  description   String?
+  basePrice     Float
+  stock         Int?
+  active        Boolean  @default(true)
+  gradeLabel    String?
+  unitLabel     String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PaymentAttempt {
+  id                String        @id @default(cuid())
+  orderId           String?
+  provider          String        @default("CUBO")
+  providerReference String?
+  amount            Float
+  currency          String        @default("GTQ")
+  status            PaymentStatus @default(DRAFT)
+  customerName      String
+  customerWhatsapp  String
+  metadata          Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
 model CatalogVariantState {

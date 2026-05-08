@@ -1,43 +1,44 @@
-# GuateGambas - Full Stack Portfolio Project
+# GuateGambas
 
-Proyecto de portafolio orientado a una tienda digital de gambas ornamentales e insumos para gambario.
+Tienda digital de gambas ornamentales, insumos y pedidos para WhatsApp con panel admin y preparación para pagos con tarjeta.
 
 ## Objetivo
-Construir una vitrina y sistema de pedidos enfocado en tu inventario actual:
-- Bloody Mary
-- Cherry
-- Golden Bee
-- Sustrato por porciones
-- Salty Shrimp por porciones
-- Filtros de pulmón
-- Hojas de catappa
+Construir una tienda lista para venta real con:
+- Catálogo público con variantes por grado y unidad
+- Pedido por WhatsApp
+- Envío FORZA con reglas por departamento
+- Panel admin para pedidos, inventario, CRM y pagos
+- Preparación para integrar Cubo como pasarela de tarjeta
 
 ## Stack
 - Next.js 15 (App Router)
 - React 19 + TypeScript
 - API Routes (backend en el mismo proyecto)
 - Prisma ORM + PostgreSQL
-- GitHub Actions para CI
-- Vercel para CD
+- GitHub para versionado
+- Vercel para deploy
 
 ## Funcionalidades implementadas
-- Catalogo por productos y secciones
+- Catálogo por productos y secciones
 - Carrito de compras para pedidos
 - Formulario de pedidos conectado a backend (`POST /api/orders`)
-- Endpoint para pedidos (`GET /api/orders`)
-- Endpoint para inventario (`GET /api/species`)
-- Panel admin para ver y filtrar pedidos (`/admin`)
-- Pipeline CI (lint + build)
-- CD a Vercel en push a `main`
+- Envío FORZA con tarifa del 3.8% para pago contra entrega fuera de Guatemala
+- Opción de pago con tarjeta preparada para Cubo
+- Panel admin para pedidos, inventario, clientes y productos CRM
+- API de inventario (`GET /api/species`, `GET /api/catalog`)
+- Preparación de pago (`/api/payments/cubo/intent`)
 
 ## Productos actuales
 - Bloody Mary
-- Cherry
+- Green Jade
+- Orange
+- Blue Velvet
+- Cherries
 - Golden Bee
-- Sustrato por porciones
-- Salty Shrimp por porciones
-- Filtros de pulmón
-- Hojas de catappa
+- Tai Bee
+- CRS
+- Taiwan CBS
+- Suplementos y accesorios del catálogo
 
 ## Variables de entorno
 1. Copia `.env.example` a `.env`.
@@ -45,6 +46,13 @@ Construir una vitrina y sistema de pedidos enfocado en tu inventario actual:
    - `DATABASE_URL`
    - `INSTAGRAM_ACCESS_TOKEN`
    - `INSTAGRAM_BUSINESS_ACCOUNT_ID`
+   - `ADMIN_PASSWORD` (opcional, por defecto `G0ld3nb33`)
+   - `CUBO_API_BASE_URL` (cuando compartan la API)
+   - `CUBO_CHECKOUT_URL` (si Cubo entrega una URL de checkout)
+   - `CUBO_API_KEY`
+   - `CUBO_PUBLIC_KEY`
+   - `CUBO_MERCHANT_ID`
+   - `CUBO_WEBHOOK_SECRET`
 
 Para GitHub Actions (secrets del repo):
 - `VERCEL_TOKEN`
@@ -66,25 +74,23 @@ Abre `http://localhost:3000`.
 - `GET /api/orders`
 - `POST /api/orders`
 - `GET /api/social`
+- `GET /api/catalog`
+- `PATCH /api/catalog`
+- `GET /api/crm/customers`
+- `POST /api/crm/customers`
+- `GET /api/crm/products`
+- `POST /api/crm/products`
+- `GET /api/payments/cubo/intent`
+- `POST /api/payments/cubo/intent`
+- `GET /api/payments/cubo/attempts`
 
 ### Filtros de admin
 - `GET /api/orders?city=guatemala`
 - `GET /api/orders?from=2026-03-01&to=2026-03-31`
 
-## CI/CD
-Flujo en `.github/workflows/ci.yml`:
-- Instala dependencias
-- Genera Prisma Client
-- Ejecuta lint
-- Ejecuta build
-
-Flujo en `.github/workflows/cd-vercel.yml`:
-- Se ejecuta en push a `main`
-- Compila artefactos con Vercel CLI
-- Publica a Vercel en produccion
-
-## Roadmap siguiente fase
-- Autenticacion para `/admin`
-- Inventario por stock real
-- Estados de pedido (`pending`, `confirmed`, `delivered`)
-- Notificaciones por WhatsApp/Email
+## Estado actual
+- `admin` protegido por contraseña
+- Inventario por variante con stock y ofertas
+- CRM básico para clientes y productos
+- Preparación de pagos con tarjeta mediante Cubo
+- Checkout con WhatsApp como canal principal

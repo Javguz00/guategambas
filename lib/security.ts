@@ -25,7 +25,7 @@ export interface SanitizedOrderPayload {
   whatsapp: string;
   city: string;
   departamento?: string;
-  paymentMethod: "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA";
+  paymentMethod: "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA" | "TARJETA_CUBO";
   notes: string;
   items: SanitizedOrderItem[];
   total: number;
@@ -105,7 +105,7 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
 
   // Validar paymentMethod
   const paymentMethod = candidate.paymentMethod as unknown;
-  if (paymentMethod !== "DEPOSITO_PREVIO" && paymentMethod !== "PAGO_CONTRAENTREGA") {
+  if (paymentMethod !== "DEPOSITO_PREVIO" && paymentMethod !== "PAGO_CONTRAENTREGA" && paymentMethod !== "TARJETA_CUBO") {
     return null;
   }
 
@@ -127,7 +127,7 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
     whatsapp,
     city,
     departamento,
-    paymentMethod: paymentMethod as "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA",
+    paymentMethod: paymentMethod as "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA" | "TARJETA_CUBO",
     notes,
     items: items as SanitizedOrderItem[],
     total,

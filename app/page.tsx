@@ -18,6 +18,8 @@ interface MediaSlide {
   src: string;
 }
 
+type PaymentMethod = "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA" | "TARJETA_CUBO";
+
 const WHATSAPP_NUMBER = "50243132549";
 
 export default function HomePage() {
@@ -26,7 +28,7 @@ export default function HomePage() {
   const [message, setMessage] = useState("");
   const [catalogProducts, setCatalogProducts] = useState(products);
   const [departamento, setDepartamento] = useState("Guatemala");
-  const [paymentMethod, setPaymentMethod] = useState<"DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA">("PAGO_CONTRAENTREGA");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PAGO_CONTRAENTREGA");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(() =>
     products.reduce<Record<string, string>>((acc, product) => {
       acc[product.id] = product.variants[0]?.id || "";
@@ -287,7 +289,7 @@ export default function HomePage() {
       `WhatsApp: ${customerWhatsapp}`,
       `Ciudad: ${city}`,
       `Departamento: ${departamento}`,
-      `Método de pago: ${paymentMethod === "DEPOSITO_PREVIO" ? "Depósito previo" : "Pago contra entrega"}`,
+      `Método de pago: ${paymentMethod === "DEPOSITO_PREVIO" ? "Depósito previo" : paymentMethod === "TARJETA_CUBO" ? "Tarjeta Cubo" : "Pago contra entrega"}`,
       notes ? `Notas: ${notes}` : "",
       "---",
       `Subtotal: Q ${total.toFixed(2)}`,
@@ -311,12 +313,50 @@ export default function HomePage() {
         throw new Error("Error al crear pedido");
       }
 
-      const popup = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-      if (!popup) {
-        window.location.assign(whatsappUrl);
+      const createdOrder = (await response.json()) as { order?: { id?: string } };
+      let cuboMessage = "";
+      let shouldOpenWhatsapp = true;
+
+      if (paymentMethod === "TARJETA_CUBO" && createdOrder.order?.id) {
+        const cuboResponse = await fetch("/api/payments/cubo/intent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            orderId: createdOrder.order.id,
+            customerName,
+            customerWhatsapp,
+            amount: finalTotal,
+            currency: "GTQ",
+            metadata: {
+              city,
+              departamento,
+              notes,
+              itemCount: cartDetail.length
+            }
+          })
+        });
+
+        if (cuboResponse.ok) {
+          const cuboData = (await cuboResponse.json()) as { checkoutUrl?: string; message?: string };
+          if (cuboData.checkoutUrl) {
+            shouldOpenWhatsapp = false;
+            window.location.assign(cuboData.checkoutUrl);
+          } else if (cuboData.message) {
+            cuboMessage = cuboData.message;
+          }
+        }
       }
 
-      setMessage("Pedido listo. Se abrió WhatsApp con tu resumen y el pedido quedó registrado.");
+      if (shouldOpenWhatsapp) {
+        const popup = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        if (!popup) {
+          window.location.assign(whatsappUrl);
+        }
+      }
+
+      setMessage(cuboMessage || "Pedido listo. Se abrió WhatsApp con tu resumen y el pedido quedó registrado.");
       setCart([]);
       event.currentTarget.reset();
       setDepartamento("Guatemala");
@@ -551,6 +591,16 @@ export default function HomePage() {
                       onChange={() => setPaymentMethod("DEPOSITO_PREVIO")}
                     />
                     Depósito previo (precio catálogo)
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="TARJETA_CUBO"
+                      checked={paymentMethod === "TARJETA_CUBO"}
+                      onChange={() => setPaymentMethod("TARJETA_CUBO")}
+                    />
+                    Tarjeta con Cubo
                   </label>
                   <label>
                     <input

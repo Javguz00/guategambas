@@ -114,6 +114,7 @@ img, video { max-width: 100%; }
 .pack { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 14px; }
 .pack strong { display: block; margin-bottom: 6px; }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.panel-tabs { display: flex; gap: 10px; flex-wrap: wrap; }
 button { border: none; border-radius: 999px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #032030; font-weight: 800; padding: 10px 14px; cursor: pointer; }
 button.secondary { background: var(--surface-soft); color: var(--text); border: 1px solid var(--border); }
 .field-caption { font-size: 0.8rem; color: var(--muted); }

@@ -9,7 +9,7 @@ export type ShippingResult = {
 
 export type ShippingInput = {
   departamento?: string;
-  paymentMethod: "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA";
+  paymentMethod: "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA" | "TARJETA_CUBO";
   orderTotal: number;
   cartItems: Array<{ productId: string; variantId: string; quantity: number; price: number }>;
 };
@@ -39,11 +39,11 @@ export function calculateShipping(input: ShippingInput): ShippingResult {
   }
 
   // Si es otro departamento con depósito previo, sin cargo (paga precio catálogo)
-  if (paymentMethod === "DEPOSITO_PREVIO") {
+  if (paymentMethod === "DEPOSITO_PREVIO" || paymentMethod === "TARJETA_CUBO") {
     return {
       isValid: true,
       shippingCost: 0,
-      message: "Deposito previo - Sin cargo de envío"
+      message: paymentMethod === "TARJETA_CUBO" ? "Pago con tarjeta Cubo - Sin cargo de envío" : "Deposito previo - Sin cargo de envío"
     };
   }
 

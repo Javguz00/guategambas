@@ -44,9 +44,51 @@ type CatalogProduct = {
   variants: CatalogVariant[];
 };
 
+type Customer = {
+  id: string;
+  fullName: string;
+  whatsapp: string;
+  email?: string | null;
+  department?: string | null;
+  notes?: string | null;
+  updatedAt: string;
+};
+
+type CrmProduct = {
+  id: string;
+  name: string;
+  category: string;
+  description?: string | null;
+  basePrice: number;
+  stock?: number | null;
+  active: boolean;
+  gradeLabel?: string | null;
+  unitLabel?: string | null;
+  notes?: string | null;
+  updatedAt: string;
+};
+
+type PaymentAttempt = {
+  id: string;
+  orderId?: string | null;
+  provider: string;
+  providerReference?: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  customerName: string;
+  customerWhatsapp: string;
+  createdAt: string;
+};
+
 export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [crmProducts, setCrmProducts] = useState<CrmProduct[]>([]);
+  const [paymentAttempts, setPaymentAttempts] = useState<PaymentAttempt[]>([]);
+  const [cuboMessage, setCuboMessage] = useState("Cubo pendiente de configuración.");
+  const [panelView, setPanelView] = useState<"orders" | "crm" | "payments">("orders");
   const [city, setCity] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -99,9 +141,81 @@ export default function AdminPage() {
     }
   }
 
+  async function loadCustomers() {
+    try {
+      const response = await fetch("/api/crm/customers");
+      if (response.status === 401) {
+        setAuthenticated(false);
+        return;
+      }
+      if (!response.ok) return;
+
+      const data = (await response.json()) as { customers?: Customer[] };
+      if (Array.isArray(data.customers)) {
+        setCustomers(data.customers);
+      }
+    } catch {
+      setCustomers([]);
+    }
+  }
+
+  async function loadCrmProducts() {
+    try {
+      const response = await fetch("/api/crm/products");
+      if (response.status === 401) {
+        setAuthenticated(false);
+        return;
+      }
+      if (!response.ok) return;
+
+      const data = (await response.json()) as { products?: CrmProduct[] };
+      if (Array.isArray(data.products)) {
+        setCrmProducts(data.products);
+      }
+    } catch {
+      setCrmProducts([]);
+    }
+  }
+
+  async function loadPaymentAttempts() {
+    try {
+      const response = await fetch("/api/payments/cubo/attempts");
+      if (response.status === 401) {
+        setAuthenticated(false);
+        return;
+      }
+      if (!response.ok) return;
+
+      const data = (await response.json()) as { attempts?: PaymentAttempt[] };
+      if (Array.isArray(data.attempts)) {
+        setPaymentAttempts(data.attempts);
+      }
+    } catch {
+      setPaymentAttempts([]);
+    }
+  }
+
+  async function loadCuboReadiness() {
+    try {
+      const response = await fetch("/api/payments/cubo/intent");
+      if (!response.ok) return;
+
+      const data = (await response.json()) as { message?: string };
+      if (data.message) {
+        setCuboMessage(data.message);
+      }
+    } catch {
+      setCuboMessage("Cubo pendiente de configuración.");
+    }
+  }
+
   useEffect(() => {
     void loadOrders();
     void loadCatalog();
+    void loadCustomers();
+    void loadCrmProducts();
+    void loadPaymentAttempts();
+    void loadCuboReadiness();
   }, []);
 
   function handleFilter(event: FormEvent<HTMLFormElement>) {
@@ -158,6 +272,80 @@ export default function AdminPage() {
     setFrom("");
     setTo("");
     setError("");
+  }
+
+  async function createCustomer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    const form = new FormData(event.currentTarget);
+    const payload = Object.fromEntries(form.entries());
+
+    const response = await fetch("/api/crm/customers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      setError("No se pudo guardar el cliente.");
+      return;
+    }
+
+    event.currentTarget.reset();
+    await loadCustomers();
+  }
+
+  async function deleteCustomer(id: string) {
+    const response = await fetch("/api/crm/customers", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+
+    if (!response.ok) {
+      setError("No se pudo eliminar el cliente.");
+      return;
+    }
+
+    await loadCustomers();
+  }
+
+  async function createCrmProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    const form = new FormData(event.currentTarget);
+    const payload = Object.fromEntries(form.entries());
+
+    const response = await fetch("/api/crm/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      setError("No se pudo guardar el producto CRM.");
+      return;
+    }
+
+    event.currentTarget.reset();
+    await loadCrmProducts();
+  }
+
+  async function deleteCrmProduct(id: string) {
+    const response = await fetch("/api/crm/products", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+
+    if (!response.ok) {
+      setError("No se pudo eliminar el producto CRM.");
+      return;
+    }
+
+    await loadCrmProducts();
   }
 
   async function saveVariantState(productId: string, variantId: string) {
@@ -256,141 +444,265 @@ export default function AdminPage() {
         </form>
       ) : (
         <>
-          <form className="card order-form" onSubmit={handleFilter}>
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Filtrar por ciudad"
-            />
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            <div className="actions">
-              <button type="submit">Aplicar filtros</button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  setCity("");
-                  setFrom("");
-                  setTo("");
-                  void loadOrders();
-                }}
-              >
-                Limpiar
-              </button>
-            </div>
-          </form>
+          <div className="card panel-tabs">
+            <button type="button" className={panelView === "orders" ? "" : "secondary"} onClick={() => setPanelView("orders")}>
+              Pedidos
+            </button>
+            <button type="button" className={panelView === "crm" ? "" : "secondary"} onClick={() => setPanelView("crm")}>
+              CRM
+            </button>
+            <button type="button" className={panelView === "payments" ? "" : "secondary"} onClick={() => setPanelView("payments")}>
+              Pagos Cubo
+            </button>
+          </div>
 
-          <section className="section" style={{ paddingTop: 20 }}>
-            <div className="card">
-              <h3>Resumen</h3>
-              <p className="muted">Pedidos: {orders.length}</p>
-              <p className="cart-total">Ingresos estimados: Q {totalRevenue.toFixed(2)}</p>
-            </div>
-          </section>
+          {panelView === "orders" ? (
+            <>
+              <form className="card order-form" onSubmit={handleFilter}>
+                <input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Filtrar por ciudad"
+                />
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+                <div className="actions">
+                  <button type="submit">Aplicar filtros</button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      setCity("");
+                      setFrom("");
+                      setTo("");
+                      void loadOrders();
+                    }}
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              </form>
 
-          <section className="section" style={{ paddingTop: 0 }}>
-            {loading ? <p className="muted">Cargando pedidos...</p> : null}
-            {error ? <p className="muted">{error}</p> : null}
-            {!loading && !error ? (
-              <div className="grid" style={{ gap: 12 }}>
-                {orders.map((order) => (
-                  <article key={order.id} className="card">
-                    <h3>{order.customerName}</h3>
-                    <p className="muted">
-                      {order.city} · {order.whatsapp}
-                    </p>
-                    <p className="muted">Estado: {order.status}</p>
-                    <p className="muted">Fecha: {new Date(order.createdAt).toLocaleString()}</p>
-                    <p>Total: Q {Number(order.total || 0).toFixed(2)}</p>
-                    <div className="actions">
-                      {statusOptions.map((status) => (
-                        <button
-                          key={`${order.id}-${status}`}
-                          type="button"
-                          className={status === order.status ? "secondary" : ""}
-                          disabled={updatingId === order.id || status === order.status}
-                          onClick={() => updateOrderStatus(order.id, status)}
-                        >
-                          {status}
-                        </button>
+              <section className="section" style={{ paddingTop: 20 }}>
+                <div className="card">
+                  <h3>Resumen</h3>
+                  <p className="muted">Pedidos: {orders.length}</p>
+                  <p className="cart-total">Ingresos estimados: Q {totalRevenue.toFixed(2)}</p>
+                </div>
+              </section>
+
+              <section className="section" style={{ paddingTop: 0 }}>
+                {loading ? <p className="muted">Cargando pedidos...</p> : null}
+                {error ? <p className="muted">{error}</p> : null}
+                {!loading && !error ? (
+                  <div className="grid" style={{ gap: 12 }}>
+                    {orders.map((order) => (
+                      <article key={order.id} className="card">
+                        <h3>{order.customerName}</h3>
+                        <p className="muted">
+                          {order.city} · {order.whatsapp}
+                        </p>
+                        <p className="muted">Estado: {order.status}</p>
+                        <p className="muted">Fecha: {new Date(order.createdAt).toLocaleString()}</p>
+                        <p>Total: Q {Number(order.total || 0).toFixed(2)}</p>
+                        <div className="actions">
+                          {statusOptions.map((status) => (
+                            <button
+                              key={`${order.id}-${status}`}
+                              type="button"
+                              className={status === order.status ? "secondary" : ""}
+                              disabled={updatingId === order.id || status === order.status}
+                              onClick={() => updateOrderStatus(order.id, status)}
+                            >
+                              {status}
+                            </button>
+                          ))}
+                        </div>
+                        <ul>
+                          {Array.isArray(order.items)
+                            ? order.items.map((item, idx) => (
+                                <li key={`${order.id}-${idx}`}>
+                                  {formatOrderItem(item)} x {item.quantity}
+                                </li>
+                              ))
+                            : null}
+                        </ul>
+                        {order.notes ? <p className="muted">Notas: {order.notes}</p> : null}
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+
+              <section className="section" style={{ paddingTop: 0 }}>
+                <div className="card">
+                  <h3>Inventario del catálogo</h3>
+                  <p className="muted">Marca una variante como agotada o desactívala cuando ya no esté disponible.</p>
+                </div>
+
+                <div className="grid" style={{ gap: 12, marginTop: 12 }}>
+                  {catalog.flatMap((product) =>
+                    product.variants.map((variant) => {
+                      const key = `${product.id}:${variant.id}`;
+                      return (
+                        <article key={key} className="card">
+                          <h3>{product.name}</h3>
+                          <p className="muted">
+                            {(variant.gradeLabel || "Sin grado") + " · " + variant.label}
+                          </p>
+                          <p className="muted">Precio base: Q {variant.price.toFixed(2)}</p>
+                          <div className="actions" style={{ alignItems: "center" }}>
+                            <input
+                              id={`${key}-stock`}
+                              type="number"
+                              min="0"
+                              defaultValue={variant.stockAvailable ?? ""}
+                              placeholder="Sin límite"
+                              aria-label={`Stock para ${product.name} ${variant.label}`}
+                            />
+                            <label className="field-caption" htmlFor={`${key}-price`}>
+                              Oferta o excepción
+                            </label>
+                            <input
+                              id={`${key}-price`}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              defaultValue={variant.priceOverride ?? variant.price}
+                              aria-label={`Precio para ${product.name} ${variant.label}`}
+                            />
+                            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <input
+                                id={`${key}-active`}
+                                type="checkbox"
+                                defaultChecked={variant.isActive !== false}
+                              />
+                              Disponible
+                            </label>
+                            <button
+                              type="button"
+                              disabled={savingVariantKey === key}
+                              onClick={() => saveVariantState(product.id, variant.id)}
+                            >
+                              {savingVariantKey === key ? "Guardando..." : "Guardar"}
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          {panelView === "crm" ? (
+            <>
+              <section className="section" style={{ paddingTop: 20 }}>
+                <div className="grid" style={{ gap: 12 }}>
+                  <form className="card order-form" onSubmit={createCustomer}>
+                    <h3>Clientes</h3>
+                    <input name="fullName" placeholder="Nombre completo" required />
+                    <input name="whatsapp" placeholder="WhatsApp" required />
+                    <input name="email" placeholder="Correo opcional" />
+                    <input name="department" placeholder="Departamento" />
+                    <textarea name="notes" rows={3} placeholder="Notas del cliente" />
+                    <button type="submit">Agregar cliente</button>
+                  </form>
+
+                  <form className="card order-form" onSubmit={createCrmProduct}>
+                    <h3>Productos CRM</h3>
+                    <input name="name" placeholder="Nombre del producto" required />
+                    <input name="category" placeholder="Categoría" required />
+                    <input name="gradeLabel" placeholder="Grado / etiqueta" />
+                    <input name="unitLabel" placeholder="Unidad / empaque" />
+                    <input name="basePrice" type="number" step="0.01" min="0" placeholder="Precio base" required />
+                    <input name="stock" type="number" min="0" placeholder="Stock opcional" />
+                    <textarea name="description" rows={3} placeholder="Descripción" />
+                    <textarea name="notes" rows={3} placeholder="Notas internas" />
+                    <button type="submit">Agregar producto</button>
+                  </form>
+                </div>
+              </section>
+
+              <section className="section" style={{ paddingTop: 0 }}>
+                <div className="grid" style={{ gap: 12 }}>
+                  <div className="card">
+                    <h3>Clientes registrados</h3>
+                    <p className="muted">{customers.length} clientes en CRM.</p>
+                    <div className="grid" style={{ gap: 10 }}>
+                      {customers.map((customer) => (
+                        <article key={customer.id} className="card">
+                          <strong>{customer.fullName}</strong>
+                          <p className="muted">{customer.whatsapp}</p>
+                          {customer.email ? <p className="muted">{customer.email}</p> : null}
+                          {customer.department ? <p className="muted">{customer.department}</p> : null}
+                          {customer.notes ? <p className="muted">{customer.notes}</p> : null}
+                          <button type="button" className="secondary" onClick={() => deleteCustomer(customer.id)}>
+                            Eliminar
+                          </button>
+                        </article>
                       ))}
                     </div>
-                    <ul>
-                      {Array.isArray(order.items)
-                        ? order.items.map((item, idx) => (
-                            <li key={`${order.id}-${idx}`}>
-                              {formatOrderItem(item)} x {item.quantity}
-                            </li>
-                          ))
-                        : null}
-                    </ul>
-                    {order.notes ? <p className="muted">Notas: {order.notes}</p> : null}
-                  </article>
-                ))}
+                  </div>
+
+                  <div className="card">
+                    <h3>Productos CRM guardados</h3>
+                    <p className="muted">{crmProducts.length} productos en CRM.</p>
+                    <div className="grid" style={{ gap: 10 }}>
+                      {crmProducts.map((product) => (
+                        <article key={product.id} className="card">
+                          <strong>{product.name}</strong>
+                          <p className="muted">
+                            {product.category} · Q {product.basePrice.toFixed(2)}
+                          </p>
+                          <p className="muted">
+                            {product.gradeLabel || "Sin grado"} · {product.unitLabel || "Sin unidad"}
+                          </p>
+                          {product.description ? <p className="muted">{product.description}</p> : null}
+                          {product.notes ? <p className="muted">{product.notes}</p> : null}
+                          <div className="actions">
+                            <button type="button" className="secondary" onClick={() => deleteCrmProduct(product.id)}>
+                              Eliminar
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          {panelView === "payments" ? (
+            <section className="section" style={{ paddingTop: 20 }}>
+              <div className="grid" style={{ gap: 12 }}>
+                <div className="card">
+                  <h3>Cubo</h3>
+                  <p className="muted">{cuboMessage}</p>
+                  <p className="muted">Cuando compartan la API, este panel podrá activar pago con tarjeta sin rehacer el checkout.</p>
+                </div>
+
+                <div className="card">
+                  <h3>Intentos de pago</h3>
+                  <p className="muted">{paymentAttempts.length} intentos registrados.</p>
+                  <div className="grid" style={{ gap: 10 }}>
+                    {paymentAttempts.map((attempt) => (
+                      <article key={attempt.id} className="card">
+                        <strong>{attempt.customerName}</strong>
+                        <p className="muted">{attempt.customerWhatsapp}</p>
+                        <p className="muted">
+                          {attempt.provider} · {attempt.status} · Q {Number(attempt.amount || 0).toFixed(2)}
+                        </p>
+                        {attempt.orderId ? <p className="muted">Orden: {attempt.orderId}</p> : null}
+                      </article>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ) : null}
-          </section>
-
-          <section className="section" style={{ paddingTop: 0 }}>
-            <div className="card">
-              <h3>Inventario del catálogo</h3>
-              <p className="muted">Marca una variante como agotada o desactívala cuando ya no esté disponible.</p>
-            </div>
-
-            <div className="grid" style={{ gap: 12, marginTop: 12 }}>
-              {catalog.flatMap((product) =>
-                product.variants.map((variant) => {
-                  const key = `${product.id}:${variant.id}`;
-                  return (
-                    <article key={key} className="card">
-                      <h3>{product.name}</h3>
-                      <p className="muted">
-                        {(variant.gradeLabel || "Sin grado") + " · " + variant.label}
-                      </p>
-                      <p className="muted">Precio base: Q {variant.price.toFixed(2)}</p>
-                      <div className="actions" style={{ alignItems: "center" }}>
-                        <input
-                          id={`${key}-stock`}
-                          type="number"
-                          min="0"
-                          defaultValue={variant.stockAvailable ?? ""}
-                          placeholder="Sin límite"
-                          aria-label={`Stock para ${product.name} ${variant.label}`}
-                        />
-                        <label className="field-caption" htmlFor={`${key}-price`}>
-                          Oferta o excepción
-                        </label>
-                        <input
-                          id={`${key}-price`}
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          defaultValue={variant.priceOverride ?? variant.price}
-                          aria-label={`Precio para ${product.name} ${variant.label}`}
-                        />
-                        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <input
-                            id={`${key}-active`}
-                            type="checkbox"
-                            defaultChecked={variant.isActive !== false}
-                          />
-                          Disponible
-                        </label>
-                        <button
-                          type="button"
-                          disabled={savingVariantKey === key}
-                          onClick={() => saveVariantState(product.id, variant.id)}
-                        >
-                          {savingVariantKey === key ? "Guardando..." : "Guardar"}
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </div>
-          </section>
+            </section>
+          ) : null}
         </>
       )}
     </main>
