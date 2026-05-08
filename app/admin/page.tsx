@@ -32,6 +32,9 @@ type CatalogVariant = {
   label: string;
   stockAvailable?: number | null;
   isActive?: boolean;
+  priceOverride?: number | null;
+  gradeLabel?: string;
+  price: number;
 };
 
 type CatalogProduct = {
@@ -161,8 +164,10 @@ export default function AdminPage() {
     const key = `${productId}:${variantId}`;
     const variantInput = document.getElementById(`${key}-stock`) as HTMLInputElement | null;
     const activeInput = document.getElementById(`${key}-active`) as HTMLInputElement | null;
+    const priceInput = document.getElementById(`${key}-price`) as HTMLInputElement | null;
     const stockValue = variantInput?.value ?? "";
     const isActive = activeInput?.checked ?? true;
+    const priceValue = priceInput?.value ?? "";
 
     setSavingVariantKey(key);
     setError("");
@@ -177,7 +182,8 @@ export default function AdminPage() {
           productId,
           variantId,
           stockAvailable: stockValue === "" ? null : Number(stockValue),
-          isActive
+          isActive,
+          priceOverride: priceValue === "" ? null : Number(priceValue)
         })
       });
 
@@ -339,7 +345,10 @@ export default function AdminPage() {
                   return (
                     <article key={key} className="card">
                       <h3>{product.name}</h3>
-                      <p className="muted">{variant.label}</p>
+                      <p className="muted">
+                        {(variant.gradeLabel || "Sin grado") + " · " + variant.label}
+                      </p>
+                      <p className="muted">Precio base: Q {variant.price.toFixed(2)}</p>
                       <div className="actions" style={{ alignItems: "center" }}>
                         <input
                           id={`${key}-stock`}
@@ -348,6 +357,17 @@ export default function AdminPage() {
                           defaultValue={variant.stockAvailable ?? ""}
                           placeholder="Sin límite"
                           aria-label={`Stock para ${product.name} ${variant.label}`}
+                        />
+                        <label className="field-caption" htmlFor={`${key}-price`}>
+                          Oferta o excepción
+                        </label>
+                        <input
+                          id={`${key}-price`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          defaultValue={variant.priceOverride ?? variant.price}
+                          aria-label={`Precio para ${product.name} ${variant.label}`}
                         />
                         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <input

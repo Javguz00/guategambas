@@ -11,6 +11,7 @@ export interface ProductVariant {
   lowStockThreshold?: number;
   shippingNote?: string;
   isActive?: boolean;
+  gradeLabel?: string;
   media?: ProductMedia;
 }
 

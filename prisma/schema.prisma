@@ -38,6 +38,7 @@ model CatalogVariantState {
   variantId      String
   stockAvailable Int?
   isActive       Boolean  @default(true)
+  priceOverride  Float?
   updatedAt      DateTime @updatedAt
 
   @@id([productId, variantId])

@@ -25,6 +25,7 @@ export async function PATCH(request: NextRequest) {
     variantId?: string;
     stockAvailable?: number | string | null;
     isActive?: boolean;
+    priceOverride?: number | string | null;
   };
 
   const productId = typeof body.productId === "string" ? body.productId.trim() : "";
@@ -32,8 +33,16 @@ export async function PATCH(request: NextRequest) {
   const stockValue = body.stockAvailable;
   const stockAvailable = stockValue === null || stockValue === undefined || stockValue === "" ? null : Number(stockValue);
   const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
+  const priceValue = body.priceOverride;
+  const priceOverride =
+    priceValue === null || priceValue === undefined || priceValue === "" ? null : Number(priceValue);
 
-  if (!productId || !variantId || (stockAvailable !== null && (!Number.isFinite(stockAvailable) || stockAvailable < 0))) {
+  if (
+    !productId ||
+    !variantId ||
+    (stockAvailable !== null && (!Number.isFinite(stockAvailable) || stockAvailable < 0)) ||
+    (priceOverride !== null && (!Number.isFinite(priceOverride) || priceOverride <= 0))
+  ) {
     return NextResponse.json({ error: "Invalid catalog payload" }, { status: 400 });
   }
 
@@ -56,11 +65,13 @@ export async function PATCH(request: NextRequest) {
       productId,
       variantId,
       stockAvailable: stockAvailable === null ? null : Math.floor(stockAvailable),
-      isActive
+      isActive,
+      priceOverride: priceOverride === null ? null : priceOverride
     },
     update: {
       stockAvailable: stockAvailable === null ? null : Math.floor(stockAvailable),
-      isActive
+      isActive,
+      priceOverride: priceOverride === null ? null : priceOverride
     }
   });
 

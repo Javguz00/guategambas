@@ -8,14 +8,38 @@ export const products: Product[] = [
     id: "golden-bee",
     name: "Golden Bee",
     category: "caridinas",
-    description: "Pack de 5 Caridinas Golden Bee, animales seleccionados.",
-    highlight: "Pack 5",
+    description: "Caridinas Golden Bee con variedad de grados. Selecciona el grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
+      // Grado Alto
       {
-        id: "golden-bee-5",
+        id: "golden-bee-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 50
+      },
+      {
+        id: "golden-bee-alto-5",
+        gradeLabel: "Grado Alto",
         label: "Pack 5",
         unitLabel: "5 unidades",
         price: 200
+      },
+      // Grado Normal
+      {
+        id: "golden-bee-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 35
+      },
+      {
+        id: "golden-bee-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
       }
     ],
     media: { photos: [], videos: [] }
@@ -24,13 +48,38 @@ export const products: Product[] = [
     id: "tai-bee-spotted-head",
     name: "Tai Bee (Spotted Head)",
     category: "caridinas",
-    description: "Caridina Tai Bee con patron Spotted Head. Venta por pack de 5.",
+    description: "Caridina Tai Bee con patrón Spotted Head. Elige grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
+      // Grado Alto
       {
-        id: "tai-bee-5",
+        id: "tai-bee-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 50
+      },
+      {
+        id: "tai-bee-alto-5",
+        gradeLabel: "Grado Alto",
         label: "Pack 5",
         unitLabel: "5 unidades",
         price: 200
+      },
+      // Grado Normal
+      {
+        id: "tai-bee-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 35
+      },
+      {
+        id: "tai-bee-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
       }
     ],
     media: { photos: [], videos: [] }
@@ -39,9 +88,39 @@ export const products: Product[] = [
     id: "crs",
     name: "CRS",
     category: "caridinas",
-    description: "Caridina Red Select (CRS) - pack de 5.",
+    description: "Caridina Red Select (CRS). Selecciona grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
-      { id: "crs-5", label: "Pack 5", unitLabel: "5 unidades", price: 150 }
+      // Grado Alto
+      {
+        id: "crs-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 50
+      },
+      {
+        id: "crs-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "crs-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 35
+      },
+      {
+        id: "crs-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
+      }
     ],
     media: { photos: [], videos: [] }
   },
@@ -49,9 +128,39 @@ export const products: Product[] = [
     id: "taiwan-cbs",
     name: "Taiwan CBS",
     category: "caridinas",
-    description: "Caridina Taiwan CBS - pack de 5.",
+    description: "Caridina Taiwan CBS. Elige tu grado y cantidad favorita.",
+    highlight: "2 Grados",
     variants: [
-      { id: "taiwan-cbs-5", label: "Pack 5", unitLabel: "5 unidades", price: 150 }
+      // Grado Alto
+      {
+        id: "taiwan-cbs-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 50
+      },
+      {
+        id: "taiwan-cbs-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "taiwan-cbs-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 35
+      },
+      {
+        id: "taiwan-cbs-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
+      }
     ],
     media: { photos: [], videos: [] }
   },

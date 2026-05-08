@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { products } from "@/lib/data";
 import { OrderItem, Product, ProductVariant } from "@/lib/types";
-import { getVariantAvailabilityLabel, getVariantMedia } from "@/lib/catalog";
+import { getVariantAvailabilityLabel, getVariantDisplayLabel, getVariantMedia, groupVariantsByGrade } from "@/lib/catalog";
 import { calculateShipping } from "@/lib/shipping";
 
 interface CartLine {
@@ -230,6 +230,10 @@ export default function HomePage() {
     return getVariantAvailabilityLabel(variant);
   }
 
+  function isShrimpProduct(product: Product) {
+    return product.category === "caridinas";
+  }
+
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -254,7 +258,7 @@ export default function HomePage() {
       productId: item.product.id,
       variantId: item.variant.id,
       name: item.product.name,
-      variantLabel: item.variant.label,
+      variantLabel: getVariantDisplayLabel(item.variant),
       category: item.product.category,
       unit: item.variant.unitLabel,
       unitPrice: item.variant.price,
@@ -277,7 +281,7 @@ export default function HomePage() {
 
     const whatsappLines = [
       "Hola, quiero confirmar este pedido:",
-      ...cartDetail.map((item) => `${item.product.name} - ${item.variant.label} x ${item.qty}`),
+      ...cartDetail.map((item) => `${item.product.name} - ${getVariantDisplayLabel(item.variant)} x ${item.qty}`),
       "",
       `Cliente: ${customerName}`,
       `WhatsApp: ${customerWhatsapp}`,
@@ -424,19 +428,42 @@ export default function HomePage() {
                             <h3>{product.name}</h3>
                             <p className="muted">{product.description}</p>
                             {product.note ? <p className="product-note">{product.note}</p> : null}
-                            <div className="variant-picker variant-picker-card">
-                              {product.variants.map((variant) => (
-                                <button
-                                  key={variant.id}
-                                  type="button"
-                                  className={selectedVariant.id === variant.id ? "variant-button active" : "variant-button"}
-                                  aria-pressed={selectedVariant.id === variant.id}
-                                  onClick={() => setSelectedVariant(product.id, variant.id)}
-                                >
-                                  {variant.label} - Q {variant.price.toFixed(2)}
-                                </button>
-                              ))}
-                            </div>
+                            {isShrimpProduct(product) ? (
+                              <div className="variant-stack">
+                                {groupVariantsByGrade(product).map(([grade, variants]) => (
+                                  <div key={grade} className="variant-group">
+                                    <div className="variant-group-title">{grade}</div>
+                                    <div className="variant-picker variant-picker-card">
+                                      {variants.map((variant) => (
+                                        <button
+                                          key={variant.id}
+                                          type="button"
+                                          className={selectedVariant.id === variant.id ? "variant-button active" : "variant-button"}
+                                          aria-pressed={selectedVariant.id === variant.id}
+                                          onClick={() => setSelectedVariant(product.id, variant.id)}
+                                        >
+                                          {getVariantDisplayLabel(variant)} - Q {variant.price.toFixed(2)}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="variant-picker variant-picker-card">
+                                {product.variants.map((variant) => (
+                                  <button
+                                    key={variant.id}
+                                    type="button"
+                                    className={selectedVariant.id === variant.id ? "variant-button active" : "variant-button"}
+                                    aria-pressed={selectedVariant.id === variant.id}
+                                    onClick={() => setSelectedVariant(product.id, variant.id)}
+                                  >
+                                    {variant.label} - Q {variant.price.toFixed(2)}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             <p className="product-meta">{selectedVariant.unitLabel}</p>
                             {productStockAlert(selectedVariant) ? (
                               <p className="stock-chip">{productStockAlert(selectedVariant)}</p>
@@ -571,7 +598,7 @@ export default function HomePage() {
               <li key={`${item.product.id}-${item.variant.id}`}>
                 <div>
                   <strong>{item.product.name}</strong>
-                  <p className="muted">{item.variant.label}</p>
+                  <p className="muted">{getVariantDisplayLabel(item.variant)}</p>
                 </div>
                 <div className="floating-cart-line">
                   <button
