@@ -179,3 +179,42 @@ button.secondary { background: var(--surface-soft); color: var(--text); border: 
   button { padding: 14px 18px; font-size: 1rem; }
   .product-card h3 { font-size: 1.05rem; }
 }
+
+/* Compact floating cart icon (mobile) */
+.floating-cart-icon {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: 84px;
+  z-index: 62;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  cursor: pointer;
+}
+.floating-cart-icon svg { display: block; }
+.floating-cart-count {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  background: #e11d48;
+  color: white;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--surface) 60%, transparent);
+}
+
+@media (max-width: 900px) {
+  /* hide the full aside cart when closed on mobile to save space */
+  .floating-cart.closed { display: none; }
+  .floating-cart-icon { display: inline-flex; }
+}

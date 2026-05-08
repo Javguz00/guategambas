@@ -1057,6 +1057,21 @@ export default function HomePage() {
           </article>
         </div>
       ) : null}
+
+      {/* Compact floating cart icon for mobile */}
+      <button
+        type="button"
+        className="floating-cart-icon"
+        onClick={() => setIsCartOpen((s) => !s)}
+        aria-label={isCartOpen ? "Cerrar carrito" : "Abrir carrito"}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <path d="M6 6h15l-1.5 9h-11L6 6z" fill="#fff" opacity="0.95" />
+          <circle cx="10" cy="19" r="1.5" fill="#fff" />
+          <circle cx="18" cy="19" r="1.5" fill="#fff" />
+        </svg>
+        {totalItems > 0 ? <span className="floating-cart-count">{totalItems}</span> : null}
+      </button>
     </>
   );
 }
