@@ -170,18 +170,76 @@ export const products: Product[] = [
     id: "bloody-mary",
     name: "Bloody Mary",
     category: "neocaridinas",
-    description: "Selecciona el grado para ver precio, disponibilidad y multimedia.",
+    description: "Neocaridina Bloody Mary con variedad de grados. Selecciona el grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
+      // Grado Alto
       {
-        id: "bm-alto-5",
-        label: "Alto grado",
-        unitLabel: "5 unidades",
-        price: 200,
-        media: { photos: ["/photos/bloody-mary/20251009_210314.jpg"], videos: [] }
+        id: "bloody-mary-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 45
       },
       {
-        id: "bm-normal-5",
-        label: "Grado normal",
+        id: "bloody-mary-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "bloody-mary-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 30
+      },
+      {
+        id: "bloody-mary-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
+      }
+    ],
+    media: { photos: ["/photos/bloody-mary/20251009_210314.jpg"], videos: [] }
+  },
+  {
+    id: "green-jade",
+    name: "Green Jade",
+    category: "neocaridinas",
+    description: "Neocaridina Green Jade con variedad de grados. Selecciona el grado y cantidad.",
+    highlight: "2 Grados",
+    variants: [
+      // Grado Alto
+      {
+        id: "green-jade-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 45
+      },
+      {
+        id: "green-jade-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "green-jade-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 30
+      },
+      {
+        id: "green-jade-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
         unitLabel: "5 unidades",
         price: 125
       }
@@ -189,24 +247,42 @@ export const products: Product[] = [
     media: { photos: [], videos: [] }
   },
   {
-    id: "green-jade",
-    name: "Green Jade",
-    category: "neocaridinas",
-    description: "Neocaridina Green Jade. Venta por unidad o pack de 5.",
-    variants: [
-      { id: "green-jade-unit", label: "Unidad", unitLabel: "1 unidad", price: 125 },
-      { id: "green-jade-5", label: "Pack 5", unitLabel: "5 unidades", price: 600, stockAvailable: 2, lowStockThreshold: 1 }
-    ],
-    media: { photos: [], videos: [] }
-  },
-  {
     id: "orange-neocaridina",
     name: "Orange",
     category: "neocaridinas",
-    description: "Neocaridina color naranja. Pack económico de 5.",
+    description: "Neocaridina Orange con variedad de grados. Selecciona el grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
-      { id: "orange-5", label: "Pack 5", unitLabel: "5 unidades", price: 125 },
-      { id: "orange-unit", label: "Unidad (estimada)", unitLabel: "1 unidad", price: 25 }
+      // Grado Alto
+      {
+        id: "orange-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 45
+      },
+      {
+        id: "orange-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "orange-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 30
+      },
+      {
+        id: "orange-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
+      }
     ],
     media: { photos: [], videos: [] }
   },
@@ -214,9 +290,39 @@ export const products: Product[] = [
     id: "blue-velvet",
     name: "Blue Velvet",
     category: "neocaridinas",
-    description: "Neocaridina Blue Velvet - pack de 5.",
+    description: "Neocaridina Blue Velvet con variedad de grados. Selecciona el grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
-      { id: "blue-velvet-5", label: "Pack 5", unitLabel: "5 unidades", price: 200 }
+      // Grado Alto
+      {
+        id: "blue-velvet-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 45
+      },
+      {
+        id: "blue-velvet-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "blue-velvet-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 30
+      },
+      {
+        id: "blue-velvet-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
+      }
     ],
     media: { photos: [], videos: [] }
   },
@@ -224,10 +330,39 @@ export const products: Product[] = [
     id: "cherries",
     name: "Cherries",
     category: "neocaridinas",
-    description: "Neocaridina Cherries. Venta por unidad y promoción por 10.",
+    description: "Neocaridina Cherries con variedad de grados. Selecciona el grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
-      { id: "cherries-unit", label: "Unidad", unitLabel: "1 unidad", price: 15 },
-      { id: "cherries-10", label: "Promo 10", unitLabel: "10 unidades", price: 125, stockAvailable: 5 }
+      // Grado Alto
+      {
+        id: "cherries-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 45
+      },
+      {
+        id: "cherries-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "cherries-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 30
+      },
+      {
+        id: "cherries-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
+      }
     ],
     media: { photos: [], videos: [] }
   },
@@ -235,9 +370,39 @@ export const products: Product[] = [
     id: "black-neocaridina",
     name: "Black",
     category: "neocaridinas",
-    description: "Neocaridina negra - pack de 5.",
+    description: "Neocaridina Black con variedad de grados. Selecciona el grado y cantidad.",
+    highlight: "2 Grados",
     variants: [
-      { id: "black-5", label: "Pack 5", unitLabel: "5 unidades", price: 175 }
+      // Grado Alto
+      {
+        id: "black-alto-1",
+        gradeLabel: "Grado Alto",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 45
+      },
+      {
+        id: "black-alto-5",
+        gradeLabel: "Grado Alto",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 200
+      },
+      // Grado Normal
+      {
+        id: "black-normal-1",
+        gradeLabel: "Grado Normal",
+        label: "1 unidad",
+        unitLabel: "1 unidad",
+        price: 30
+      },
+      {
+        id: "black-normal-5",
+        gradeLabel: "Grado Normal",
+        label: "Pack 5",
+        unitLabel: "5 unidades",
+        price: 125
+      }
     ],
     media: { photos: [], videos: [] }
   },

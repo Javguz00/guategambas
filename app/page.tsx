@@ -435,7 +435,7 @@ export default function HomePage() {
   }
 
   function isShrimpProduct(product: Product) {
-    return product.category === "caridinas";
+    return product.category === "caridinas" || product.category === "neocaridinas";
   }
 
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
