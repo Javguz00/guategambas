@@ -22,6 +22,7 @@ export interface SanitizedOrderItem {
 
 export interface SanitizedOrderPayload {
   customerName: string;
+  email?: string;
   whatsapp: string;
   city: string;
   departamento?: string;
@@ -86,6 +87,7 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
   const candidate = body as {
     customerName?: unknown;
     whatsapp?: unknown;
+    email?: unknown;
     city?: unknown;
     departamento?: unknown;
     paymentMethod?: unknown;
@@ -97,6 +99,7 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
 
   const customerName = cleanText(candidate.customerName, 80);
   const whatsapp = normalizeWhatsapp(candidate.whatsapp);
+  const email = typeof candidate.email === "string" ? cleanText(candidate.email, 120) : "";
   const city = cleanText(candidate.city, 80);
   const departamento = cleanText(candidate.departamento, 80) || undefined;
   const notes = cleanText(candidate.notes, 240);
@@ -113,6 +116,9 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
     return null;
   }
 
+  // optional email: basic format check
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return null;
+
   if (!Number.isFinite(total) || total <= 0) {
     return null;
   }
@@ -124,6 +130,7 @@ export function sanitizeOrderPayload(body: unknown): SanitizedOrderPayload | nul
 
   return {
     customerName,
+    email,
     whatsapp,
     city,
     departamento,

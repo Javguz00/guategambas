@@ -11,8 +11,12 @@ async function loadMergedCatalog() {
 }
 
 export async function GET() {
-  const catalog = await loadMergedCatalog();
-  return NextResponse.json({ products: catalog, inventory: extractInventoryRows(catalog) });
+  try {
+    const catalog = await loadMergedCatalog();
+    return NextResponse.json({ products: catalog, inventory: extractInventoryRows(catalog) });
+  } catch {
+    return NextResponse.json({ products, inventory: [] });
+  }
 }
 
 export async function PATCH(request: NextRequest) {

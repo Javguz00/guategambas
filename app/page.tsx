@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { products } from "@/lib/data";
 import { OrderItem, Product, ProductVariant } from "@/lib/types";
@@ -13,6 +13,30 @@ interface CartLine {
   qty: number;
 }
 
+const CART_STORAGE_KEY = "gg_cart_v1";
+const CART_OPEN_STORAGE_KEY = "gg_cart_open_v1";
+const CART_SESSION_STORAGE_KEY = "gg_cart_session_v1";
+const LAST_WHATSAPP_STORAGE_KEY = "gg_last_whatsapp_v1";
+const WHATSAPP_CART_PREFIX = "gg_cart_whatsapp_";
+
+function createCartSessionKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `cart-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeWhatsapp(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function getWhatsappCartKey(value: string) {
+  const digits = normalizeWhatsapp(value);
+  if (digits.length < 8) return "";
+  return `${WHATSAPP_CART_PREFIX}${digits}`;
+}
+
 interface MediaSlide {
   type: "photo" | "video";
   src: string;
@@ -23,8 +47,56 @@ type PaymentMethod = "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA" | "TARJETA_CUBO";
 const WHATSAPP_NUMBER = "50243132549";
 
 export default function HomePage() {
-  const [cart, setCart] = useState<CartLine[]>([]);
+  type ConfirmPayload = {
+    customerName: string;
+    whatsapp: string;
+    city: string;
+    departamento?: string;
+    paymentMethod: PaymentMethod;
+    notes: string;
+    items: OrderItem[];
+    total: number;
+    shippingCost: number;
+    hp?: string;
+  };
+  const [cart, setCart] = useState<CartLine[]>(() => {
+    try {
+      const raw = typeof window === "undefined" ? null : window.localStorage.getItem(CART_STORAGE_KEY);
+      if (raw) return JSON.parse(raw) as CartLine[];
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(() => {
+    try {
+      const raw = typeof window === "undefined" ? null : window.localStorage.getItem(CART_OPEN_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : false;
+    } catch {
+      return false;
+    }
+  });
+  const [cartSessionKey] = useState(() => {
+    try {
+      const raw = typeof window === "undefined" ? null : window.localStorage.getItem(CART_SESSION_STORAGE_KEY);
+      if (raw) return raw;
+    } catch {
+      // ignore
+    }
+
+    return createCartSessionKey();
+  });
+  const [checkoutWhatsapp, setCheckoutWhatsapp] = useState(() => {
+    try {
+      return typeof window === "undefined" ? "" : window.localStorage.getItem(LAST_WHATSAPP_STORAGE_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentModal, setPaymentModal] = useState<null | { orderId: string; amount: number; customerName?: string }>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<null | { payload: ConfirmPayload; whatsappUrl: string; finalTotal: number }>(null);
   const [message, setMessage] = useState("");
   const [catalogProducts, setCatalogProducts] = useState(products);
   const [departamento, setDepartamento] = useState("Guatemala");
@@ -37,6 +109,8 @@ export default function HomePage() {
   );
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [quickViewSlide, setQuickViewSlide] = useState(0);
+  const [cartReady, setCartReady] = useState(false);
+  const loadedWhatsappCartRef = useRef("");
 
   const quickViewProduct = useMemo(
     () => catalogProducts.find((item) => item.id === quickViewProductId) || null,
@@ -68,6 +142,134 @@ export default function HomePage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CART_SESSION_STORAGE_KEY, cartSessionKey);
+    } catch {
+      // ignore
+    }
+  }, [cartSessionKey]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LAST_WHATSAPP_STORAGE_KEY, checkoutWhatsapp);
+    } catch {
+      // ignore
+    }
+  }, [checkoutWhatsapp]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateCart() {
+      try {
+        const whatsappKey = getWhatsappCartKey(checkoutWhatsapp);
+
+        if (whatsappKey) {
+          const whatsappResponse = await fetch(`/api/cart?key=${encodeURIComponent(whatsappKey)}`);
+          if (whatsappResponse.ok) {
+            const whatsappData = (await whatsappResponse.json()) as { cart?: { data?: unknown } };
+            const whatsappCart = Array.isArray(whatsappData.cart?.data) ? (whatsappData.cart.data as CartLine[]) : [];
+
+            if (!cancelled && whatsappCart.length > 0) {
+              loadedWhatsappCartRef.current = whatsappKey;
+              setCart(whatsappCart);
+              setCartReady(true);
+              return;
+            }
+
+            loadedWhatsappCartRef.current = whatsappKey;
+          }
+        }
+
+        const sessionResponse = await fetch(`/api/cart?key=${encodeURIComponent(cartSessionKey)}`);
+        if (sessionResponse.ok) {
+          const sessionData = (await sessionResponse.json()) as { cart?: { data?: unknown } };
+          const sessionCart = Array.isArray(sessionData.cart?.data) ? (sessionData.cart.data as CartLine[]) : [];
+
+          if (!cancelled && sessionCart.length > 0) {
+            setCart(sessionCart);
+          }
+        }
+      } catch {
+        // ignore hydration issues and fall back to local state
+      } finally {
+        if (!cancelled) {
+          setCartReady(true);
+        }
+      }
+    }
+
+    void hydrateCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cartSessionKey, checkoutWhatsapp]);
+
+  // persist cart to localStorage
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    } catch {
+      // ignore
+    }
+  }, [cart]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CART_OPEN_STORAGE_KEY, JSON.stringify(isCartOpen));
+    } catch {
+      // ignore
+    }
+  }, [isCartOpen]);
+
+  useEffect(() => {
+    if (!cartReady) return;
+
+    const timer = window.setTimeout(() => {
+      void fetch("/api/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ key: cartSessionKey, data: cart })
+      });
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [cart, cartReady, cartSessionKey]);
+
+  useEffect(() => {
+    if (!cartReady) return;
+
+    const whatsappKey = getWhatsappCartKey(checkoutWhatsapp);
+    if (!whatsappKey) {
+      loadedWhatsappCartRef.current = "";
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (cart.length === 0 && loadedWhatsappCartRef.current !== whatsappKey) {
+        return;
+      }
+
+      void fetch("/api/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ key: whatsappKey, data: cart })
+      });
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [cart, cartReady, checkoutWhatsapp]);
 
   const cartDetail = useMemo(() => {
     return cart
@@ -253,9 +455,16 @@ export default function HomePage() {
 
     const form = new FormData(event.currentTarget);
     const customerName = String(form.get("customerName") || "");
-    const customerWhatsapp = String(form.get("whatsapp") || "");
+    const customerWhatsapp = String(form.get("whatsapp") || checkoutWhatsapp || "").trim();
     const city = String(form.get("city") || "");
     const notes = String(form.get("notes") || "");
+
+    if (!customerWhatsapp) {
+      setMessage("Ingresa tu WhatsApp antes de continuar.");
+      return;
+    }
+
+    setCheckoutWhatsapp(customerWhatsapp);
     const items = cartDetail.map<OrderItem>((item) => ({
       productId: item.product.id,
       variantId: item.variant.id,
@@ -299,7 +508,13 @@ export default function HomePage() {
 
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappLines.join("\n"))}`;
 
+    // open confirmation modal with payload
+    setConfirmModal({ payload, whatsappUrl, finalTotal });
+  }
+
+  async function confirmAndSend(payload: ConfirmPayload, whatsappUrl: string, finalTotal: number) {
     setIsSubmitting(true);
+    setMessage("");
     try {
       const response = await fetch("/api/orders", {
         method: "POST",
@@ -310,61 +525,56 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        throw new Error("Error al crear pedido");
+        const txt = await response.text();
+        throw new Error(txt || "Error al crear pedido");
       }
 
       const createdOrder = (await response.json()) as { order?: { id?: string } };
-      let cuboMessage = "";
       let shouldOpenWhatsapp = true;
 
       if (paymentMethod === "TARJETA_CUBO" && createdOrder.order?.id) {
-        const cuboResponse = await fetch("/api/payments/cubo/intent", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            orderId: createdOrder.order.id,
-            customerName,
-            customerWhatsapp,
-            amount: finalTotal,
-            currency: "GTQ",
-            metadata: {
-              city,
-              departamento,
-              notes,
-              itemCount: cartDetail.length
-            }
-          })
-        });
-
-        if (cuboResponse.ok) {
-          const cuboData = (await cuboResponse.json()) as { checkoutUrl?: string; message?: string };
-          if (cuboData.checkoutUrl) {
-            shouldOpenWhatsapp = false;
-            window.location.assign(cuboData.checkoutUrl);
-          } else if (cuboData.message) {
-            cuboMessage = cuboData.message;
-          }
-        }
+        setPaymentModal({ orderId: createdOrder.order.id, amount: finalTotal, customerName: payload.customerName });
+        shouldOpenWhatsapp = false;
       }
 
       if (shouldOpenWhatsapp) {
         const popup = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-        if (!popup) {
-          window.location.assign(whatsappUrl);
-        }
+        if (!popup) window.location.assign(whatsappUrl);
       }
 
-      setMessage(cuboMessage || "Pedido listo. Se abrió WhatsApp con tu resumen y el pedido quedó registrado.");
+      setMessage("Pedido registrado.");
       setCart([]);
-      event.currentTarget.reset();
       setDepartamento("Guatemala");
       setPaymentMethod("PAGO_CONTRAENTREGA");
-    } catch {
-      setMessage("No se pudo enviar el pedido. Intenta de nuevo.");
+      setConfirmModal(null);
+    } catch (err) {
+      setMessage(String(err) || "No se pudo enviar el pedido. Intenta de nuevo.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handlePayWithCubo(orderId: string, amount: number) {
+    setPaymentProcessing(true);
+    try {
+      const resp = await fetch("/api/payments/cubo/intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, amount, currency: "GTQ" })
+      });
+      if (!resp.ok) throw new Error("No se pudo iniciar pago");
+      const data = await resp.json() as { checkoutUrl?: string; message?: string };
+      if (data.checkoutUrl) {
+        // redirect to hosted checkout
+        window.location.assign(data.checkoutUrl);
+      } else {
+        setMessage(data.message || "No se pudo iniciar el pago en línea.");
+      }
+    } catch (err) {
+      setMessage(String(err) || "Error al iniciar pago");
+    } finally {
+      setPaymentProcessing(false);
+      setPaymentModal(null);
     }
   }
 
@@ -546,8 +756,17 @@ export default function HomePage() {
           <h2>Finalizar pedido</h2>
           <div className="checkout-grid">
             <form className="card order-form" onSubmit={submitOrder}>
+                <input name="hp" style={{ display: "none" }} />
               <input name="customerName" placeholder="Tu nombre" required />
-              <input name="whatsapp" placeholder="Tu WhatsApp" required />
+              <input
+                name="whatsapp"
+                value={checkoutWhatsapp}
+                onChange={(event) => setCheckoutWhatsapp(event.target.value)}
+                placeholder="Tu WhatsApp"
+                autoComplete="tel"
+                required
+              />
+              <input name="email" placeholder="Correo electrónico (opcional)" />
               <input name="city" placeholder="Ciudad o zona" required />
               
               <fieldset>
@@ -629,6 +848,27 @@ export default function HomePage() {
               <p className="muted">El pedido se abre en WhatsApp con tu resumen y también queda registrado.</p>
             </form>
 
+              {confirmModal ? (
+                <div className="modal-overlay" onClick={() => setConfirmModal(null)}>
+                  <article className="modal-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-head">
+                      <h3>Confirmar pedido</h3>
+                      <button type="button" className="secondary" onClick={() => setConfirmModal(null)}>Cerrar</button>
+                    </div>
+                    <div className="card">
+                      <p className="muted">Total a pagar: Q {confirmModal.finalTotal.toFixed(2)}</p>
+                      <p className="muted">Revisa los datos antes de confirmar. El pedido quedará registrado en el sistema.</p>
+                      <div className="actions">
+                        <button type="button" onClick={() => confirmAndSend(confirmModal.payload, confirmModal.whatsappUrl, confirmModal.finalTotal)} disabled={isSubmitting}>
+                          {isSubmitting ? "Enviando..." : "Confirmar y enviar pedido"}
+                        </button>
+                        <button type="button" className="secondary" onClick={() => setConfirmModal(null)}>Volver</button>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              ) : null}
+
             <article className="card">
               <h3>Compra asistida</h3>
               <p className="muted">Si prefieres cerrar por chat, usa el botón de pedido o escríbenos al 43132549.</p>
@@ -638,8 +878,15 @@ export default function HomePage() {
         </section>
       </main>
 
-      <aside className="floating-cart card">
-        <h3>Tu carrito ({totalItems})</h3>
+      <aside className={"floating-cart card" + (isCartOpen ? " open" : " closed")}>
+        <div className="cart-head">
+          <h3>Tu carrito ({totalItems})</h3>
+          <div className="cart-actions">
+            <button type="button" className="secondary" onClick={() => setIsCartOpen((s) => !s)}>
+              {isCartOpen ? "Minimizar" : "Abrir"}
+            </button>
+          </div>
+        </div>
         {cartDetail.length === 0 ? (
           <p className="muted">Agrega productos para empezar a comprar.</p>
         ) : (
@@ -683,6 +930,36 @@ export default function HomePage() {
       <a className="whatsapp-float" href={contactWhatsappHref} target="_blank" rel="noreferrer">
         WhatsApp 43132549
       </a>
+
+      {totalItems > 0 ? (
+        <div className="mobile-checkout-cta">
+          <a className="quick-link" href="#checkout">Finalizar pedido · Q {finalTotal.toFixed(2)}</a>
+        </div>
+      ) : null}
+
+      {paymentModal ? (
+        <div className="modal-overlay" onClick={() => setPaymentModal(null)}>
+          <article className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Pago con tarjeta</h3>
+              <button type="button" className="secondary" onClick={() => setPaymentModal(null)}>Cerrar</button>
+            </div>
+            <p className="muted">Orden: {paymentModal.orderId}</p>
+            <div className="card">
+              <h4>Resumen de pago</h4>
+              <p>Importe a pagar: Q {paymentModal.amount.toFixed(2)}</p>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button type="button" onClick={() => handlePayWithCubo(paymentModal.orderId, paymentModal.amount)} disabled={paymentProcessing}>
+                  {paymentProcessing ? "Procesando…" : "Pagar con tarjeta"}
+                </button>
+                <button type="button" className="secondary" onClick={() => { setPaymentModal(null); window.open(contactWhatsappHref, "_blank", "noopener"); }}>
+                  Pagar por WhatsApp
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      ) : null}
 
       {quickViewProduct ? (
         <div className="modal-overlay" onClick={closeQuickView}>

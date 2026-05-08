@@ -90,6 +90,8 @@ export default function AdminPage() {
   const [cuboMessage, setCuboMessage] = useState("Cubo pendiente de configuración.");
   const [panelView, setPanelView] = useState<"orders" | "crm" | "payments">("orders");
   const [city, setCity] = useState("");
+  const [q, setQ] = useState("");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [password, setPassword] = useState("");
@@ -100,7 +102,7 @@ export default function AdminPage() {
   const [updatingId, setUpdatingId] = useState("");
   const [savingVariantKey, setSavingVariantKey] = useState("");
 
-  async function loadOrders(filters?: { city?: string; from?: string; to?: string }) {
+  async function loadOrders(filters?: { city?: string; from?: string; to?: string; q?: string; paymentMethod?: string }) {
     setLoading(true);
     setError("");
     try {
@@ -108,6 +110,8 @@ export default function AdminPage() {
       if (filters?.city) params.set("city", filters.city);
       if (filters?.from) params.set("from", filters.from);
       if (filters?.to) params.set("to", filters.to);
+      if (filters?.q) params.set("q", filters.q);
+      if (filters?.paymentMethod) params.set("paymentMethod", filters.paymentMethod);
       const response = await fetch(`/api/orders?${params.toString()}`);
       if (response.status === 401) {
         setAuthenticated(false);
@@ -115,12 +119,15 @@ export default function AdminPage() {
         setError("Ingresa la contraseña para ver pedidos.");
         return;
       }
-      if (!response.ok) throw new Error("No se pudo cargar pedidos");
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || `No se pudo cargar pedidos (${response.status})`);
+      }
       const data = (await response.json()) as { orders: Order[] };
       setOrders(data.orders);
       setAuthenticated(true);
-    } catch {
-      setError("No se pudo cargar pedidos. Revisa la DB o filtros.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cargar pedidos. Revisa la DB o filtros.");
       setOrders([]);
     } finally {
       setLoading(false);
@@ -210,17 +217,17 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    void loadOrders();
+    void loadOrders({ q, paymentMethod: paymentMethodFilter || undefined });
     void loadCatalog();
     void loadCustomers();
     void loadCrmProducts();
     void loadPaymentAttempts();
     void loadCuboReadiness();
-  }, []);
+  }, [q, paymentMethodFilter]);
 
   function handleFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void loadOrders({ city, from, to });
+    void loadOrders({ city, from, to, q, paymentMethod: paymentMethodFilter || undefined });
   }
 
   const totalRevenue = useMemo(
@@ -460,10 +467,21 @@ export default function AdminPage() {
             <>
               <form className="card order-form" onSubmit={handleFilter}>
                 <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Buscar por cliente o WhatsApp"
+                />
+                <input
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   placeholder="Filtrar por ciudad"
                 />
+                <select value={paymentMethodFilter} onChange={(e) => setPaymentMethodFilter(e.target.value)}>
+                  <option value="">Todas las formas de pago</option>
+                  <option value="DEPOSITO_PREVIO">Deposito previo</option>
+                  <option value="PAGO_CONTRAENTREGA">Pago contra entrega</option>
+                  <option value="TARJETA_CUBO">Tarjeta Cubo</option>
+                </select>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
                 <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
                 <div className="actions">
@@ -506,6 +524,9 @@ export default function AdminPage() {
                         <p className="muted">Fecha: {new Date(order.createdAt).toLocaleString()}</p>
                         <p>Total: Q {Number(order.total || 0).toFixed(2)}</p>
                         <div className="actions">
+                          <a className="secondary" href={`/admin/order/${order.id}`}>
+                            Ver detalle
+                          </a>
                           {statusOptions.map((status) => (
                             <button
                               key={`${order.id}-${status}`}

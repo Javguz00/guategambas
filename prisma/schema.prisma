@@ -30,6 +30,7 @@ enum PaymentStatus {
 model Order {
   id             String        @id @default(cuid())
   customerName   String
+  email          String?
   whatsapp       String
   city           String
   departamento   String?
@@ -43,6 +44,14 @@ model Order {
   shippingCost   Float         @default(0)
   status         OrderStatus   @default(PENDING)
   createdAt      DateTime      @default(now())
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Customer {

@@ -163,3 +163,19 @@ button.secondary { background: var(--surface-soft); color: var(--text); border: 
   .with-floating-cart { padding-right: 0; padding-bottom: 40vh; }
   .modal-card { padding: 14px; }
 }
+
+/* Minimize / open states for floating cart */
+.floating-cart.closed { height: auto; max-height: none; overflow: visible; width: min(220px, 44vw); right: 18px; }
+.floating-cart.closed ul, .floating-cart.closed .cart-total, .floating-cart.closed .checkout-link { display: none; }
+.floating-cart.closed .cart-head { display: flex; align-items: center; justify-content: space-between; padding: 8px; }
+.floating-cart.open { box-shadow: var(--shadow); }
+.floating-cart .cart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cart-actions button { padding: 8px 10px; border-radius: 10px; }
+
+/* Mobile checkout CTA */
+@media (max-width: 420px) {
+  .mobile-checkout-cta { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; display: flex; }
+  .mobile-checkout-cta a { flex: 1; text-align: center; padding: 14px; border-radius: 12px; font-weight: 900; }
+  button { padding: 14px 18px; font-size: 1rem; }
+  .product-card h3 { font-size: 1.05rem; }
+}
