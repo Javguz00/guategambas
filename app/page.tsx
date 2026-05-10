@@ -641,6 +641,33 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="section announcement">
+          <div className="card accent-card">
+            <h3>Importacion de gambitas — Viernes 15 de mayo</h3>
+            <p>Importacion de gambitas para el proximo viernes 15 de mayo.</p>
+            <p className="muted">Precios especiales (referencia):</p>
+            <ul className="announcement-list">
+              <li>
+                <strong>Caridinas (packs de 5):</strong>
+                <span>Blue Bolt a-s — Q1000</span>
+                <span>Red galaxy fishbone — Q1000</span>
+                <span>Galaxy black — Q1000</span>
+                <span>Panda bkk — Q1000</span>
+              </li>
+              <li>
+                <strong>Neocaridinas:</strong>
+                <span>Bloody dark — Q300</span>
+                <span>Black — Q200</span>
+                <span>Snowball — Q200</span>
+                <span>Yellow GB — Q250</span>
+                <span>Orange — Q175</span>
+                <span>Green Jade — Q600</span>
+              </li>
+            </ul>
+            <p className="muted">Más info por mensaje directo (WhatsApp).</p>
+          </div>
+        </section>
+
         <section id="catalogo" className="section">
           <div className="section-head">
             <div>

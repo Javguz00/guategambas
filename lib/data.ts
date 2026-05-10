@@ -17,14 +17,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Alto",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 50
+        price: 60
       },
       {
         id: "golden-bee-alto-5",
         gradeLabel: "Grado Alto",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 200
+        price: 250
       },
       // Grado Normal
       {
@@ -32,14 +32,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Normal",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 35
+        price: 40
       },
       {
         id: "golden-bee-normal-5",
         gradeLabel: "Grado Normal",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 125
+        price: 175
       }
     ],
     media: { photos: ["/photos/golden-bee/product5.jpg", "/photos/golden-bee/product6.jpg", "/photos/golden-bee/product7.jpg", "/photos/golden-bee/product8.jpg"], videos: [] }
@@ -57,14 +57,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Alto",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 50
+        price: 60
       },
       {
         id: "tai-bee-alto-5",
         gradeLabel: "Grado Alto",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 200
+        price: 250
       },
       // Grado Normal
       {
@@ -72,17 +72,17 @@ export const products: Product[] = [
         gradeLabel: "Grado Normal",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 35
+        price: 40
       },
       {
         id: "tai-bee-normal-5",
         gradeLabel: "Grado Normal",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 125
+        price: 175
       }
     ],
-    media: { photos: ["/photos/tai-bee-spotted-head/product5.jpg"], videos: [] }
+    media: { photos: ["/photos/tai-bee-spotted-head/tibee-spotted-head-normal.jpg"], videos: [] }
   },
   {
     id: "crs",
@@ -97,14 +97,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Alto",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 50
+        price: 60
       },
       {
         id: "crs-alto-5",
         gradeLabel: "Grado Alto",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 200
+        price: 250
       },
       // Grado Normal
       {
@@ -112,14 +112,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Normal",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 35
+        price: 40
       },
       {
         id: "crs-normal-5",
         gradeLabel: "Grado Normal",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 125
+        price: 175
       }
     ],
     media: { photos: ["/photos/crs/product2.jpg"], videos: [] }
@@ -137,14 +137,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Alto",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 50
+        price: 60
       },
       {
         id: "taiwan-cbs-alto-5",
         gradeLabel: "Grado Alto",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 200
+        price: 250
       },
       // Grado Normal
       {
@@ -152,14 +152,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Normal",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 35
+        price: 40
       },
       {
         id: "taiwan-cbs-normal-5",
         gradeLabel: "Grado Normal",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 125
+        price: 175
       }
     ],
     media: { photos: ["/photos/taiwan-cbs/product3.jpg", "/photos/taiwan-cbs/product4.jpg"], videos: [] }
@@ -219,14 +219,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Alto",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 45
+        price: 150
       },
       {
         id: "green-jade-alto-5",
         gradeLabel: "Grado Alto",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 200
+        price: 600
       },
       // Grado Normal
       {
@@ -234,14 +234,14 @@ export const products: Product[] = [
         gradeLabel: "Grado Normal",
         label: "1 unidad",
         unitLabel: "1 unidad",
-        price: 30
+        price: 100
       },
       {
         id: "green-jade-normal-5",
         gradeLabel: "Grado Normal",
         label: "Pack 5",
         unitLabel: "5 unidades",
-        price: 125
+        price: 475
       }
     ],
     media: { photos: ["/photos/green-jade/product5.jpg", "/photos/green-jade/product6.jpg", "/photos/green-jade/product7.jpg", "/photos/green-jade/product8.jpg"], videos: [] }
@@ -425,7 +425,7 @@ export const products: Product[] = [
     category: "suplementos",
     description: "Aditivo bacteriano en presentacion de 10 gramos.",
     variants: [{ id: "bacter-ae-10g", label: "10g", unitLabel: "10 g", price: 35 }],
-    media: { photos: ["/photos/bacter-ae/product2.jpg"], videos: [] }
+    media: { photos: ["/photos/bacter-ae/bacter-ae.jpg", "/photos/magic-powder/magic-powder-10g.jpg"], videos: [] }
   },
   {
     id: "magic-powder",
@@ -433,7 +433,7 @@ export const products: Product[] = [
     category: "suplementos",
     description: "Suplemento en polvo, 10 gramos.",
     variants: [{ id: "magic-10g", label: "10g", unitLabel: "10 g", price: 40 }],
-    media: { photos: ["/photos/magic-powder/product3.jpg", "/photos/magic-powder/product4.jpg"], videos: [] }
+    media: { photos: ["/photos/magic-powder/magic-powder-40g.jpg"], videos: [] }
   },
 
   // Accesorios
