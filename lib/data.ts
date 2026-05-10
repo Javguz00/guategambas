@@ -42,7 +42,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/golden-bee/product5.jpg", "/photos/golden-bee/product6.jpg", "/photos/golden-bee/product7.jpg", "/photos/golden-bee/product8.jpg"], videos: [] }
   },
   {
     id: "tai-bee-spotted-head",
@@ -82,7 +82,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/tai-bee-spotted-head/product5.jpg"], videos: [] }
   },
   {
     id: "crs",
@@ -122,7 +122,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/crs/product2.jpg"], videos: [] }
   },
   {
     id: "taiwan-cbs",
@@ -162,7 +162,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/taiwan-cbs/product3.jpg", "/photos/taiwan-cbs/product4.jpg"], videos: [] }
   },
 
   // Neocaridinas
@@ -204,7 +204,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: ["/photos/bloody-mary/20251009_210314.jpg"], videos: [] }
+    media: { photos: ["/photos/bloody-mary/20251009_210314.jpg", "/photos/bloody-mary/product7.jpg", "/photos/bloody-mary/product8.jpg", "/photos/bloody-mary/product9.jpg"], videos: [] }
   },
   {
     id: "green-jade",
@@ -244,7 +244,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/green-jade/product5.jpg", "/photos/green-jade/product6.jpg", "/photos/green-jade/product7.jpg", "/photos/green-jade/product8.jpg"], videos: [] }
   },
   {
     id: "orange-neocaridina",
@@ -364,7 +364,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/cherries/product2.jpg"], videos: [] }
   },
   {
     id: "black-neocaridina",
@@ -404,7 +404,7 @@ export const products: Product[] = [
         price: 125
       }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/black-neocaridina/product2.jpg"], videos: [] }
   },
 
   // Suplementos
@@ -425,7 +425,7 @@ export const products: Product[] = [
     category: "suplementos",
     description: "Aditivo bacteriano en presentacion de 10 gramos.",
     variants: [{ id: "bacter-ae-10g", label: "10g", unitLabel: "10 g", price: 35 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/bacter-ae/product2.jpg"], videos: [] }
   },
   {
     id: "magic-powder",
@@ -433,7 +433,7 @@ export const products: Product[] = [
     category: "suplementos",
     description: "Suplemento en polvo, 10 gramos.",
     variants: [{ id: "magic-10g", label: "10g", unitLabel: "10 g", price: 40 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/magic-powder/product3.jpg", "/photos/magic-powder/product4.jpg"], videos: [] }
   },
 
   // Accesorios
@@ -447,7 +447,7 @@ export const products: Product[] = [
       { id: "cholla-medium", label: "Mediano", unitLabel: "1 pz", price: 25 },
       { id: "cholla-large", label: "Grande", unitLabel: "1 pz", price: 30 }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/tronco-cholla/product2.jpg"], videos: [] }
   },
   {
     id: "red-expansible",
@@ -471,7 +471,7 @@ export const products: Product[] = [
     category: "accesorios",
     description: "Bolsa comercial de 10 hojas de almendro.",
     variants: [{ id: "almendro-10", label: "Pack 10", unitLabel: "10 hojas", price: 35 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/almendro-hojas-10/product3.jpg", "/photos/almendro-hojas-10/product4.jpg"], videos: [] }
   },
   {
     id: "filtro-pulmon-material",
@@ -479,7 +479,7 @@ export const products: Product[] = [
     category: "accesorios",
     description: "Filtro de esponja/pulmon con material filtrante incluido.",
     variants: [{ id: "filtro-pulmon-1", label: "Unidad", unitLabel: "1 kit", price: 110 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/filtro-pulmon-material/product2.jpg"], videos: [] }
   },
   {
     id: "bomba-sobo",
@@ -490,7 +490,7 @@ export const products: Product[] = [
       { id: "sobo-1-salida", label: "1 salida", unitLabel: "1 pz", price: 45 },
       { id: "sobo-2-salidas", label: "2 salidas", unitLabel: "1 pz", price: 70 }
     ],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/bomba-sobo/product3.jpg", "/photos/bomba-sobo/product4.jpg"], videos: [] }
   },
   {
     id: "fluval-stratum",
@@ -498,7 +498,7 @@ export const products: Product[] = [
     category: "accesorios",
     description: "Sustrato Fluval Stratum - precio por libra.",
     variants: [{ id: "stratum-lb", label: "Libra", unitLabel: "1 libra", price: 55 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/fluval-stratum/product3.jpg", "/photos/fluval-stratum/product4.jpg"], videos: [] }
   },
   {
     id: "shrimp-sand",
@@ -506,7 +506,7 @@ export const products: Product[] = [
     category: "accesorios",
     description: "Sustrato tipo arena para gambas - precio por libra.",
     variants: [{ id: "sand-lb", label: "Libra", unitLabel: "1 libra", price: 35 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/shrimp-sand/product2.jpg"], videos: [] }
   },
   {
     id: "wanenergy-30",
@@ -514,7 +514,7 @@ export const products: Product[] = [
     category: "accesorios",
     description: "Lámpara LED Wanenergy 30 cm.",
     variants: [{ id: "wan-30", label: "30 cm", unitLabel: "1 pz", price: 100 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/wanenergy-30/product2.jpg"], videos: [] }
   },
   {
     id: "wanenergy-60",
@@ -522,7 +522,7 @@ export const products: Product[] = [
     category: "accesorios",
     description: "Lámpara LED Wanenergy 60 cm.",
     variants: [{ id: "wan-60", label: "60 cm", unitLabel: "1 pz", price: 150 }],
-    media: { photos: [], videos: [] }
+    media: { photos: ["/photos/wanenergy-60/product2.jpg"], videos: [] }
   }
 ];
 

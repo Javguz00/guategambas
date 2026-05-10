@@ -1,0 +1,375 @@
+{
+  "manifest": {
+    "salty-shrimp-gh": [
+      "/photos/salty-shrimp-gh/alimento-20-gramos.jpg",
+      "/photos/salty-shrimp-gh/alimento-para-gambas.jpg"
+    ],
+    "bacter-ae": [
+      "/photos/bacter-ae/bacter-ae.jpg"
+    ],
+    "black-neocaridina": [
+      "/photos/black-neocaridina/black.jpg"
+    ],
+    "bloody-mary": [
+      "/photos/bloody-mary/blody-mary-alto-grado.jpg",
+      "/photos/bloody-mary/bloody-mary-grupo.jpg",
+      "/photos/bloody-mary/bloody-mary-normal.jpg"
+    ],
+    "taiwan-cbs": [
+      "/photos/taiwan-cbs/cbs-1.jpg",
+      "/photos/taiwan-cbs/cbs.jpg"
+    ],
+    "cherries": [
+      "/photos/cherries/cherrys.jpg"
+    ],
+    "crs": [
+      "/photos/crs/crs.jpg"
+    ],
+    "filtro-pulmon-material": [
+      "/photos/filtro-pulmon-material/filtro.jpg"
+    ],
+    "golden-bee": [
+      "/photos/golden-bee/golden-bee-1.jpg",
+      "/photos/golden-bee/golden-bee-2.jpg",
+      "/photos/golden-bee/golden-bee-3.jpg",
+      "/photos/golden-bee/golden-bee.jpg"
+    ],
+    "green-jade": [
+      "/photos/green-jade/green-jade-1.jpg",
+      "/photos/green-jade/green-jade-2.jpg",
+      "/photos/green-jade/green-jade-3.jpg",
+      "/photos/green-jade/green-jade.jpg"
+    ],
+    "almendro-hojas-10": [
+      "/photos/almendro-hojas-10/hojas-de-almendro-info.jpg",
+      "/photos/almendro-hojas-10/hojas-de-almendro.jpg"
+    ],
+    "magic-powder": [
+      "/photos/magic-powder/magic-powder-10g.jpg",
+      "/photos/magic-powder/magic-powder-40g.jpg"
+    ],
+    "shrimp-sand": [
+      "/photos/shrimp-sand/shrim-sand.jpg"
+    ],
+    "bomba-sobo": [
+      "/photos/bomba-sobo/sobo-548a.jpg",
+      "/photos/bomba-sobo/sobo-648a.jpg"
+    ],
+    "fluval-stratum": [
+      "/photos/fluval-stratum/sustrato-fluval-stratum-1.jpg",
+      "/photos/fluval-stratum/sustrato-fluval-stratum.jpg"
+    ],
+    "tai-bee-spotted-head": [
+      "/photos/tai-bee-spotted-head/tibee-spotted-head-normal.jpg"
+    ],
+    "tronco-cholla": [
+      "/photos/tronco-cholla/troncos-de-cholla.jpg"
+    ],
+    "wanenergy-30": [
+      "/photos/wanenergy-30/wanenergy-28-cm.jpg"
+    ],
+    "wanenergy-60": [
+      "/photos/wanenergy-60/wanenergy-58-cm.jpg"
+    ]
+  },
+  "processed": [
+    {
+      "source": "Alimento 20 gramos.jpeg",
+      "target": "/photos/salty-shrimp-gh/alimento-20-gramos.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Alimento para gambas.jpeg",
+      "target": "/photos/salty-shrimp-gh/alimento-para-gambas.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Bacter ae.jpeg",
+      "target": "/photos/bacter-ae/bacter-ae.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Black.jpeg",
+      "target": "/photos/black-neocaridina/black.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Blody mary alto grado.jpeg",
+      "target": "/photos/bloody-mary/blody-mary-alto-grado.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Bloody mary grupo.jpeg",
+      "target": "/photos/bloody-mary/bloody-mary-grupo.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Bloody mary normal.jpeg",
+      "target": "/photos/bloody-mary/bloody-mary-normal.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "cbs 1.jpeg",
+      "target": "/photos/taiwan-cbs/cbs-1.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Cbs.jpeg",
+      "target": "/photos/taiwan-cbs/cbs.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Cherrys.jpeg",
+      "target": "/photos/cherries/cherrys.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "CRS.jpeg",
+      "target": "/photos/crs/crs.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Filtro.jpeg",
+      "target": "/photos/filtro-pulmon-material/filtro.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Golden bee 1.jpeg",
+      "target": "/photos/golden-bee/golden-bee-1.jpg",
+      "cropped": false,
+      "size": [
+        900,
+        1600
+      ]
+    },
+    {
+      "source": "Golden bee 2.jpeg",
+      "target": "/photos/golden-bee/golden-bee-2.jpg",
+      "cropped": false,
+      "size": [
+        900,
+        1600
+      ]
+    },
+    {
+      "source": "Golden bee 3.jpeg",
+      "target": "/photos/golden-bee/golden-bee-3.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Golden bee.jpeg",
+      "target": "/photos/golden-bee/golden-bee.jpg",
+      "cropped": false,
+      "size": [
+        900,
+        1600
+      ]
+    },
+    {
+      "source": "Green jade 1.jpeg",
+      "target": "/photos/green-jade/green-jade-1.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Green jade 2.jpeg",
+      "target": "/photos/green-jade/green-jade-2.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Green jade 3.jpeg",
+      "target": "/photos/green-jade/green-jade-3.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Green jade.jpeg",
+      "target": "/photos/green-jade/green-jade.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Hojas de almendro info.jpeg",
+      "target": "/photos/almendro-hojas-10/hojas-de-almendro-info.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Hojas de almendro.jpeg",
+      "target": "/photos/almendro-hojas-10/hojas-de-almendro.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Magic powder 10g.jpeg",
+      "target": "/photos/magic-powder/magic-powder-10g.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Magic powder 40g.jpeg",
+      "target": "/photos/magic-powder/magic-powder-40g.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Shrim Sand.jpeg",
+      "target": "/photos/shrimp-sand/shrim-sand.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "SOBO 548A.jpeg",
+      "target": "/photos/bomba-sobo/sobo-548a.jpg",
+      "cropped": false,
+      "size": [
+        1080,
+        1920
+      ]
+    },
+    {
+      "source": "SOBO 648a.jpeg",
+      "target": "/photos/bomba-sobo/sobo-648a.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Sustrato fluval stratum 1.jpeg",
+      "target": "/photos/fluval-stratum/sustrato-fluval-stratum-1.jpg",
+      "cropped": false,
+      "size": [
+        738,
+        1600
+      ]
+    },
+    {
+      "source": "Sustrato Fluval Stratum.jpeg",
+      "target": "/photos/fluval-stratum/sustrato-fluval-stratum.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Tibee spotted head normal.jpeg",
+      "target": "/photos/tai-bee-spotted-head/tibee-spotted-head-normal.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "Troncos de cholla.jpeg",
+      "target": "/photos/tronco-cholla/troncos-de-cholla.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "WanEnergy 28 cm.jpeg",
+      "target": "/photos/wanenergy-30/wanenergy-28-cm.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    },
+    {
+      "source": "WanEnergy 58 cm.jpeg",
+      "target": "/photos/wanenergy-60/wanenergy-58-cm.jpg",
+      "cropped": false,
+      "size": [
+        739,
+        1600
+      ]
+    }
+  ],
+  "unmapped": []
+}
