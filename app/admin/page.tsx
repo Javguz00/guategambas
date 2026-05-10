@@ -112,7 +112,7 @@ export default function AdminPage() {
       if (filters?.to) params.set("to", filters.to);
       if (filters?.q) params.set("q", filters.q);
       if (filters?.paymentMethod) params.set("paymentMethod", filters.paymentMethod);
-      const response = await fetch(`/api/orders?${params.toString()}`);
+      const response = await fetch(`/api/orders?${params.toString()}`, { credentials: "same-origin" });
       if (response.status === 401) {
         setAuthenticated(false);
         setOrders([]);
@@ -169,7 +169,7 @@ export default function AdminPage() {
 
   async function loadCatalog() {
     try {
-      const response = await fetch("/api/catalog");
+      const response = await fetch("/api/catalog", { credentials: "same-origin" });
       if (!response.ok) return;
       const data = (await response.json()) as { products?: CatalogProduct[] };
       if (Array.isArray(data.products)) {
@@ -186,7 +186,7 @@ export default function AdminPage() {
 
   async function loadCrmProducts() {
     try {
-      const response = await fetch("/api/crm/products");
+      const response = await fetch("/api/crm/products", { credentials: "same-origin" });
       if (response.status === 401) {
         setAuthenticated(false);
         return;
@@ -235,7 +235,7 @@ export default function AdminPage() {
     setError("");
     setNotice("");
     try {
-      const response = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
+      const response = await fetch("/api/admin/login", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
       if (!response.ok) throw new Error("Contraseña invalida");
       setAuthenticated(true);
       setPassword("");
@@ -251,7 +251,7 @@ export default function AdminPage() {
   }
 
   async function handleLogout() {
-    await fetch("/api/admin/logout", { method: "POST" });
+    await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" });
     setAuthenticated(false);
     setOrders([]);
     setPassword("");
@@ -285,7 +285,7 @@ export default function AdminPage() {
         const [productId, variantId] = key.split(":");
         const draft = catalogDrafts[key];
         if (!productId || !variantId || !draft) continue;
-        const response = await fetch("/api/catalog", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId, variantId, stockAvailable: draft.stockAvailable === "" ? null : Number(draft.stockAvailable), isActive: draft.isActive, priceOverride: draft.priceOverride === "" ? null : Number(draft.priceOverride) }) });
+        const response = await fetch("/api/catalog", { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId, variantId, stockAvailable: draft.stockAvailable === "" ? null : Number(draft.stockAvailable), isActive: draft.isActive, priceOverride: draft.priceOverride === "" ? null : Number(draft.priceOverride) }) });
         if (!response.ok) throw new Error(`No se pudo guardar variante ${variantId}`);
       }
       await loadCatalog();
@@ -316,7 +316,7 @@ export default function AdminPage() {
       for (const id of dirtyIds) {
         const draft = crmDrafts[id];
         if (!draft) continue;
-        const response = await fetch("/api/crm/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, description: draft.description, basePrice: Number(draft.basePrice), stock: draft.stock === "" ? null : Number(draft.stock), active: draft.active, gradeLabel: draft.gradeLabel, unitLabel: draft.unitLabel, notes: draft.notes }) });
+        const response = await fetch("/api/crm/products", { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, description: draft.description, basePrice: Number(draft.basePrice), stock: draft.stock === "" ? null : Number(draft.stock), active: draft.active, gradeLabel: draft.gradeLabel, unitLabel: draft.unitLabel, notes: draft.notes }) });
         if (!response.ok) throw new Error(`No se pudo guardar ${draft.name || id}`);
       }
       await loadCrmProducts();
@@ -333,7 +333,7 @@ export default function AdminPage() {
     setError("");
     setNotice("");
     try {
-      const response = await fetch("/api/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
+      const response = await fetch("/api/orders", { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
       if (!response.ok) throw new Error("No se pudo actualizar estado");
       setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));
       setNotice(`Pedido ${id.slice(0, 8)} actualizado a ${status}.`);
