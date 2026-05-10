@@ -150,6 +150,82 @@ button.secondary { background: var(--surface-soft); color: var(--text); border: 
 .carousel-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .admin-login { max-width: 480px; display: grid; gap: 10px; }
 .admin-shell { display: grid; gap: 18px; }
+.admin-kpi-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.admin-kpi { display: grid; gap: 6px; }
+.admin-kpi strong { font-size: 1.45rem; color: var(--secondary); }
+.admin-notice,
+.admin-error {
+  margin: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+}
+.admin-notice {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: color-mix(in srgb, var(--primary) 80%, var(--text));
+}
+.admin-error {
+  background: color-mix(in srgb, #ef4444 15%, transparent);
+  color: color-mix(in srgb, #ef4444 80%, var(--text));
+}
+.admin-grid-5 {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.admin-order-card {
+  display: grid;
+  gap: 10px;
+}
+.admin-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-section-head h3 {
+  margin: 0;
+}
+.admin-section-head p {
+  margin: 4px 0 0;
+}
+.admin-edit-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: center;
+}
+.admin-grid-2 {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.admin-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+.admin-checkbox input {
+  margin: 0;
+}
+
+.admin-shell textarea,
+.admin-shell input,
+.admin-shell select {
+  width: 100%;
+  background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px;
+}
 
 @media (max-width: 900px) {
   .layout-buy, .checkout-grid, .hero-summary, .product-grid { grid-template-columns: 1fr; }

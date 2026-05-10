@@ -44,16 +44,6 @@ type CatalogProduct = {
   variants: CatalogVariant[];
 };
 
-type Customer = {
-  id: string;
-  fullName: string;
-  whatsapp: string;
-  email?: string | null;
-  department?: string | null;
-  notes?: string | null;
-  updatedAt: string;
-};
-
 type CrmProduct = {
   id: string;
   name: string;
@@ -68,39 +58,49 @@ type CrmProduct = {
   updatedAt: string;
 };
 
-type PaymentAttempt = {
-  id: string;
-  orderId?: string | null;
-  provider: string;
-  providerReference?: string | null;
-  amount: number;
-  currency: string;
-  status: string;
-  customerName: string;
-  customerWhatsapp: string;
-  createdAt: string;
+type CatalogDraft = {
+  stockAvailable: string;
+  priceOverride: string;
+  isActive: boolean;
+};
+
+type CrmDraft = {
+  name: string;
+  category: string;
+  description: string;
+  basePrice: string;
+  stock: string;
+  active: boolean;
+  gradeLabel: string;
+  unitLabel: string;
+  notes: string;
 };
 
 export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [crmProducts, setCrmProducts] = useState<CrmProduct[]>([]);
-  const [paymentAttempts, setPaymentAttempts] = useState<PaymentAttempt[]>([]);
-  const [cuboMessage, setCuboMessage] = useState("Cubo pendiente de configuración.");
-  const [panelView, setPanelView] = useState<"orders" | "crm" | "payments">("orders");
+
+  const [catalogDrafts, setCatalogDrafts] = useState<Record<string, CatalogDraft>>({});
+  const [catalogDirty, setCatalogDirty] = useState<Record<string, true>>({});
+  const [crmDrafts, setCrmDrafts] = useState<Record<string, CrmDraft>>({});
+  const [crmDirty, setCrmDirty] = useState<Record<string, true>>({});
+
   const [city, setCity] = useState("");
   const [q, setQ] = useState("");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
-  const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState("");
-  const [savingVariantKey, setSavingVariantKey] = useState("");
+  const [savingCatalog, setSavingCatalog] = useState(false);
+  const [savingCrm, setSavingCrm] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   async function loadOrders(filters?: { city?: string; from?: string; to?: string; q?: string; paymentMethod?: string }) {
     setLoading(true);
@@ -127,42 +127,60 @@ export default function AdminPage() {
       setOrders(data.orders);
       setAuthenticated(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cargar pedidos. Revisa la DB o filtros.");
+      setError(err instanceof Error ? err.message : "No se pudo cargar pedidos.");
       setOrders([]);
     } finally {
       setLoading(false);
     }
   }
 
+  function toCatalogDraftMap(products: CatalogProduct[]) {
+    const next: Record<string, CatalogDraft> = {};
+    products.forEach((product) => {
+      product.variants.forEach((variant) => {
+        const key = `${product.id}:${variant.id}`;
+        next[key] = {
+          stockAvailable: variant.stockAvailable === null || variant.stockAvailable === undefined ? "" : String(variant.stockAvailable),
+          priceOverride: variant.priceOverride === null || variant.priceOverride === undefined ? String(variant.price) : String(variant.priceOverride),
+          isActive: variant.isActive !== false
+        };
+      });
+    });
+    return next;
+  }
+
+  function toCrmDraftMap(products: CrmProduct[]) {
+    const next: Record<string, CrmDraft> = {};
+    products.forEach((product) => {
+      next[product.id] = {
+        name: product.name,
+        category: product.category,
+        description: product.description || "",
+        basePrice: String(product.basePrice),
+        stock: product.stock === null || product.stock === undefined ? "" : String(product.stock),
+        active: product.active,
+        gradeLabel: product.gradeLabel || "",
+        unitLabel: product.unitLabel || "",
+        notes: product.notes || ""
+      };
+    });
+    return next;
+  }
+
   async function loadCatalog() {
     try {
       const response = await fetch("/api/catalog");
       if (!response.ok) return;
-
       const data = (await response.json()) as { products?: CatalogProduct[] };
       if (Array.isArray(data.products)) {
         setCatalog(data.products);
+        setCatalogDrafts(toCatalogDraftMap(data.products));
+        setCatalogDirty({});
       }
     } catch {
       setCatalog([]);
-    }
-  }
-
-  async function loadCustomers() {
-    try {
-      const response = await fetch("/api/crm/customers");
-      if (response.status === 401) {
-        setAuthenticated(false);
-        return;
-      }
-      if (!response.ok) return;
-
-      const data = (await response.json()) as { customers?: Customer[] };
-      if (Array.isArray(data.customers)) {
-        setCustomers(data.customers);
-      }
-    } catch {
-      setCustomers([]);
+      setCatalogDrafts({});
+      setCatalogDirty({});
     }
   }
 
@@ -174,55 +192,23 @@ export default function AdminPage() {
         return;
       }
       if (!response.ok) return;
-
       const data = (await response.json()) as { products?: CrmProduct[] };
       if (Array.isArray(data.products)) {
         setCrmProducts(data.products);
+        setCrmDrafts(toCrmDraftMap(data.products));
+        setCrmDirty({});
       }
     } catch {
       setCrmProducts([]);
-    }
-  }
-
-  async function loadPaymentAttempts() {
-    try {
-      const response = await fetch("/api/payments/cubo/attempts");
-      if (response.status === 401) {
-        setAuthenticated(false);
-        return;
-      }
-      if (!response.ok) return;
-
-      const data = (await response.json()) as { attempts?: PaymentAttempt[] };
-      if (Array.isArray(data.attempts)) {
-        setPaymentAttempts(data.attempts);
-      }
-    } catch {
-      setPaymentAttempts([]);
-    }
-  }
-
-  async function loadCuboReadiness() {
-    try {
-      const response = await fetch("/api/payments/cubo/intent");
-      if (!response.ok) return;
-
-      const data = (await response.json()) as { message?: string };
-      if (data.message) {
-        setCuboMessage(data.message);
-      }
-    } catch {
-      setCuboMessage("Cubo pendiente de configuración.");
+      setCrmDrafts({});
+      setCrmDirty({});
     }
   }
 
   useEffect(() => {
     void loadOrders({ q, paymentMethod: paymentMethodFilter || undefined });
     void loadCatalog();
-    void loadCustomers();
     void loadCrmProducts();
-    void loadPaymentAttempts();
-    void loadCuboReadiness();
   }, [q, paymentMethodFilter]);
 
   function handleFilter(event: FormEvent<HTMLFormElement>) {
@@ -230,10 +216,12 @@ export default function AdminPage() {
     void loadOrders({ city, from, to, q, paymentMethod: paymentMethodFilter || undefined });
   }
 
-  const totalRevenue = useMemo(
-    () => orders.reduce((sum, order) => sum + Number(order.total || 0), 0),
-    [orders]
-  );
+  const totalRevenue = useMemo(() => orders.reduce((sum, order) => sum + Number(order.total || 0), 0), [orders]);
+
+  const pendingOrders = useMemo(() => orders.filter((order) => order.status === "PENDING").length, [orders]);
+
+  const catalogDirtyCount = useMemo(() => Object.keys(catalogDirty).length, [catalogDirty]);
+  const crmDirtyCount = useMemo(() => Object.keys(crmDirty).length, [crmDirty]);
 
   function formatOrderItem(item: Order["items"][number]) {
     const baseName = item.name || item.productId || item.packId || "Producto";
@@ -245,22 +233,14 @@ export default function AdminPage() {
     event.preventDefault();
     setAuthLoading(true);
     setError("");
+    setNotice("");
     try {
-      const response = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ password })
-      });
-
-      if (!response.ok) {
-        throw new Error("Contraseña invalida");
-      }
-
+      const response = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
+      if (!response.ok) throw new Error("Contraseña invalida");
       setAuthenticated(true);
       setPassword("");
-      await loadOrders({ city, from, to });
+      await loadOrders({ city, from, to, q, paymentMethod: paymentMethodFilter || undefined });
+      await Promise.all([loadCatalog(), loadCrmProducts()]);
     } catch {
       setAuthenticated(false);
       setOrders([]);
@@ -278,138 +258,85 @@ export default function AdminPage() {
     setCity("");
     setFrom("");
     setTo("");
+    setQ("");
+    setPaymentMethodFilter("");
     setError("");
+    setNotice("");
   }
 
-  async function createCustomer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-
-    const form = new FormData(event.currentTarget);
-    const payload = Object.fromEntries(form.entries());
-
-    const response = await fetch("/api/crm/customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      setError("No se pudo guardar el cliente.");
-      return;
-    }
-
-    event.currentTarget.reset();
-    await loadCustomers();
-  }
-
-  async function deleteCustomer(id: string) {
-    const response = await fetch("/api/crm/customers", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
-    });
-
-    if (!response.ok) {
-      setError("No se pudo eliminar el cliente.");
-      return;
-    }
-
-    await loadCustomers();
-  }
-
-  async function createCrmProduct(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-
-    const form = new FormData(event.currentTarget);
-    const payload = Object.fromEntries(form.entries());
-
-    const response = await fetch("/api/crm/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      setError("No se pudo guardar el producto CRM.");
-      return;
-    }
-
-    event.currentTarget.reset();
-    await loadCrmProducts();
-  }
-
-  async function deleteCrmProduct(id: string) {
-    const response = await fetch("/api/crm/products", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
-    });
-
-    if (!response.ok) {
-      setError("No se pudo eliminar el producto CRM.");
-      return;
-    }
-
-    await loadCrmProducts();
-  }
-
-  async function saveVariantState(productId: string, variantId: string) {
+  function markCatalogDraft(productId: string, variantId: string, changes: Partial<CatalogDraft>) {
     const key = `${productId}:${variantId}`;
-    const variantInput = document.getElementById(`${key}-stock`) as HTMLInputElement | null;
-    const activeInput = document.getElementById(`${key}-active`) as HTMLInputElement | null;
-    const priceInput = document.getElementById(`${key}-price`) as HTMLInputElement | null;
-    const stockValue = variantInput?.value ?? "";
-    const isActive = activeInput?.checked ?? true;
-    const priceValue = priceInput?.value ?? "";
+    setCatalogDrafts((prev) => ({ ...prev, [key]: { ...(prev[key] || { stockAvailable: "", priceOverride: "", isActive: true }), ...changes } }));
+    setCatalogDirty((prev) => ({ ...prev, [key]: true }));
+  }
 
-    setSavingVariantKey(key);
+  async function saveAllCatalogChanges() {
+    const dirtyKeys = Object.keys(catalogDirty);
+    if (dirtyKeys.length === 0) {
+      setNotice("No hay cambios pendientes en inventario.");
+      setError("");
+      return;
+    }
+    setSavingCatalog(true);
     setError("");
-
+    setNotice("");
     try {
-      const response = await fetch("/api/catalog", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          productId,
-          variantId,
-          stockAvailable: stockValue === "" ? null : Number(stockValue),
-          isActive,
-          priceOverride: priceValue === "" ? null : Number(priceValue)
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("No se pudo guardar inventario");
+      for (const key of dirtyKeys) {
+        const [productId, variantId] = key.split(":");
+        const draft = catalogDrafts[key];
+        if (!productId || !variantId || !draft) continue;
+        const response = await fetch("/api/catalog", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId, variantId, stockAvailable: draft.stockAvailable === "" ? null : Number(draft.stockAvailable), isActive: draft.isActive, priceOverride: draft.priceOverride === "" ? null : Number(draft.priceOverride) }) });
+        if (!response.ok) throw new Error(`No se pudo guardar variante ${variantId}`);
       }
-
       await loadCatalog();
-    } catch {
-      setError("No se pudo guardar el estado del inventario.");
+      setNotice(`Inventario actualizado (${dirtyKeys.length} cambios).`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar inventario.");
     } finally {
-      setSavingVariantKey("");
+      setSavingCatalog(false);
+    }
+  }
+
+  function markCrmDraft(productId: string, changes: Partial<CrmDraft>) {
+    setCrmDrafts((prev) => ({ ...prev, [productId]: { ...(prev[productId] || { name: "", category: "", description: "", basePrice: "", stock: "", active: true, gradeLabel: "", unitLabel: "", notes: "" }), ...changes } }));
+    setCrmDirty((prev) => ({ ...prev, [productId]: true }));
+  }
+
+  async function saveAllCrmChanges() {
+    const dirtyIds = Object.keys(crmDirty);
+    if (dirtyIds.length === 0) {
+      setNotice("No hay cambios pendientes en productos CRM.");
+      setError("");
+      return;
+    }
+    setSavingCrm(true);
+    setError("");
+    setNotice("");
+    try {
+      for (const id of dirtyIds) {
+        const draft = crmDrafts[id];
+        if (!draft) continue;
+        const response = await fetch("/api/crm/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, description: draft.description, basePrice: Number(draft.basePrice), stock: draft.stock === "" ? null : Number(draft.stock), active: draft.active, gradeLabel: draft.gradeLabel, unitLabel: draft.unitLabel, notes: draft.notes }) });
+        if (!response.ok) throw new Error(`No se pudo guardar ${draft.name || id}`);
+      }
+      await loadCrmProducts();
+      setNotice(`Productos CRM actualizados (${dirtyIds.length} cambios).`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar productos CRM.");
+    } finally {
+      setSavingCrm(false);
     }
   }
 
   async function updateOrderStatus(id: string, status: OrderStatus) {
     setUpdatingId(id);
+    setError("");
+    setNotice("");
     try {
-      const response = await fetch("/api/orders", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ id, status })
-      });
-
-      if (!response.ok) {
-        throw new Error("No se pudo actualizar estado");
-      }
-
+      const response = await fetch("/api/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
+      if (!response.ok) throw new Error("No se pudo actualizar estado");
       setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));
+      setNotice(`Pedido ${id.slice(0, 8)} actualizado a ${status}.`);
     } catch {
       setError("No se pudo actualizar estado del pedido.");
     } finally {
@@ -422,8 +349,8 @@ export default function AdminPage() {
       <div className="hero-bar">
         <div>
           <span className="badge">Acceso privado</span>
-          <h1>GuateGambas Admin</h1>
-          <p className="muted">Panel privado para revisar pedidos, filtrar y cambiar estados.</p>
+          <h1>Dashboard Admin</h1>
+          <p className="muted">Control de pedidos, inventario y productos CRM desde un solo panel.</p>
         </div>
         {authenticated ? (
           <button type="button" className="secondary" onClick={handleLogout}>
@@ -435,15 +362,8 @@ export default function AdminPage() {
       {!authenticated ? (
         <form className="card admin-login" onSubmit={handleLogin}>
           <h3>Ingresar contraseña</h3>
-          <p className="muted">Solo tú puedes ver y administrar los pedidos.</p>
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Contraseña del admin"
-            autoComplete="current-password"
-            required
-          />
+          <p className="muted">Solo tú puedes ver y administrar esta información.</p>
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Contraseña del admin" autoComplete="current-password" required />
           <button type="submit" disabled={authLoading}>
             {authLoading ? "Validando..." : "Entrar"}
           </button>
@@ -451,279 +371,164 @@ export default function AdminPage() {
         </form>
       ) : (
         <>
-          <div className="card panel-tabs">
-            <button type="button" className={panelView === "orders" ? "" : "secondary"} onClick={() => setPanelView("orders")}>
-              Pedidos
-            </button>
-            <button type="button" className={panelView === "crm" ? "" : "secondary"} onClick={() => setPanelView("crm")}>
-              CRM
-            </button>
-            <button type="button" className={panelView === "payments" ? "" : "secondary"} onClick={() => setPanelView("payments")}>
-              Pagos Cubo
-            </button>
-          </div>
+          <section className="grid admin-kpi-grid">
+            <article className="card admin-kpi">
+              <p className="muted">Pedidos totales</p>
+              <strong>{orders.length}</strong>
+            </article>
+            <article className="card admin-kpi">
+              <p className="muted">Pendientes</p>
+              <strong>{pendingOrders}</strong>
+            </article>
+            <article className="card admin-kpi">
+              <p className="muted">Ingresos estimados</p>
+              <strong>Q {totalRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="card admin-kpi">
+              <p className="muted">Cambios sin guardar</p>
+              <strong>{catalogDirtyCount + crmDirtyCount}</strong>
+            </article>
+          </section>
 
-          {panelView === "orders" ? (
-            <>
-              <form className="card order-form" onSubmit={handleFilter}>
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Buscar por cliente o WhatsApp"
-                />
-                <input
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Filtrar por ciudad"
-                />
+          {notice ? <p className="admin-notice">{notice}</p> : null}
+          {error ? <p className="admin-error">{error}</p> : null}
+
+          <section className="card">
+            <h3>Pedidos</h3>
+            <form className="order-form" onSubmit={handleFilter}>
+              <div className="admin-grid-5">
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por cliente o WhatsApp" />
+                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Filtrar por ciudad" />
                 <select value={paymentMethodFilter} onChange={(e) => setPaymentMethodFilter(e.target.value)}>
                   <option value="">Todas las formas de pago</option>
-                  <option value="DEPOSITO_PREVIO">Deposito previo</option>
+                  <option value="DEPOSITO_PREVIO">Depósito previo</option>
                   <option value="PAGO_CONTRAENTREGA">Pago contra entrega</option>
                   <option value="TARJETA_CUBO">Tarjeta Cubo</option>
                 </select>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
                 <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-                <div className="actions">
-                  <button type="submit">Aplicar filtros</button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      setCity("");
-                      setFrom("");
-                      setTo("");
-                      void loadOrders();
-                    }}
-                  >
-                    Limpiar
-                  </button>
-                </div>
-              </form>
+              </div>
+              <div className="actions">
+                <button type="submit">Aplicar filtros</button>
+                <button type="button" className="secondary" onClick={() => { setCity(""); setFrom(""); setTo(""); setQ(""); setPaymentMethodFilter(""); void loadOrders(); }}>
+                  Limpiar
+                </button>
+              </div>
+            </form>
 
-              <section className="section" style={{ paddingTop: 20 }}>
-                <div className="card">
-                  <h3>Resumen</h3>
-                  <p className="muted">Pedidos: {orders.length}</p>
-                  <p className="cart-total">Ingresos estimados: Q {totalRevenue.toFixed(2)}</p>
-                </div>
-              </section>
-
-              <section className="section" style={{ paddingTop: 0 }}>
-                {loading ? <p className="muted">Cargando pedidos...</p> : null}
-                {error ? <p className="muted">{error}</p> : null}
-                {!loading && !error ? (
-                  <div className="grid" style={{ gap: 12 }}>
-                    {orders.map((order) => (
-                      <article key={order.id} className="card">
+            <div className="grid" style={{ gap: 12, marginTop: 14 }}>
+              {loading ? <p className="muted">Cargando pedidos...</p> : null}
+              {!loading && orders.length === 0 ? <p className="muted">No hay pedidos para estos filtros.</p> : null}
+              {!loading
+                ? orders.map((order) => (
+                    <article key={order.id} className="card admin-order-card">
+                      <div>
                         <h3>{order.customerName}</h3>
                         <p className="muted">
                           {order.city} · {order.whatsapp}
                         </p>
-                        <p className="muted">Estado: {order.status}</p>
                         <p className="muted">Fecha: {new Date(order.createdAt).toLocaleString()}</p>
-                        <p>Total: Q {Number(order.total || 0).toFixed(2)}</p>
-                        <div className="actions">
-                          <a className="secondary" href={`/admin/order/${order.id}`}>
-                            Ver detalle
-                          </a>
-                          {statusOptions.map((status) => (
-                            <button
-                              key={`${order.id}-${status}`}
-                              type="button"
-                              className={status === order.status ? "secondary" : ""}
-                              disabled={updatingId === order.id || status === order.status}
-                              onClick={() => updateOrderStatus(order.id, status)}
-                            >
-                              {status}
-                            </button>
-                          ))}
-                        </div>
-                        <ul>
-                          {Array.isArray(order.items)
-                            ? order.items.map((item, idx) => (
-                                <li key={`${order.id}-${idx}`}>
-                                  {formatOrderItem(item)} x {item.quantity}
-                                </li>
-                              ))
-                            : null}
-                        </ul>
-                        {order.notes ? <p className="muted">Notas: {order.notes}</p> : null}
-                      </article>
-                    ))}
-                  </div>
-                ) : null}
-              </section>
-
-              <section className="section" style={{ paddingTop: 0 }}>
-                <div className="card">
-                  <h3>Inventario del catálogo</h3>
-                  <p className="muted">Marca una variante como agotada o desactívala cuando ya no esté disponible.</p>
-                </div>
-
-                <div className="grid" style={{ gap: 12, marginTop: 12 }}>
-                  {catalog.flatMap((product) =>
-                    product.variants.map((variant) => {
-                      const key = `${product.id}:${variant.id}`;
-                      return (
-                        <article key={key} className="card">
-                          <h3>{product.name}</h3>
-                          <p className="muted">
-                            {(variant.gradeLabel || "Sin grado") + " · " + variant.label}
-                          </p>
-                          <p className="muted">Precio base: Q {variant.price.toFixed(2)}</p>
-                          <div className="actions" style={{ alignItems: "center" }}>
-                            <input
-                              id={`${key}-stock`}
-                              type="number"
-                              min="0"
-                              defaultValue={variant.stockAvailable ?? ""}
-                              placeholder="Sin límite"
-                              aria-label={`Stock para ${product.name} ${variant.label}`}
-                            />
-                            <label className="field-caption" htmlFor={`${key}-price`}>
-                              Oferta o excepción
-                            </label>
-                            <input
-                              id={`${key}-price`}
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              defaultValue={variant.priceOverride ?? variant.price}
-                              aria-label={`Precio para ${product.name} ${variant.label}`}
-                            />
-                            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <input
-                                id={`${key}-active`}
-                                type="checkbox"
-                                defaultChecked={variant.isActive !== false}
-                              />
-                              Disponible
-                            </label>
-                            <button
-                              type="button"
-                              disabled={savingVariantKey === key}
-                              onClick={() => saveVariantState(product.id, variant.id)}
-                            >
-                              {savingVariantKey === key ? "Guardando..." : "Guardar"}
-                            </button>
-                          </div>
-                        </article>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
-            </>
-          ) : null}
-
-          {panelView === "crm" ? (
-            <>
-              <section className="section" style={{ paddingTop: 20 }}>
-                <div className="grid" style={{ gap: 12 }}>
-                  <form className="card order-form" onSubmit={createCustomer}>
-                    <h3>Clientes</h3>
-                    <input name="fullName" placeholder="Nombre completo" required />
-                    <input name="whatsapp" placeholder="WhatsApp" required />
-                    <input name="email" placeholder="Correo opcional" />
-                    <input name="department" placeholder="Departamento" />
-                    <textarea name="notes" rows={3} placeholder="Notas del cliente" />
-                    <button type="submit">Agregar cliente</button>
-                  </form>
-
-                  <form className="card order-form" onSubmit={createCrmProduct}>
-                    <h3>Productos CRM</h3>
-                    <input name="name" placeholder="Nombre del producto" required />
-                    <input name="category" placeholder="Categoría" required />
-                    <input name="gradeLabel" placeholder="Grado / etiqueta" />
-                    <input name="unitLabel" placeholder="Unidad / empaque" />
-                    <input name="basePrice" type="number" step="0.01" min="0" placeholder="Precio base" required />
-                    <input name="stock" type="number" min="0" placeholder="Stock opcional" />
-                    <textarea name="description" rows={3} placeholder="Descripción" />
-                    <textarea name="notes" rows={3} placeholder="Notas internas" />
-                    <button type="submit">Agregar producto</button>
-                  </form>
-                </div>
-              </section>
-
-              <section className="section" style={{ paddingTop: 0 }}>
-                <div className="grid" style={{ gap: 12 }}>
-                  <div className="card">
-                    <h3>Clientes registrados</h3>
-                    <p className="muted">{customers.length} clientes en CRM.</p>
-                    <div className="grid" style={{ gap: 10 }}>
-                      {customers.map((customer) => (
-                        <article key={customer.id} className="card">
-                          <strong>{customer.fullName}</strong>
-                          <p className="muted">{customer.whatsapp}</p>
-                          {customer.email ? <p className="muted">{customer.email}</p> : null}
-                          {customer.department ? <p className="muted">{customer.department}</p> : null}
-                          {customer.notes ? <p className="muted">{customer.notes}</p> : null}
-                          <button type="button" className="secondary" onClick={() => deleteCustomer(customer.id)}>
-                            Eliminar
+                        <p className="cart-total">Q {Number(order.total || 0).toFixed(2)}</p>
+                      </div>
+                      <div className="admin-order-actions">
+                        <a className="secondary" href={`/admin/order/${order.id}`}>
+                          Ver detalle
+                        </a>
+                        {statusOptions.map((status) => (
+                          <button key={`${order.id}-${status}`} type="button" className={status === order.status ? "secondary" : ""} disabled={updatingId === order.id || status === order.status} onClick={() => updateOrderStatus(order.id, status)}>
+                            {status}
                           </button>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
+                        ))}
+                      </div>
+                      <ul>
+                        {Array.isArray(order.items)
+                          ? order.items.map((item, idx) => (
+                              <li key={`${order.id}-${idx}`}>
+                                {formatOrderItem(item)} x {item.quantity}
+                              </li>
+                            ))
+                          : null}
+                      </ul>
+                      {order.notes ? <p className="muted">Notas: {order.notes}</p> : null}
+                    </article>
+                  ))
+                : null}
+            </div>
+          </section>
 
-                  <div className="card">
-                    <h3>Productos CRM guardados</h3>
-                    <p className="muted">{crmProducts.length} productos en CRM.</p>
-                    <div className="grid" style={{ gap: 10 }}>
-                      {crmProducts.map((product) => (
-                        <article key={product.id} className="card">
-                          <strong>{product.name}</strong>
-                          <p className="muted">
-                            {product.category} · Q {product.basePrice.toFixed(2)}
-                          </p>
-                          <p className="muted">
-                            {product.gradeLabel || "Sin grado"} · {product.unitLabel || "Sin unidad"}
-                          </p>
-                          {product.description ? <p className="muted">{product.description}</p> : null}
-                          {product.notes ? <p className="muted">{product.notes}</p> : null}
-                          <div className="actions">
-                            <button type="button" className="secondary" onClick={() => deleteCrmProduct(product.id)}>
-                              Eliminar
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </>
-          ) : null}
-
-          {panelView === "payments" ? (
-            <section className="section" style={{ paddingTop: 20 }}>
-              <div className="grid" style={{ gap: 12 }}>
-                <div className="card">
-                  <h3>Cubo</h3>
-                  <p className="muted">{cuboMessage}</p>
-                  <p className="muted">Cuando compartan la API, este panel podrá activar pago con tarjeta sin rehacer el checkout.</p>
-                </div>
-
-                <div className="card">
-                  <h3>Intentos de pago</h3>
-                  <p className="muted">{paymentAttempts.length} intentos registrados.</p>
-                  <div className="grid" style={{ gap: 10 }}>
-                    {paymentAttempts.map((attempt) => (
-                      <article key={attempt.id} className="card">
-                        <strong>{attempt.customerName}</strong>
-                        <p className="muted">{attempt.customerWhatsapp}</p>
-                        <p className="muted">
-                          {attempt.provider} · {attempt.status} · Q {Number(attempt.amount || 0).toFixed(2)}
-                        </p>
-                        {attempt.orderId ? <p className="muted">Orden: {attempt.orderId}</p> : null}
-                      </article>
-                    ))}
-                  </div>
-                </div>
+          <section className="card">
+            <div className="admin-section-head">
+              <div>
+                <h3>Inventario del catálogo</h3>
+                <p className="muted">Edita libremente y guarda todo con un solo botón.</p>
               </div>
-            </section>
-          ) : null}
+              <button type="button" onClick={() => void saveAllCatalogChanges()} disabled={savingCatalog}>
+                {savingCatalog ? "Guardando inventario..." : `Guardar cambios (${catalogDirtyCount})`}
+              </button>
+            </div>
+
+            <div className="grid" style={{ gap: 12, marginTop: 12 }}>
+              {catalog.flatMap((product) =>
+                product.variants.map((variant) => {
+                  const key = `${product.id}:${variant.id}`;
+                  const draft = catalogDrafts[key] || { stockAvailable: "", priceOverride: String(variant.price), isActive: variant.isActive !== false };
+                  return (
+                    <article key={key} className="card">
+                      <h3>{product.name}</h3>
+                      <p className="muted">{(variant.gradeLabel || "Sin grado") + " · " + variant.label}</p>
+                      <p className="muted">Precio base: Q {variant.price.toFixed(2)}</p>
+                      <div className="admin-edit-grid">
+                        <input type="number" min="0" value={draft.stockAvailable} placeholder="Stock (vacío = sin límite)" aria-label={`Stock para ${product.name} ${variant.label}`} onChange={(event) => markCatalogDraft(product.id, variant.id, { stockAvailable: event.target.value })} />
+                        <input type="number" min="0" step="0.01" value={draft.priceOverride} aria-label={`Precio para ${product.name} ${variant.label}`} onChange={(event) => markCatalogDraft(product.id, variant.id, { priceOverride: event.target.value })} />
+                        <label className="admin-checkbox">
+                          <input type="checkbox" checked={draft.isActive} onChange={(event) => markCatalogDraft(product.id, variant.id, { isActive: event.target.checked })} />
+                          Disponible
+                        </label>
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="admin-section-head">
+              <div>
+                <h3>Productos CRM</h3>
+                <p className="muted">Puedes editar todos los campos y aplicar todo junto.</p>
+              </div>
+              <button type="button" onClick={() => void saveAllCrmChanges()} disabled={savingCrm}>
+                {savingCrm ? "Guardando CRM..." : `Guardar cambios (${crmDirtyCount})`}
+              </button>
+            </div>
+
+            <div className="grid" style={{ gap: 12, marginTop: 12 }}>
+              {crmProducts.length === 0 ? <p className="muted">No hay productos CRM registrados.</p> : null}
+              {crmProducts.map((product) => {
+                const draft = crmDrafts[product.id];
+                if (!draft) return null;
+                return (
+                  <article key={product.id} className="card">
+                    <div className="admin-grid-2">
+                      <input value={draft.name} placeholder="Nombre" onChange={(event) => markCrmDraft(product.id, { name: event.target.value })} />
+                      <input value={draft.category} placeholder="Categoría" onChange={(event) => markCrmDraft(product.id, { category: event.target.value })} />
+                      <input type="number" min="0" step="0.01" value={draft.basePrice} placeholder="Precio" onChange={(event) => markCrmDraft(product.id, { basePrice: event.target.value })} />
+                      <input type="number" min="0" value={draft.stock} placeholder="Stock" onChange={(event) => markCrmDraft(product.id, { stock: event.target.value })} />
+                      <input value={draft.gradeLabel} placeholder="Grado" onChange={(event) => markCrmDraft(product.id, { gradeLabel: event.target.value })} />
+                      <input value={draft.unitLabel} placeholder="Unidad" onChange={(event) => markCrmDraft(product.id, { unitLabel: event.target.value })} />
+                    </div>
+                    <textarea rows={2} value={draft.description} placeholder="Descripción" onChange={(event) => markCrmDraft(product.id, { description: event.target.value })} />
+                    <textarea rows={2} value={draft.notes} placeholder="Notas internas" onChange={(event) => markCrmDraft(product.id, { notes: event.target.value })} />
+                    <label className="admin-checkbox">
+                      <input type="checkbox" checked={draft.active} onChange={(event) => markCrmDraft(product.id, { active: event.target.checked })} />
+                      Producto activo
+                    </label>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
         </>
       )}
     </main>

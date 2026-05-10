@@ -82,6 +82,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: shippingCheck.message || "Envio no disponible" }, { status: 400 });
   }
 
+  const shippingCost = shippingCheck.shippingCost;
+
   const orderPayload = {
     customerName: sanitized.customerName,
     email: sanitized.email || null,
@@ -95,7 +97,7 @@ export async function POST(request: Request) {
     notes: sanitized.notes,
     items: sanitized.items as unknown as Prisma.InputJsonValue,
     total: sanitized.total,
-    shippingCost: sanitized.shippingCost,
+    shippingCost,
     status: "PENDING" as const,
     createdAt: new Date().toISOString(),
     persisted: true
@@ -135,7 +137,7 @@ export async function POST(request: Request) {
         notes: sanitized.notes,
         items: sanitized.items as unknown as Prisma.InputJsonValue,
         total: sanitized.total,
-        shippingCost: sanitized.shippingCost
+        shippingCost
       }
     });
 
@@ -158,8 +160,9 @@ export async function POST(request: Request) {
       `Departamento: ${sanitized.departamento}`,
       `Metodo: ${sanitized.paymentMethod}`,
       `Subtotal: Q ${sanitized.total.toFixed(2)}`,
-      `Envio: Q ${sanitized.shippingCost?.toFixed(2) || "0.00"}`,
-      `Total: Q ${(sanitized.total + (sanitized.shippingCost || 0)).toFixed(2)}`
+      `Envio: Q ${shippingCost.toFixed(2)}`,
+      shippingCheck.message ? `Nota de envío: ${shippingCheck.message}` : "",
+      `Total: Q ${(sanitized.total + shippingCost).toFixed(2)}`
     ];
 
     const msg = lines.join("\n");

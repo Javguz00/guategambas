@@ -488,7 +488,11 @@ export default function HomePage() {
       shippingCost: shippingInfo.shippingCost
     };
 
-    const shippingLine = shippingInfo.shippingCost > 0 ? `Envío FORZA Delivery (+3.8%): Q ${shippingInfo.shippingCost.toFixed(2)}` : "Envío: Incluido / Deposito previo";
+    const shippingLine =
+      shippingInfo.message ||
+      (shippingInfo.shippingCost > 0
+        ? `Recargo por pago contra entrega: Q ${shippingInfo.shippingCost.toFixed(2)}`
+        : "Envío: Incluido / Depósito previo");
 
     const whatsappLines = [
       "Hola, quiero confirmar este pedido:",

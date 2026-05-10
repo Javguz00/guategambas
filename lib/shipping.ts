@@ -38,22 +38,24 @@ export function calculateShipping(input: ShippingInput): ShippingResult {
     };
   }
 
-  // Si es otro departamento con depósito previo, sin cargo (paga precio catálogo)
+  const forzaPendingMessage = "Envío Forza Delivery: costo a confirmar (se coordina al confirmar el pedido).";
+
+  // Si es otro departamento con depósito previo o tarjeta, costo de envío variable por confirmar
   if (paymentMethod === "DEPOSITO_PREVIO" || paymentMethod === "TARJETA_CUBO") {
     return {
       isValid: true,
       shippingCost: 0,
-      message: paymentMethod === "TARJETA_CUBO" ? "Pago con tarjeta Cubo - Sin cargo de envío" : "Deposito previo - Sin cargo de envío"
+      message: forzaPendingMessage
     };
   }
 
-  // Si es otro departamento con pago contra entrega, agregar 3.8%
+  // Si es otro departamento con pago contra entrega, agregar 3.8% adicional
   if (paymentMethod === "PAGO_CONTRAENTREGA") {
     const surcharge = orderTotal * 0.038;
     return {
       isValid: true,
       shippingCost: parseFloat(surcharge.toFixed(2)),
-      message: `Pago contra entrega - Cargo de envío (3.8%): Q ${surcharge.toFixed(2)}`
+      message: `${forzaPendingMessage} Adicional por pago contra entrega (3.8%): Q ${surcharge.toFixed(2)}.`
     };
   }
 
