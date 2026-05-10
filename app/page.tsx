@@ -668,11 +668,24 @@ export default function HomePage() {
                         const selectedQty = getCartQty(product.id, selectedVariant.id);
                         const stockLabel = getVariantAvailabilityLabel(selectedVariant);
                         const stockAvailable = selectedVariant.stockAvailable;
+                        const media = getVariantMedia(product, selectedVariant);
+                        const coverPhoto = media?.photos?.[0];
                         const canAdd =
                           selectedVariant.isActive !== false &&
                           (typeof stockAvailable !== "number" || stockAvailable > selectedQty);
                         return (
                           <>
+                            {coverPhoto ? (
+                              <div className="product-card-media">
+                                <Image
+                                  src={coverPhoto}
+                                  alt={product.name}
+                                  width={640}
+                                  height={520}
+                                  sizes="(max-width: 700px) 92vw, (max-width: 1100px) 45vw, 320px"
+                                />
+                              </div>
+                            ) : null}
                             <div className="product-card-top">
                               <span className={`badge badge-soft ${stockLabel === "Agotado" || stockLabel === "No disponible" ? "badge-danger" : ""}`}>
                                 {stockLabel}
