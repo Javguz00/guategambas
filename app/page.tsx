@@ -108,7 +108,10 @@ export default function HomePage() {
     }, {})
   );
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
-  const [importacionPhotos, setImportacionPhotos] = useState<string[]>([]);
+  const [importacionGambas, setImportacionGambas] = useState<string[]>([]);
+  const [importacionBucephalandras, setImportacionBucephalandras] = useState<string[]>([]);
+  const [importacionTerrario, setImportacionTerrario] = useState<string[]>([]);
+  const [selectedImportacionCategory, setSelectedImportacionCategory] = useState<"gambas" | "bucephalandras" | "terrario" | null>(null);
   const [quickViewSlide, setQuickViewSlide] = useState(0);
   const [cartReady, setCartReady] = useState(false);
   const loadedWhatsappCartRef = useRef("");
@@ -144,8 +147,12 @@ export default function HomePage() {
       try {
         const resp = await fetch("/api/importacion/photos");
         if (!resp.ok) return;
-        const data = await resp.json() as { photos?: string[] };
-        if (Array.isArray(data.photos) && !cancelled) setImportacionPhotos(data.photos);
+        const data = await resp.json() as { gambas?: string[]; bucephalandras?: string[]; terrario?: string[] };
+        if (!cancelled) {
+          setImportacionGambas(data.gambas || []);
+          setImportacionBucephalandras(data.bucephalandras || []);
+          setImportacionTerrario(data.terrario || []);
+        }
       } catch {
         // ignore
       }
@@ -679,11 +686,55 @@ export default function HomePage() {
             </ul>
             <p className="muted">Más info por mensaje directo (WhatsApp).</p>
 
-            {importacionPhotos.length > 0 && (
-              <div className="import-gallery">
-                {importacionPhotos.map((src) => (
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className={selectedImportacionCategory === "gambas" ? "accent" : "secondary"}
+                onClick={() => setSelectedImportacionCategory(selectedImportacionCategory === "gambas" ? null : "gambas")}
+              >
+                Fotos de gambas ({importacionGambas.length})
+              </button>
+              <button
+                type="button"
+                className={selectedImportacionCategory === "bucephalandras" ? "accent" : "secondary"}
+                onClick={() => setSelectedImportacionCategory(selectedImportacionCategory === "bucephalandras" ? null : "bucephalandras")}
+              >
+                Fotos de bucephalandras ({importacionBucephalandras.length})
+              </button>
+              <button
+                type="button"
+                className={selectedImportacionCategory === "terrario" ? "accent" : "secondary"}
+                onClick={() => setSelectedImportacionCategory(selectedImportacionCategory === "terrario" ? null : "terrario")}
+              >
+                Fotos de plantas terrario ({importacionTerrario.length})
+              </button>
+            </div>
+
+            {selectedImportacionCategory === "gambas" && importacionGambas.length > 0 && (
+              <div className="import-gallery" style={{ marginTop: "1.5rem" }}>
+                {importacionGambas.map((src) => (
                   <div key={src} className="import-thumb">
-                    <Image src={src} alt="Importación" width={240} height={160} style={{ objectFit: "cover" }} />
+                    <Image src={src} alt="Gamba importación" width={240} height={160} style={{ objectFit: "cover" }} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedImportacionCategory === "bucephalandras" && importacionBucephalandras.length > 0 && (
+              <div className="import-gallery" style={{ marginTop: "1.5rem" }}>
+                {importacionBucephalandras.map((src) => (
+                  <div key={src} className="import-thumb">
+                    <Image src={src} alt="Bucephalandra importación" width={240} height={160} style={{ objectFit: "cover" }} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedImportacionCategory === "terrario" && importacionTerrario.length > 0 && (
+              <div className="import-gallery" style={{ marginTop: "1.5rem" }}>
+                {importacionTerrario.map((src) => (
+                  <div key={src} className="import-thumb">
+                    <Image src={src} alt="Planta terrario" width={240} height={160} style={{ objectFit: "cover" }} />
                   </div>
                 ))}
               </div>
