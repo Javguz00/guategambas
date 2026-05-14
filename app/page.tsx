@@ -679,22 +679,13 @@ export default function HomePage() {
             </ul>
             <p className="muted">Más info por mensaje directo (WhatsApp).</p>
 
-            {importacionPhotos.length > 0 ? (
+            {importacionPhotos.length > 0 && (
               <div className="import-gallery">
                 {importacionPhotos.map((src) => (
                   <div key={src} className="import-thumb">
                     <Image src={src} alt="Importación" width={240} height={160} style={{ objectFit: "cover" }} />
                   </div>
                 ))}
-              </div>
-            ) : (
-              <div style={{ padding: "0.75rem", borderRadius: "0.5rem", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}>
-                <p>No hay fotos de importación cargadas aún.</p>
-                <p>Si tienes las fotos en tu equipo, ejecútalas localmente con el script <strong>scripts/copy_importacion_photos.ps1</strong> para copiarlas a <strong>public/photos/importacion-plantas</strong>.</p>
-                <p>También puedes enviarnos las fotos o consultar disponibilidad por WhatsApp.</p>
-                <p>
-                  <a href={contactWhatsappHref} target="_blank" rel="noreferrer">Escribir por WhatsApp</a>
-                </p>
               </div>
             )}
           </div>
