@@ -687,7 +687,16 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <div style={{ padding: "0.75rem", borderRadius: "0.5rem", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}>
+                <p>No hay fotos de importación cargadas aún.</p>
+                <p>Si tienes las fotos en tu equipo, ejecútalas localmente con el script <strong>scripts/copy_importacion_photos.ps1</strong> para copiarlas a <strong>public/photos/importacion-plantas</strong>.</p>
+                <p>También puedes enviarnos las fotos o consultar disponibilidad por WhatsApp.</p>
+                <p>
+                  <a href={contactWhatsappHref} target="_blank" rel="noreferrer">Escribir por WhatsApp</a>
+                </p>
+              </div>
+            )}
           </div>
         </section>
 
