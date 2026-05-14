@@ -108,6 +108,7 @@ export default function HomePage() {
     }, {})
   );
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
+  const [importacionPhotos, setImportacionPhotos] = useState<string[]>([]);
   const [quickViewSlide, setQuickViewSlide] = useState(0);
   const [cartReady, setCartReady] = useState(false);
   const loadedWhatsappCartRef = useRef("");
@@ -137,6 +138,18 @@ export default function HomePage() {
     }
 
     void loadCatalog();
+
+    // load importacion photos for announcement gallery
+    (async () => {
+      try {
+        const resp = await fetch("/api/importacion/photos");
+        if (!resp.ok) return;
+        const data = await resp.json() as { photos?: string[] };
+        if (Array.isArray(data.photos) && !cancelled) setImportacionPhotos(data.photos);
+      } catch {
+        // ignore
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -665,6 +678,16 @@ export default function HomePage() {
               </li>
             </ul>
             <p className="muted">Más info por mensaje directo (WhatsApp).</p>
+
+            {importacionPhotos.length > 0 ? (
+              <div className="import-gallery">
+                {importacionPhotos.map((src) => (
+                  <div key={src} className="import-thumb">
+                    <Image src={src} alt="Importación" width={240} height={160} style={{ objectFit: "cover" }} />
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         </section>
 

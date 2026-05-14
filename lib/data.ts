@@ -524,6 +524,65 @@ export const products: Product[] = [
     variants: [{ id: "wan-60", label: "60 cm", unitLabel: "1 pz", price: 150 }],
     media: { photos: ["/photos/wanenergy-60/product2.jpg"], videos: [] }
   }
+  ,
+  // Importación plantas
+  {
+    id: "anubia-white",
+    name: "Anubia White",
+    category: "plantas",
+    description: "Anubia White (importación). Precio por unidad.",
+    variants: [{ id: "anubia-white-1", label: "1 unidad", unitLabel: "1 pz", price: 350 }],
+    media: { photos: ["/photos/importacion-plantas/anubia-white.jpg"], videos: [] }
+  },
+  {
+    id: "bucephalandra-1",
+    name: "Bucephalandra #1",
+    category: "plantas",
+    description: "Bucephalandra importada. Precio por unidad.",
+    variants: [{ id: "buce-1", label: "1 unidad", unitLabel: "1 pz", price: 250 }],
+    media: { photos: ["/photos/importacion-plantas/bucephalandra-1.jpg"], videos: [] }
+  },
+  {
+    id: "bucephalandra-2",
+    name: "Bucephalandra #2",
+    category: "plantas",
+    description: "Bucephalandra importada. Precio por unidad.",
+    variants: [{ id: "buce-2", label: "1 unidad", unitLabel: "1 pz", price: 250 }],
+    media: { photos: ["/photos/importacion-plantas/bucephalandra-2.jpg"], videos: [] }
+  },
+  {
+    id: "bucephalandra-3",
+    name: "Bucephalandra #3",
+    category: "plantas",
+    description: "Bucephalandra importada. Precio por unidad.",
+    variants: [{ id: "buce-3", label: "1 unidad", unitLabel: "1 pz", price: 250 }],
+    media: { photos: ["/photos/importacion-plantas/bucephalandra-3.jpg"], videos: [] }
+  },
+  {
+    id: "bucephalandra-4",
+    name: "Bucephalandra #4",
+    category: "plantas",
+    description: "Bucephalandra importada. Precio por unidad.",
+    variants: [{ id: "buce-4", label: "1 unidad", unitLabel: "1 pz", price: 250 }],
+    media: { photos: ["/photos/importacion-plantas/bucephalandra-4.jpg"], videos: [] }
+  },
+  {
+    id: "bucephalandra-5",
+    name: "Bucephalandra #5",
+    category: "plantas",
+    description: "Bucephalandra importada. Precio por unidad.",
+    variants: [{ id: "buce-5", label: "1 unidad", unitLabel: "1 pz", price: 250 }],
+    media: { photos: ["/photos/importacion-plantas/bucephalandra-5.jpg"], videos: [] }
+  },
+  {
+    id: "plantas-terrario",
+    name: "Plantas para terrarios",
+    category: "plantas",
+    description: "Variedad de plantas para terrarios. Consultar precio por WhatsApp.",
+    note: "Consultar por WhatsApp",
+    variants: [{ id: "terrario-1", label: "Consultar", unitLabel: "Consultar", price: 0 }],
+    media: { photos: ["/photos/importacion-plantas/"], videos: [] }
+  }
 ];
 
 export const socialPosts: SocialPost[] = [
