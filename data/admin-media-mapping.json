@@ -1,0 +1,14 @@
+{
+  "__site__": [
+    {
+      "filename": "almendro-hojas-10/hojas-de-almendro-info.jpg",
+      "slot": "banner",
+      "title": "Anuncio inferior"
+    },
+    {
+      "filename": "bloody-mary/bloody-mary-grupo.jpg",
+      "slot": "hero",
+      "title": "Portada superior"
+    }
+  ]
+}

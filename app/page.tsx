@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { products } from "@/lib/data";
-import { OrderItem, Product, ProductVariant } from "@/lib/types";
+import { OrderItem, Product, ProductVariant, SocialPost } from "@/lib/types";
 import { getVariantAvailabilityLabel, getVariantDisplayLabel, getVariantMedia, groupVariantsByGrade } from "@/lib/catalog";
 import { calculateShipping } from "@/lib/shipping";
 
@@ -42,7 +42,14 @@ interface MediaSlide {
   src: string;
 }
 
-type PaymentMethod = "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA" | "TARJETA_CUBO";
+type MediaAsset = {
+  filename: string;
+  grade?: string;
+  slot?: string;
+  title?: string;
+};
+
+type PaymentMethod = "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA";
 
 const WHATSAPP_NUMBER = "50243132549";
 
@@ -94,8 +101,6 @@ export default function HomePage() {
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentModal, setPaymentModal] = useState<null | { orderId: string; amount: number; customerName?: string }>(null);
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [confirmModal, setConfirmModal] = useState<null | { payload: ConfirmPayload; whatsappUrl: string; finalTotal: number }>(null);
   const [message, setMessage] = useState("");
   const [catalogProducts, setCatalogProducts] = useState(products);
@@ -108,10 +113,9 @@ export default function HomePage() {
     }, {})
   );
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
-  const [importacionGambas, setImportacionGambas] = useState<string[]>([]);
-  const [importacionBucephalandras, setImportacionBucephalandras] = useState<string[]>([]);
-  const [importacionTerrario, setImportacionTerrario] = useState<string[]>([]);
-  const [selectedImportacionCategory, setSelectedImportacionCategory] = useState<"gambas" | "bucephalandras" | "terrario" | null>(null);
+  const [instagramPosts, setInstagramPosts] = useState<SocialPost[]>([]);
+  const [instagramProfile, setInstagramProfile] = useState<string | null>(null);
+  const [mediaMapping, setMediaMapping] = useState<Record<string, MediaAsset[]>>({});
   const [quickViewSlide, setQuickViewSlide] = useState(0);
   const [cartReady, setCartReady] = useState(false);
   const loadedWhatsappCartRef = useRef("");
@@ -142,16 +146,28 @@ export default function HomePage() {
 
     void loadCatalog();
 
-    // load importacion photos for announcement gallery
     (async () => {
       try {
-        const resp = await fetch("/api/importacion/photos");
-        if (!resp.ok) return;
-        const data = await resp.json() as { gambas?: string[]; bucephalandras?: string[]; terrario?: string[] };
+        const response = await fetch("/api/site-media");
+        if (!response.ok) return;
+        const json = (await response.json()) as { mapping?: Record<string, MediaAsset[]> };
         if (!cancelled) {
-          setImportacionGambas(data.gambas || []);
-          setImportacionBucephalandras(data.bucephalandras || []);
-          setImportacionTerrario(data.terrario || []);
+          setMediaMapping(json.mapping || {});
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    // load instagram posts for announcement
+    (async () => {
+      try {
+        const resp = await fetch("/api/social");
+        if (!resp.ok) return;
+        const json = await resp.json() as { profile?: string; posts?: SocialPost[] };
+        if (!cancelled) {
+          setInstagramProfile(json.profile || null);
+          setInstagramPosts((json.posts || []).slice(0, 6));
         }
       } catch {
         // ignore
@@ -371,6 +387,32 @@ export default function HomePage() {
     [catalogSections, catalogProducts]
   );
 
+  function getProductMediaAssets(productId: string) {
+    return mediaMapping[productId] || [];
+  }
+
+  function getSiteMedia(slot: "hero" | "banner") {
+    return mediaMapping.__site__?.find((asset) => asset.slot === slot)?.filename || "";
+  }
+
+  function pickProductCardImage(product: Product, variant: ProductVariant) {
+    const assigned = getProductMediaAssets(product.id);
+    const grade = (variant.gradeLabel || variant.highlight || "").trim();
+    const matchesGrade = assigned.filter((asset) => asset.grade && asset.grade.trim() === grade);
+    const coverImage = assigned.find((asset) => asset.slot === "cover" && (!asset.grade || asset.grade.trim() === grade));
+    const buttonImage = assigned.find((asset) => asset.slot === "button" && (!asset.grade || asset.grade.trim() === grade));
+    const heroLike = assigned.find((asset) => !asset.slot || asset.slot === "gallery");
+    return (
+      coverImage?.filename ||
+      buttonImage?.filename ||
+      matchesGrade[0]?.filename ||
+      heroLike?.filename ||
+      getVariantMedia(product, variant)?.photos?.[0] ||
+      product.media?.photos?.[0] ||
+      ""
+    );
+  }
+
   const getSelectedVariant = useCallback(
     (product: Product) => {
       const selected = selectedVariants[product.id];
@@ -522,7 +564,7 @@ export default function HomePage() {
       `WhatsApp: ${customerWhatsapp}`,
       `Ciudad: ${city}`,
       `Departamento: ${departamento}`,
-      `Método de pago: ${paymentMethod === "DEPOSITO_PREVIO" ? "Depósito previo" : paymentMethod === "TARJETA_CUBO" ? "Tarjeta Cubo" : "Pago contra entrega"}`,
+      `Método de pago: ${paymentMethod === "DEPOSITO_PREVIO" ? "Depósito previo" : "Pago contra entrega"}`,
       notes ? `Notas: ${notes}` : "",
       "---",
       `Subtotal: Q ${total.toFixed(2)}`,
@@ -536,7 +578,7 @@ export default function HomePage() {
     setConfirmModal({ payload, whatsappUrl, finalTotal });
   }
 
-  async function confirmAndSend(payload: ConfirmPayload, whatsappUrl: string, finalTotal: number) {
+  async function confirmAndSend(payload: ConfirmPayload, whatsappUrl: string) {
     setIsSubmitting(true);
     setMessage("");
     try {
@@ -553,13 +595,9 @@ export default function HomePage() {
         throw new Error(txt || "Error al crear pedido");
       }
 
-      const createdOrder = (await response.json()) as { order?: { id?: string } };
-      let shouldOpenWhatsapp = true;
+      await response.json();
 
-      if (paymentMethod === "TARJETA_CUBO" && createdOrder.order?.id) {
-        setPaymentModal({ orderId: createdOrder.order.id, amount: finalTotal, customerName: payload.customerName });
-        shouldOpenWhatsapp = false;
-      }
+      const shouldOpenWhatsapp = true;
 
       if (shouldOpenWhatsapp) {
         const popup = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
@@ -578,30 +616,6 @@ export default function HomePage() {
     }
   }
 
-  async function handlePayWithCubo(orderId: string, amount: number) {
-    setPaymentProcessing(true);
-    try {
-      const resp = await fetch("/api/payments/cubo/intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, amount, currency: "GTQ" })
-      });
-      if (!resp.ok) throw new Error("No se pudo iniciar pago");
-      const data = await resp.json() as { checkoutUrl?: string; message?: string };
-      if (data.checkoutUrl) {
-        // redirect to hosted checkout
-        window.location.assign(data.checkoutUrl);
-      } else {
-        setMessage(data.message || "No se pudo iniciar el pago en línea.");
-      }
-    } catch (err) {
-      setMessage(String(err) || "Error al iniciar pago");
-    } finally {
-      setPaymentProcessing(false);
-      setPaymentModal(null);
-    }
-  }
-
   return (
     <>
       <header className="header">
@@ -617,6 +631,18 @@ export default function HomePage() {
 
       <main className="container with-floating-cart">
         <section className="hero">
+          {getSiteMedia("hero") ? (
+            <div className="home-banner home-banner-top">
+              <Image
+                src={`/photos/${getSiteMedia("hero")}`}
+                alt="Portada principal"
+                width={1400}
+                height={500}
+                sizes="(max-width: 1100px) 100vw, 1120px"
+                priority
+              />
+            </div>
+          ) : null}
           <div className="hero-bar">
             <div>
               <span className="badge">Venta directa</span>
@@ -663,82 +689,26 @@ export default function HomePage() {
 
         <section className="section announcement">
           <div className="card accent-card">
-            <h3>Importacion de gambitas — Viernes 15 de mayo</h3>
-            <p>Importacion de gambitas para el proximo viernes 15 de mayo.</p>
-            <p className="muted">Precios especiales (referencia):</p>
-            <ul className="announcement-list">
-              <li>
-                <strong>Caridinas (packs de 5):</strong>
-                <span>Blue Bolt a-s — Q1000</span>
-                <span>Red galaxy fishbone — Q1000</span>
-                <span>Galaxy black — Q1000</span>
-                <span>Panda bkk — Q1000</span>
-              </li>
-              <li>
-                <strong>Neocaridinas:</strong>
-                <span>Bloody dark — Q300</span>
-                <span>Black — Q200</span>
-                <span>Snowball — Q200</span>
-                <span>Yellow GB — Q250</span>
-                <span>Orange — Q175</span>
-                <span>Green Jade — Q600</span>
-              </li>
-            </ul>
-            <p className="muted">Más info por mensaje directo (WhatsApp).</p>
+            <h3>Anuncios y publicaciones</h3>
+            <p className="muted">Últimas publicaciones en Instagram</p>
 
-            <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className={selectedImportacionCategory === "gambas" ? "accent" : "secondary"}
-                onClick={() => setSelectedImportacionCategory(selectedImportacionCategory === "gambas" ? null : "gambas")}
-              >
-                Fotos de gambas ({importacionGambas.length})
-              </button>
-              <button
-                type="button"
-                className={selectedImportacionCategory === "bucephalandras" ? "accent" : "secondary"}
-                onClick={() => setSelectedImportacionCategory(selectedImportacionCategory === "bucephalandras" ? null : "bucephalandras")}
-              >
-                Fotos de bucephalandras ({importacionBucephalandras.length})
-              </button>
-              <button
-                type="button"
-                className={selectedImportacionCategory === "terrario" ? "accent" : "secondary"}
-                onClick={() => setSelectedImportacionCategory(selectedImportacionCategory === "terrario" ? null : "terrario")}
-              >
-                Fotos de plantas terrario ({importacionTerrario.length})
-              </button>
-            </div>
-
-            {selectedImportacionCategory === "gambas" && importacionGambas.length > 0 && (
-              <div className="import-gallery" style={{ marginTop: "1.5rem" }}>
-                {importacionGambas.map((src) => (
-                  <div key={src} className="import-thumb">
-                    <Image src={src} alt="Gamba importación" width={240} height={160} style={{ objectFit: "cover" }} />
-                  </div>
+            {instagramPosts.length > 0 ? (
+              <div className="import-gallery" style={{ marginTop: "1rem" }}>
+                {instagramPosts.map((post) => (
+                  <a key={post.id} href={post.url} target="_blank" rel="noreferrer" className="import-thumb" style={{ display: "block" }}>
+                    <Image src={post.thumbnailUrl || "/photos/importacion-plantas/1.jpeg"} alt={post.title} width={320} height={200} style={{ objectFit: "cover" }} />
+                  </a>
                 ))}
               </div>
+            ) : (
+              <p className="muted">No hay publicaciones recientes.</p>
             )}
 
-            {selectedImportacionCategory === "bucephalandras" && importacionBucephalandras.length > 0 && (
-              <div className="import-gallery" style={{ marginTop: "1.5rem" }}>
-                {importacionBucephalandras.map((src) => (
-                  <div key={src} className="import-thumb">
-                    <Image src={src} alt="Bucephalandra importación" width={240} height={160} style={{ objectFit: "cover" }} />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {selectedImportacionCategory === "terrario" && importacionTerrario.length > 0 && (
-              <div className="import-gallery" style={{ marginTop: "1.5rem" }}>
-                {importacionTerrario.map((src) => (
-                  <div key={src} className="import-thumb">
-                    <Image src={src} alt="Planta terrario" width={240} height={160} style={{ objectFit: "cover" }} />
-                  </div>
-                ))}
-              </div>
-            )}
+            {instagramProfile ? (
+              <p style={{ marginTop: "0.75rem" }}>
+                <a href={instagramProfile} target="_blank" rel="noreferrer">Ver más en Instagram</a>
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -770,7 +740,7 @@ export default function HomePage() {
                         const stockLabel = getVariantAvailabilityLabel(selectedVariant);
                         const stockAvailable = selectedVariant.stockAvailable;
                         const media = getVariantMedia(product, selectedVariant);
-                        const coverPhoto = media?.photos?.[0];
+                        const coverPhoto = pickProductCardImage(product, selectedVariant);
                         const canAdd =
                           selectedVariant.isActive !== false &&
                           (typeof stockAvailable !== "number" || stockAvailable > selectedQty);
@@ -779,7 +749,7 @@ export default function HomePage() {
                             {coverPhoto ? (
                               <div className="product-card-media">
                                 <Image
-                                  src={coverPhoto}
+                                  src={coverPhoto.startsWith("/") ? coverPhoto : `/photos/${coverPhoto}`}
                                   alt={product.name}
                                   width={640}
                                   height={520}
@@ -857,7 +827,7 @@ export default function HomePage() {
                                 </div>
                               )}
                               <button type="button" className="secondary" onClick={() => openQuickView(product)}>
-                                Ver multimedia
+                                Ver fotos
                               </button>
                             </div>
                           </>
@@ -869,6 +839,20 @@ export default function HomePage() {
             </div>
           ))}
         </section>
+
+        {getSiteMedia("banner") ? (
+          <section className="section">
+            <div className="home-banner home-banner-bottom">
+              <Image
+                src={`/photos/${getSiteMedia("banner")}`}
+                alt="Anuncio principal"
+                width={1600}
+                height={500}
+                sizes="(max-width: 1100px) 100vw, 1120px"
+              />
+            </div>
+          </section>
+        ) : null}
 
         <section id="checkout" className="section">
           <h2>Finalizar pedido</h2>
@@ -933,16 +917,6 @@ export default function HomePage() {
                     <input
                       type="radio"
                       name="paymentMethod"
-                      value="TARJETA_CUBO"
-                      checked={paymentMethod === "TARJETA_CUBO"}
-                      onChange={() => setPaymentMethod("TARJETA_CUBO")}
-                    />
-                    Tarjeta con Cubo
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
                       value="PAGO_CONTRAENTREGA"
                       checked={paymentMethod === "PAGO_CONTRAENTREGA"}
                       onChange={() => setPaymentMethod("PAGO_CONTRAENTREGA")}
@@ -977,7 +951,7 @@ export default function HomePage() {
                       <p className="muted">Total a pagar: Q {confirmModal.finalTotal.toFixed(2)}</p>
                       <p className="muted">Revisa los datos antes de confirmar. El pedido quedará registrado en el sistema.</p>
                       <div className="actions">
-                        <button type="button" onClick={() => confirmAndSend(confirmModal.payload, confirmModal.whatsappUrl, confirmModal.finalTotal)} disabled={isSubmitting}>
+                        <button type="button" onClick={() => confirmAndSend(confirmModal.payload, confirmModal.whatsappUrl)} disabled={isSubmitting}>
                           {isSubmitting ? "Enviando..." : "Confirmar y enviar pedido"}
                         </button>
                         <button type="button" className="secondary" onClick={() => setConfirmModal(null)}>Volver</button>
@@ -1052,30 +1026,6 @@ export default function HomePage() {
       {totalItems > 0 ? (
         <div className="mobile-checkout-cta">
           <a className="quick-link" href="#checkout">Finalizar pedido · Q {finalTotal.toFixed(2)}</a>
-        </div>
-      ) : null}
-
-      {paymentModal ? (
-        <div className="modal-overlay" onClick={() => setPaymentModal(null)}>
-          <article className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <h3>Pago con tarjeta</h3>
-              <button type="button" className="secondary" onClick={() => setPaymentModal(null)}>Cerrar</button>
-            </div>
-            <p className="muted">Orden: {paymentModal.orderId}</p>
-            <div className="card">
-              <h4>Resumen de pago</h4>
-              <p>Importe a pagar: Q {paymentModal.amount.toFixed(2)}</p>
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button type="button" onClick={() => handlePayWithCubo(paymentModal.orderId, paymentModal.amount)} disabled={paymentProcessing}>
-                  {paymentProcessing ? "Procesando…" : "Pagar con tarjeta"}
-                </button>
-                <button type="button" className="secondary" onClick={() => { setPaymentModal(null); window.open(contactWhatsappHref, "_blank", "noopener"); }}>
-                  Pagar por WhatsApp
-                </button>
-              </div>
-            </div>
-          </article>
         </div>
       ) : null}
 
