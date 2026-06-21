@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 const statusOptions = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
 type OrderStatus = (typeof statusOptions)[number];
@@ -11,6 +11,7 @@ type Order = {
   whatsapp: string;
   city: string;
   notes?: string;
+  paymentMethod?: string;
   items: Array<{
     productId?: string;
     variantId?: string;
@@ -69,6 +70,29 @@ type ProductDraft = {
   notes: string;
 };
 
+type ProductVariantDraft = {
+  id: string;
+  grade: string;
+  unitLabel: string;
+  unitPrice: string;
+  packPrice: string;
+  stock: string;
+};
+
+type ProductWizardState = {
+  mode: "new" | "edit";
+  step: number;
+  productId?: string;
+  name: string;
+  category: string;
+  active: boolean;
+  description: string;
+  variants: ProductVariantDraft[];
+  photoPreviews: Array<{ id: string; src: string; file?: File; filename?: string }>;
+  existingPhotos: string[];
+  notes: string;
+};
+
 type CatalogDraft = {
   stockAvailable: string;
   priceOverride: string;
@@ -92,13 +116,17 @@ const adminTabs = [
 
 const productCategories = ["all", "caridinas", "neocaridinas", "accesorios", "insumos", "suplementos", "plantas"] as const;
 
-const mediaSlots = [
-  { key: "cover", label: "Portada" },
-  { key: "button", label: "Botón" },
-  { key: "group", label: "Grupo" },
-  { key: "announcement", label: "Anuncio" },
-  { key: "gallery", label: "Galería" }
-] as const;
+function createWizardVariantDraft(overrides?: Partial<ProductVariantDraft>): ProductVariantDraft {
+  return {
+    id: `variant-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    grade: "Grado alto",
+    unitLabel: "unidad",
+    unitPrice: "0",
+    packPrice: "0",
+    stock: "0",
+    ...overrides
+  };
+}
 
 export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -121,6 +149,9 @@ export default function AdminPage() {
     unitLabel: "",
     notes: ""
   });
+  const [productWizard, setProductWizard] = useState<ProductWizardState | null>(null);
+  const [wizardSaving, setWizardSaving] = useState(false);
+  const [wizardError, setWizardError] = useState("");
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -132,6 +163,9 @@ export default function AdminPage() {
   const [notice, setNotice] = useState("");
   const [activeTab, setActiveTab] = useState<(typeof adminTabs)[number]["id"]>("overview");
   const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<(typeof productCategories)[number]>("all");
+  const [selectedGradeByProduct, setSelectedGradeByProduct] = useState<Record<string, string>>({});
+  const [uploadingProductId, setUploadingProductId] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [q, setQ] = useState("");
   const [city, setCity] = useState("");
   const [from, setFrom] = useState("");
@@ -225,6 +259,213 @@ export default function AdminPage() {
       setProducts([]);
       setProductDrafts({});
       setProductDirty({});
+    }
+  }
+
+  function getWizardPrice(variant: ProductVariantDraft) {
+    return Number(variant.unitPrice) > 0 ? Number(variant.unitPrice) : 0;
+  }
+
+  function getWizardPackPrice(variant: ProductVariantDraft) {
+    return Number(variant.packPrice) > 0 ? Number(variant.packPrice) : 0;
+  }
+
+  function createProductWizardState(mode: "new" | "edit", product?: ProductRecord): ProductWizardState {
+    if (mode === "edit" && product) {
+      return {
+        mode: "edit",
+        step: 1,
+        productId: product.id,
+        name: product.name,
+        category: product.category,
+        active: product.active,
+        description: product.description || "",
+        variants: [
+          createWizardVariantDraft({
+            grade: product.gradeLabel || "Grado alto",
+            unitLabel: product.unitLabel || "unidad",
+            unitPrice: String(product.basePrice ?? 0),
+            packPrice: String(product.basePrice ? Math.round(product.basePrice * 4.5) : 0),
+            stock: product.stock === null || product.stock === undefined ? "" : String(product.stock)
+          })
+        ],
+        photoPreviews: [],
+        existingPhotos: getProductAssets(product.id).map((asset) => asset.filename),
+        notes: product.notes || ""
+      };
+    }
+
+    return {
+      mode: "new",
+      step: 1,
+      name: "",
+      category: "neocaridinas",
+      active: true,
+      description: "",
+      variants: [createWizardVariantDraft()],
+      photoPreviews: [],
+      existingPhotos: [],
+      notes: ""
+    };
+  }
+
+  function openNewProductWizard() {
+    setWizardError("");
+    setProductWizard(createProductWizardState("new"));
+  }
+
+  function openEditProductWizard(product: ProductRecord) {
+    setWizardError("");
+    setProductWizard(createProductWizardState("edit", product));
+  }
+
+  function closeProductWizard() {
+    setProductWizard(null);
+    setWizardError("");
+  }
+
+  function updateWizardField<K extends keyof Omit<ProductWizardState, "variants" | "photoPreviews" | "existingPhotos">>(key: K, value: ProductWizardState[K]) {
+    setProductWizard((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
+  function updateWizardVariant(variantId: string, changes: Partial<ProductVariantDraft>) {
+    setProductWizard((prev) =>
+      prev
+        ? {
+            ...prev,
+            variants: prev.variants.map((variant) => (variant.id === variantId ? { ...variant, ...changes } : variant))
+          }
+        : prev
+    );
+  }
+
+  function addWizardVariant() {
+    setProductWizard((prev) =>
+      prev
+        ? {
+            ...prev,
+            variants: [...prev.variants, createWizardVariantDraft({ grade: `Grado ${prev.variants.length + 1}` })]
+          }
+        : prev
+    );
+  }
+
+  function removeWizardVariant(variantId: string) {
+    setProductWizard((prev) =>
+      prev
+        ? {
+            ...prev,
+            variants: prev.variants.length <= 1 ? prev.variants : prev.variants.filter((variant) => variant.id !== variantId)
+          }
+        : prev
+    );
+  }
+
+  function addWizardPhoto(file: File) {
+    const src = URL.createObjectURL(file);
+    setProductWizard((prev) =>
+      prev
+        ? {
+            ...prev,
+            photoPreviews: [...prev.photoPreviews, { id: `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`, src, file }]
+          }
+        : prev
+    );
+  }
+
+  function removeWizardPhoto(photoId: string) {
+    setProductWizard((prev) =>
+      prev
+        ? {
+            ...prev,
+            photoPreviews: prev.photoPreviews.filter((photo) => photo.id !== photoId)
+          }
+        : prev
+    );
+  }
+
+  async function uploadWizardPhotos(productId: string, wizard: ProductWizardState) {
+    const firstGrade = wizard.variants[0]?.grade || undefined;
+    for (const photo of wizard.photoPreviews.filter((item) => item.file)) {
+      const reader = new FileReader();
+      await new Promise<void>((resolve, reject) => {
+        reader.onload = async (event) => {
+          const data = event.target?.result as string;
+          const filename = `${productId}-${Date.now()}-${photo.file?.name}`;
+          const response = await fetch("/api/admin/media", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename, data })
+          });
+          if (response.ok) {
+            await assignMedia(productId, filename, firstGrade, firstGrade);
+          }
+          resolve();
+        };
+        reader.onerror = () => reject(new Error("Error leyendo imagen"));
+        if (photo.file) reader.readAsDataURL(photo.file);
+      });
+    }
+    await loadMedia();
+  }
+
+  async function saveWizardProduct() {
+    if (!productWizard) return;
+    setWizardError("");
+    setWizardSaving(true);
+    const primaryVariant = productWizard.variants[0];
+    if (!primaryVariant) {
+      setWizardError("Agrega al menos un grado con precio.");
+      setWizardSaving(false);
+      return;
+    }
+
+    const payload = {
+      name: productWizard.name,
+      category: productWizard.category,
+      description: productWizard.description,
+      basePrice: Number(primaryVariant.unitPrice),
+      stock: primaryVariant.stock === "" ? null : Number(primaryVariant.stock),
+      active: productWizard.active,
+      gradeLabel: primaryVariant.grade,
+      unitLabel: primaryVariant.unitLabel,
+      notes: productWizard.notes
+    };
+
+    try {
+      if (productWizard.mode === "new") {
+        const response = await fetch("/api/crm/products", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error("No se pudo crear el producto.");
+        const data = (await response.json()) as { product?: ProductRecord };
+        if (!data.product) throw new Error("No se pudo crear el producto.");
+        await uploadWizardPhotos(data.product.id, productWizard);
+        await loadProducts();
+        setNotice("Producto creado correctamente.");
+        closeProductWizard();
+      } else if (productWizard.mode === "edit" && productWizard.productId) {
+        const response = await fetch("/api/crm/products", {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: productWizard.productId, ...payload })
+        });
+        if (!response.ok) throw new Error("No se pudo actualizar el producto.");
+        await uploadWizardPhotos(productWizard.productId, productWizard);
+        await loadProducts();
+        await loadMedia();
+        setNotice("Producto actualizado correctamente.");
+        closeProductWizard();
+      }
+    } catch (err) {
+      setWizardError(err instanceof Error ? err.message : "No se pudo guardar el producto.");
+    } finally {
+      setWizardSaving(false);
     }
   }
 
@@ -469,12 +710,24 @@ export default function AdminPage() {
     return mediaMapping[productId] || [];
   }
 
-  async function assignMedia(productId: string, filename: string, slot?: string, grade?: string, title?: string) {
+  function getProductGradeOptions(product: CatalogProduct) {
+    const grades = new Set<string>();
+    product.variants.forEach((variant) => {
+      const grade = variant.gradeLabel?.trim() || variant.label?.trim();
+      if (grade) grades.add(grade);
+    });
+    getProductAssets(product.id).forEach((asset) => {
+      if (asset.grade?.trim()) grades.add(asset.grade.trim());
+    });
+    return Array.from(grades);
+  }
+
+  async function assignMedia(productId: string, filename: string, grade?: string, title?: string) {
     await fetch("/api/admin/media/mapping", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, filename, slot, grade, title })
+      body: JSON.stringify({ productId, filename, grade, slot: "gallery", title })
     });
     await loadMedia();
   }
@@ -499,6 +752,59 @@ export default function AdminPage() {
     await loadMedia();
   }
 
+  function getImagesByProductAndGrade(productId: string, grade?: string): MediaAsset[] {
+    const assets = mediaMapping[productId] || [];
+    if (!grade) return [];
+    return assets.filter((asset) => asset.grade === grade);
+  }
+
+  async function handleUploadImage(productId: string, grade: string, file: File) {
+    if (!file.type.startsWith("image/")) {
+      setError("Por favor selecciona una imagen válida");
+      return;
+    }
+
+    if (!grade) {
+      setError("Selecciona un grado antes de subir la imagen.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadingProductId(productId);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = e.target?.result as string;
+        const filename = `${productId}-${Date.now()}-${file.name}`;
+
+        const response = await fetch("/api/admin/media", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename, data })
+        });
+
+        if (response.ok) {
+          await assignMedia(productId, filename, grade, grade);
+          setSelectedGradeByProduct((prev) => ({ ...prev, [productId]: grade }));
+          setNotice("Imagen subida y asignada al grado seleccionado.");
+          await loadMedia();
+        } else {
+          setError("Error al subir imagen");
+        }
+
+        setUploading(false);
+        setUploadingProductId("");
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setError("Error al procesar imagen");
+      setUploading(false);
+      setUploadingProductId("");
+    }
+  }
+
   const totalRevenue = useMemo(() => orders.reduce((sum, order) => sum + Number(order.total || 0), 0), [orders]);
   const pendingOrders = useMemo(() => orders.filter((order) => order.status === "PENDING").length, [orders]);
   const catalogDirtyCount = useMemo(() => Object.keys(catalogDirty).length, [catalogDirty]);
@@ -510,6 +816,31 @@ export default function AdminPage() {
     catalog.forEach((product) => counts.set(product.category, (counts.get(product.category) || 0) + 1));
     return Array.from(counts.entries()).map(([category, count]) => ({ category, count }));
   }, [catalog]);
+
+  // Advanced stats
+  const ordersByStatus = useMemo(() => {
+    const statuses: Record<OrderStatus, number> = { PENDING: 0, CONFIRMED: 0, DELIVERED: 0 };
+    orders.forEach((order) => { statuses[order.status]++; });
+    return statuses;
+  }, [orders]);
+
+  const topProducts = useMemo(() => {
+    const productSales = new Map<string, { name: string; quantity: number; revenue: number }>();
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
+        const key = item.productId || item.packId || item.name || "unknown";
+        const current = productSales.get(key) || { name: item.name || key, quantity: 0, revenue: 0 };
+        current.quantity += item.quantity;
+        current.revenue += (item.unitPrice || 0) * item.quantity;
+        productSales.set(key, current);
+      });
+    });
+    return Array.from(productSales.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  }, [orders]);
+
+  const recentOrders = useMemo(() => {
+    return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8);
+  }, [orders]);
   const filteredCatalog = useMemo(() => {
     if (catalogCategoryFilter === "all") return catalog;
     return catalog.filter((product) => product.category === catalogCategoryFilter);
@@ -522,45 +853,47 @@ export default function AdminPage() {
 
   return (
     <main className="container section" style={{ paddingTop: 24, paddingBottom: 32 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "280px minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
-        <aside className="card" style={{ position: "sticky", top: 16, alignSelf: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div>
-              <span className="badge">Acceso privado</span>
-              <h1 style={{ marginTop: 10, marginBottom: 6 }}>Admin Ecommerce</h1>
-              <p className="muted">Pedidos, catálogo, productos e imágenes en una sola plataforma.</p>
-            </div>
-            {authenticated ? <button type="button" className="secondary" onClick={handleLogout}>Cerrar sesión</button> : null}
-            <div style={{ display: "grid", gap: 8 }}>
-              {adminTabs.map((tab) => (
-                <button key={tab.id} type="button" className={activeTab === tab.id ? "accent" : "secondary"} onClick={() => setActiveTab(tab.id)}>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            {authenticated ? (
+      {!authenticated ? (
+        <div style={{ display: "grid", placeItems: "center", minHeight: "calc(100vh - 160px)" }}>
+          <form className="card admin-login" onSubmit={handleLogin} style={{ width: "min(420px, 100%)" }}>
+            <span className="badge">Acceso privado</span>
+            <h1 style={{ marginTop: 10, marginBottom: 6 }}>Admin Ecommerce</h1>
+            <p className="muted">Pedidos, catálogo, productos e imágenes en una sola plataforma.</p>
+            <h3 style={{ marginTop: 18 }}>Ingresar contraseña</h3>
+            <p className="muted">Solo tú puedes ver y administrar esta información.</p>
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Contraseña del admin" autoComplete="current-password" required />
+            <button type="submit" disabled={authLoading}>{authLoading ? "Validando..." : "Entrar"}</button>
+            {error ? <p className="muted">{error}</p> : null}
+          </form>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "280px minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
+          <aside className="card" style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <span className="badge">Acceso privado</span>
+                <h1 style={{ marginTop: 10, marginBottom: 6 }}>Admin Ecommerce</h1>
+                <p className="muted">Pedidos, catálogo, productos e imágenes en una sola plataforma.</p>
+              </div>
+              <button type="button" className="secondary" onClick={handleLogout}>Cerrar sesión</button>
+              <div style={{ display: "grid", gap: 8 }}>
+                {adminTabs.map((tab) => (
+                  <button key={tab.id} type="button" className={activeTab === tab.id ? "accent" : "secondary"} onClick={() => setActiveTab(tab.id)}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
               <div className="grid" style={{ gap: 8 }}>
                 <article className="card admin-kpi"><p className="muted">Pedidos</p><strong>{orders.length}</strong></article>
                 <article className="card admin-kpi"><p className="muted">Pendientes</p><strong>{pendingOrders}</strong></article>
                 <article className="card admin-kpi"><p className="muted">Ingresos</p><strong>Q {totalRevenue.toFixed(2)}</strong></article>
               </div>
-            ) : null}
-          </div>
-        </aside>
+            </div>
+          </aside>
 
-        <section style={{ display: "grid", gap: 16 }}>
-          {!authenticated ? (
-            <form className="card admin-login" onSubmit={handleLogin}>
-              <h3>Ingresar contraseña</h3>
-              <p className="muted">Solo tú puedes ver y administrar esta información.</p>
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Contraseña del admin" autoComplete="current-password" required />
-              <button type="submit" disabled={authLoading}>{authLoading ? "Validando..." : "Entrar"}</button>
-              {error ? <p className="muted">{error}</p> : null}
-            </form>
-          ) : (
-            <>
-              {notice ? <p className="admin-notice">{notice}</p> : null}
-              {error ? <p className="admin-error">{error}</p> : null}
+          <section style={{ display: "grid", gap: 16 }}>
+            {notice ? <p className="admin-notice">{notice}</p> : null}
+            {error ? <p className="admin-error">{error}</p> : null}
 
               {activeTab === "overview" ? (
                 <div style={{ display: "grid", gap: 16 }}>
@@ -708,11 +1041,10 @@ export default function AdminPage() {
 
                   <div className="grid" style={{ gap: 16 }}>
                     {filteredCatalog.map((product) => {
-                      const assets = getProductAssets(product.id);
-                      const fileSelectId = `file-${product.id}`;
-                      const slotSelectId = `slot-${product.id}`;
+                      const gradeOptions = getProductGradeOptions(product);
+                      const selectedGrade = selectedGradeByProduct[product.id] || gradeOptions[0] || "";
+                      const gradeAssets = getImagesByProductAndGrade(product.id, selectedGrade);
                       const gradeInputId = `grade-${product.id}`;
-                      const titleInputId = `title-${product.id}`;
                       return (
                         <article key={product.id} className="card">
                           <div className="admin-section-head">
@@ -724,36 +1056,43 @@ export default function AdminPage() {
 
                           <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 16 }}>
                             <div>
-                              <strong>Media del producto</strong>
+                              <strong>Imágenes del producto</strong>
                               <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-                                <select id={fileSelectId} defaultValue="">
-                                  <option value="">Seleccionar imagen...</option>
-                                  {mediaFiles.map((file) => <option key={file} value={file}>{file}</option>)}
+                                <select
+                                  id={gradeInputId}
+                                  value={selectedGrade}
+                                  onChange={(event) => setSelectedGradeByProduct((prev) => ({ ...prev, [product.id]: event.target.value }))}
+                                >
+                                  <option value="">Seleccionar grado...</option>
+                                  {gradeOptions.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
                                 </select>
-                                <select id={slotSelectId} defaultValue="cover">
-                                  {mediaSlots.map((slot) => <option key={slot.key} value={slot.key}>{slot.label}</option>)}
-                                </select>
-                                <input id={gradeInputId} placeholder="Grado o etiqueta opcional" />
-                                <input id={titleInputId} placeholder="Título opcional" />
-                                <button type="button" onClick={async () => {
-                                  const fileInput = document.getElementById(fileSelectId) as HTMLSelectElement | null;
-                                  const slotInput = document.getElementById(slotSelectId) as HTMLSelectElement | null;
-                                  const gradeInput = document.getElementById(gradeInputId) as HTMLInputElement | null;
-                                  const titleInput = document.getElementById(titleInputId) as HTMLInputElement | null;
-                                  if (!fileInput?.value) return;
-                                  await assignMedia(product.id, fileInput.value, slotInput?.value, gradeInput?.value || undefined, titleInput?.value || undefined);
-                                }}>Asignar imagen</button>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  disabled={!selectedGrade || uploading && uploadingProductId === product.id}
+                                  onChange={async (event) => {
+                                    const input = event.currentTarget;
+                                    const file = event.target.files?.[0];
+                                    if (!file || !selectedGrade) return;
+                                    await handleUploadImage(product.id, selectedGrade, file);
+                                    input.value = "";
+                                  }}
+                                />
+                                <p className="muted" style={{ fontSize: 12 }}>
+                                  Sube una imagen para este producto y grado. Se guardará y se mostrará solo en ese grado.
+                                </p>
                               </div>
 
                               <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-                                {assets.length === 0 ? <p className="muted">Sin imágenes asignadas.</p> : null}
-                                {assets.map((asset) => (
-                                  <div key={`${product.id}-${asset.filename}-${asset.slot || "slot"}`} className="card" style={{ padding: 10 }}>
+                                {!selectedGrade ? <p className="muted">Selecciona un grado para ver sus imágenes.</p> : null}
+                                {selectedGrade && gradeAssets.length === 0 ? <p className="muted">Sin imágenes asignadas a este grado.</p> : null}
+                                {gradeAssets.map((asset) => (
+                                  <div key={`${product.id}-${asset.filename}-${asset.grade || "grade"}`} className="card" style={{ padding: 10 }}>
                                     <div style={{ display: "grid", gridTemplateColumns: "84px 1fr", gap: 10, alignItems: "center" }}>
                                       <img src={`/photos/${asset.filename}`} alt={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} />
                                       <div>
-                                        <strong>{asset.slot || "galería"}</strong>
-                                        <p className="muted">{asset.grade || asset.title || asset.filename}</p>
+                                        <strong>{asset.grade || "Sin grado"}</strong>
+                                        <p className="muted">{asset.title || asset.filename}</p>
                                         <button type="button" className="secondary" onClick={() => void removeMedia(product.id, asset.filename)}>Quitar</button>
                                       </div>
                                     </div>
@@ -793,51 +1132,336 @@ export default function AdminPage() {
               ) : null}
 
               {activeTab === "products" ? (
-                <section className="card">
+                <section className="card admin-products-panel">
                   <div className="admin-section-head">
                     <div>
                       <h3>Productos</h3>
                       <p className="muted">Crear, editar y eliminar productos para el catálogo.</p>
                     </div>
-                    <button type="button" onClick={() => void saveProductChanges()} disabled={savingProducts}>
-                      {savingProducts ? "Guardando..." : `Guardar cambios (${productDirtyCount})`}
-                    </button>
+                    <div className="admin-product-actions">
+                      <button type="button" className="admin-button primary" onClick={openNewProductWizard}>Nuevo producto</button>
+                      <button type="button" className="admin-button secondary" onClick={() => void saveProductChanges()} disabled={savingProducts}>
+                        {savingProducts ? "Guardando..." : `Guardar cambios (${productDirtyCount})`}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="card" style={{ marginTop: 12 }}>
-                    <h4>Nuevo producto</h4>
-                    <div className="admin-grid-2">
-                      <input value={newProductDraft.name} placeholder="Nombre" onChange={(event) => setNewProductDraft((prev) => ({ ...prev, name: event.target.value }))} />
-                      <select value={newProductDraft.category} onChange={(event) => setNewProductDraft((prev) => ({ ...prev, category: event.target.value }))}>
-                        <option value="caridinas">caridinas</option>
-                        <option value="neocaridinas">neocaridinas</option>
-                        <option value="accesorios">accesorios</option>
-                        <option value="insumos">insumos</option>
-                        <option value="suplementos">suplementos</option>
-                        <option value="plantas">plantas</option>
-                      </select>
-                      <input type="number" min="0" step="0.01" value={newProductDraft.basePrice} placeholder="Precio" onChange={(event) => setNewProductDraft((prev) => ({ ...prev, basePrice: event.target.value }))} />
-                      <input type="number" min="0" value={newProductDraft.stock} placeholder="Stock" onChange={(event) => setNewProductDraft((prev) => ({ ...prev, stock: event.target.value }))} />
-                      <input value={newProductDraft.gradeLabel} placeholder="Grado" onChange={(event) => setNewProductDraft((prev) => ({ ...prev, gradeLabel: event.target.value }))} />
-                      <input value={newProductDraft.unitLabel} placeholder="Unidad" onChange={(event) => setNewProductDraft((prev) => ({ ...prev, unitLabel: event.target.value }))} />
+                  {productWizard ? (
+                    <div className="admin-product-wizard">
+                      <div className="wizard-main">
+                        <div className="wizard-form">
+                          <div className="wizard-stepper">
+                            {[
+                              { step: 1, label: "Información básica" },
+                              { step: 2, label: "Grados y precios" },
+                              { step: 3, label: "Fotos" },
+                              { step: 4, label: "Revisión" }
+                            ].map((item) => {
+                              const isActive = productWizard.step === item.step;
+                              const isDone = productWizard.step > item.step;
+                              return (
+                                <button
+                                  key={item.step}
+                                  type="button"
+                                  className={`wizard-step ${isActive ? "active" : ""} ${isDone ? "done" : ""}`}
+                                  onClick={() => setProductWizard((prev) => (prev ? { ...prev, step: item.step } : prev))}
+                                >
+                                  <span className="wizard-step-number">{isDone ? "✓" : item.step}</span>
+                                  <span>{item.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <div className="wizard-stage">
+                            {productWizard.step === 1 ? (
+                              <div className="wizard-panel">
+                                <h4>1. Información básica</h4>
+                                <div className="admin-grid-2">
+                                  <label>
+                                    Nombre del producto
+                                    <input
+                                      value={productWizard.name}
+                                      onChange={(event) => updateWizardField("name", event.target.value)}
+                                      placeholder="Ej: Bloody Mary"
+                                    />
+                                  </label>
+                                  <label>
+                                    Categoría
+                                    <select
+                                      value={productWizard.category}
+                                      onChange={(event) => updateWizardField("category", event.target.value)}
+                                    >
+                                      <option value="caridinas">Caridinas</option>
+                                      <option value="neocaridinas">Neocaridinas</option>
+                                      <option value="accesorios">Accesorios</option>
+                                      <option value="insumos">Insumos</option>
+                                      <option value="suplementos">Suplementos</option>
+                                      <option value="plantas">Plantas</option>
+                                    </select>
+                                  </label>
+                                </div>
+
+                                <label>
+                                  Estado del producto
+                                  <select
+                                    value={productWizard.active ? "Disponible" : "Agotado"}
+                                    onChange={(event) => updateWizardField("active", event.target.value === "Disponible")}
+                                  >
+                                    <option value="Disponible">Disponible</option>
+                                    <option value="Agotado">Agotado</option>
+                                  </select>
+                                </label>
+
+                                <label>
+                                  Descripción corta
+                                  <textarea
+                                    rows={4}
+                                    value={productWizard.description}
+                                    onChange={(event) => updateWizardField("description", event.target.value)}
+                                    placeholder="Describe brevemente el producto"
+                                  />
+                                </label>
+                              </div>
+                            ) : null}
+
+                            {productWizard.step === 2 ? (
+                              <div className="wizard-panel">
+                                <div className="wizard-panel-head">
+                                  <h4>2. Grados y precios</h4>
+                                  <p className="muted">Agrega cada grado que vendes y controla precio de unidad, pack y stock.</p>
+                                </div>
+                                <div className="wizard-variant-list">
+                                  {productWizard.variants.map((variant, index) => (
+                                    <div key={variant.id} className="variant-card">
+                                      <div className="variant-card-title">
+                                        <strong>{`Grado ${index + 1}`}</strong>
+                                        {productWizard.variants.length > 1 ? (
+                                          <button type="button" className="variant-remove" onClick={() => removeWizardVariant(variant.id)}>
+                                            Eliminar
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                      <div className="admin-edit-grid" style={{ marginTop: 10 }}>
+                                        <label>
+                                          Nombre del grado
+                                          <input
+                                            value={variant.grade}
+                                            onChange={(event) => updateWizardVariant(variant.id, { grade: event.target.value })}
+                                            placeholder="Grado alto"
+                                          />
+                                        </label>
+                                        <label>
+                                          Precio unidad
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={variant.unitPrice}
+                                            onChange={(event) => updateWizardVariant(variant.id, { unitPrice: event.target.value })}
+                                            placeholder="Q 45.00"
+                                          />
+                                        </label>
+                                        <label>
+                                          Precio pack de 5
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={variant.packPrice}
+                                            onChange={(event) => updateWizardVariant(variant.id, { packPrice: event.target.value })}
+                                            placeholder="Q 200.00"
+                                          />
+                                        </label>
+                                        <label>
+                                          Stock disponible
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            value={variant.stock}
+                                            onChange={(event) => updateWizardVariant(variant.id, { stock: event.target.value })}
+                                            placeholder="32"
+                                          />
+                                        </label>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <button type="button" className="wizard-add-variant" onClick={addWizardVariant}>
+                                  + Agregar otro grado
+                                </button>
+                              </div>
+                            ) : null}
+
+                            {productWizard.step === 3 ? (
+                              <div className="wizard-panel">
+                                <div className="wizard-panel-head">
+                                  <h4>3. Fotos</h4>
+                                  <p className="muted">Arrastra imágenes o súbelas desde tu galería. La primera foto se usa como imagen principal.</p>
+                                </div>
+                                <div
+                                  className="wizard-dropzone"
+                                  onDragOver={(event) => event.preventDefault()}
+                                  onDrop={(event) => {
+                                    event.preventDefault();
+                                    const files = Array.from(event.dataTransfer.files || []);
+                                    files.filter((file) => file.type.startsWith("image/")).forEach(addWizardPhoto);
+                                  }}
+                                >
+                                  <div className="wizard-dropzone-icon">📷</div>
+                                  <div className="wizard-dropzone-text">
+                                    Arrastra fotos aquí o toca para subir
+                                  </div>
+                                  <div className="wizard-dropzone-subtext">JPG o PNG, hasta 5 fotos</div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="wizard-file-input"
+                                    onChange={(event) => {
+                                      const files = Array.from(event.target.files || []);
+                                      files.filter((file) => file.type.startsWith("image/")).forEach(addWizardPhoto);
+                                      event.currentTarget.value = "";
+                                    }}
+                                  />
+                                </div>
+                                <div className="wizard-thumbs">
+                                  {productWizard.existingPhotos.map((filename) => (
+                                    <div key={filename} className="thumb">
+                                      <img src={`/photos/${filename}`} alt={filename} />
+                                    </div>
+                                  ))}
+                                  {productWizard.photoPreviews.map((photo) => (
+                                    <div key={photo.id} className="thumb">
+                                      <img src={photo.src} alt="Foto seleccionada" />
+                                      <button type="button" className="thumb-remove" onClick={() => removeWizardPhoto(photo.id)}>×</button>
+                                    </div>
+                                  ))}
+                                  {productWizard.existingPhotos.length + productWizard.photoPreviews.length === 0 ? (
+                                    <p className="muted">Aún no hay fotos agregadas.</p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {productWizard.step === 4 ? (
+                              <div className="wizard-panel">
+                                <h4>4. Revisión</h4>
+                                <p className="muted">Revisa los datos antes de publicar o actualizar el producto.</p>
+                                <div className="review-grid">
+                                  <div>
+                                    <strong>Nombre</strong>
+                                    <p>{productWizard.name || "Sin nombre"}</p>
+                                  </div>
+                                  <div>
+                                    <strong>Categoría</strong>
+                                    <p>{productWizard.category}</p>
+                                  </div>
+                                  <div>
+                                    <strong>Estado</strong>
+                                    <p>{productWizard.active ? "Disponible" : "Agotado"}</p>
+                                  </div>
+                                  <div>
+                                    <strong>Descripción</strong>
+                                    <p>{productWizard.description || "Sin descripción"}</p>
+                                  </div>
+                                </div>
+                                <div className="review-grid review-variants">
+                                  {productWizard.variants.map((variant, index) => (
+                                    <div key={variant.id} className="review-variant">
+                                      <strong>{variant.grade || `Grado ${index + 1}`}</strong>
+                                      <p>Unidad: Q {variant.unitPrice || "0"}</p>
+                                      <p>Pack 5: Q {variant.packPrice || "0"}</p>
+                                      <p>Stock: {variant.stock || "0"}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="review-photos">
+                                  <strong>Fotos</strong>
+                                  <p>{productWizard.existingPhotos.length + productWizard.photoPreviews.length} imagenes cargadas</p>
+                                </div>
+                                {wizardError ? <p className="admin-error" style={{ marginTop: 12 }}>{wizardError}</p> : null}
+                              </div>
+                            ) : null}
+
+                            <div className="wizard-actions">
+                              <button type="button" className="admin-button secondary" onClick={productWizard.step === 1 ? closeProductWizard : () => setProductWizard((prev) => (prev ? { ...prev, step: prev.step - 1 } : prev))}>
+                                {productWizard.step === 1 ? "Cancelar" : "Anterior"}
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-button primary"
+                                onClick={async () => {
+                                  if (!productWizard) return;
+                                  if (productWizard.step < 4) {
+                                    setProductWizard((prev) => (prev ? { ...prev, step: prev.step + 1 } : prev));
+                                  } else {
+                                    await saveWizardProduct();
+                                  }
+                                }}
+                                disabled={wizardSaving}
+                              >
+                                {productWizard.step < 4 ? "Siguiente" : productWizard.mode === "new" ? "Publicar producto" : "Actualizar producto"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <aside className="wizard-preview">
+                          <div className="preview-card">
+                            <span className="preview-tag">Así se ve en el catálogo</span>
+                            <div className="preview-img">🦐</div>
+                            <h3>{productWizard.name || "Nombre del producto"}</h3>
+                            <p className="preview-desc">{productWizard.description || "Describe el producto para que los clientes lo entiendan rápido."}</p>
+                            <div className="preview-grades">
+                              {productWizard.variants.slice(0, 2).map((variant) => (
+                                <span key={variant.id} className="preview-grade">{variant.grade || "Grado"}</span>
+                              ))}
+                            </div>
+                            <div className="preview-price-row">
+                              <span>desde</span>
+                              <strong>Q {productWizard.variants[0]?.unitPrice || "0"}</strong>
+                            </div>
+                            <div className="checklist">
+                              <div className={`checklist-item ${productWizard.name.trim() ? "done" : ""}`}><span className="check-dot">✓</span> Nombre del producto</div>
+                              <div className={`checklist-item ${productWizard.variants.some((variant) => Number(variant.unitPrice) > 0) ? "done" : ""}`}><span className="check-dot">✓</span> Al menos un grado con precio</div>
+                              <div className={`checklist-item ${productWizard.description.trim() ? "done" : ""}`}><span className="check-dot">✓</span> Descripción agregada</div>
+                              <div className={`checklist-item ${(productWizard.existingPhotos.length + productWizard.photoPreviews.length) > 0 ? "done" : ""}`}><span className="check-dot">✓</span> Al menos una foto</div>
+                            </div>
+                          </div>
+                        </aside>
+                      </div>
                     </div>
-                    <textarea rows={2} value={newProductDraft.description} placeholder="Descripción" onChange={(event) => setNewProductDraft((prev) => ({ ...prev, description: event.target.value }))} />
-                    <textarea rows={2} value={newProductDraft.notes} placeholder="Notas" onChange={(event) => setNewProductDraft((prev) => ({ ...prev, notes: event.target.value }))} />
-                    <label className="admin-checkbox">
-                      <input type="checkbox" checked={newProductDraft.active} onChange={(event) => setNewProductDraft((prev) => ({ ...prev, active: event.target.checked }))} />
-                      Activo
-                    </label>
-                    <button type="button" onClick={() => void createProduct()}>Crear producto</button>
-                  </div>
+                  ) : null}
 
                   <div className="grid" style={{ gap: 12, marginTop: 12 }}>
                     {products.length === 0 ? <p className="muted">No hay productos registrados.</p> : null}
                     {products.map((product) => {
                       const draft = productDrafts[product.id];
                       if (!draft) return null;
+                      const gradeOptions = Array.from(
+                        new Set([
+                          draft.gradeLabel?.trim(),
+                          ...getProductAssets(product.id)
+                            .map((asset) => asset.grade?.trim())
+                            .filter((grade): grade is string => Boolean(grade))
+                        ].filter((grade): grade is string => Boolean(grade)))
+                      );
+                      const selectedGrade = selectedGradeByProduct[product.id] || gradeOptions[0] || "";
+                      const gradeAssets = getImagesByProductAndGrade(product.id, selectedGrade);
                       return (
-                        <article key={product.id} className="card">
-                          <div className="admin-grid-2">
+                        <article key={product.id} className="card admin-product-card">
+                          <div className="admin-product-card-head">
+                            <div>
+                              <h4>{product.name}</h4>
+                              <p className="muted">{product.category} · {product.gradeLabel || "Sin grado"}</p>
+                            </div>
+                            <div className="admin-product-card-actions">
+                              <button type="button" className="admin-button secondary" onClick={() => openEditProductWizard(product)}>Editar</button>
+                              <button type="button" className="admin-button secondary" onClick={() => void deleteProduct(product.id)}>Eliminar</button>
+                            </div>
+                          </div>
+                          <div className="admin-grid-2" style={{ gap: 10 }}>
                             <input value={draft.name} placeholder="Nombre" onChange={(event) => markProductDraft(product.id, { name: event.target.value })} />
                             <input value={draft.category} placeholder="Categoría" onChange={(event) => markProductDraft(product.id, { category: event.target.value })} />
                             <input type="number" min="0" step="0.01" value={draft.basePrice} placeholder="Precio" onChange={(event) => markProductDraft(product.id, { basePrice: event.target.value })} />
@@ -852,40 +1476,47 @@ export default function AdminPage() {
                             Activo
                           </label>
                           <div style={{ marginTop: 12 }}>
-                            <strong>Media del producto</strong>
+                            <strong>Imágenes del producto</strong>
                             <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                                <select id={`prod-file-${product.id}`} defaultValue="">
-                                  <option value="">Seleccionar imagen...</option>
-                                  {mediaFiles.map((file) => <option key={file} value={file}>{file}</option>)}
-                                </select>
-                                <select id={`prod-slot-${product.id}`} defaultValue="cover">
-                                  {mediaSlots.map((slot) => <option key={slot.key} value={slot.key}>{slot.label}</option>)}
-                                </select>
-                              </div>
-                              <input id={`prod-grade-${product.id}`} placeholder="Grado o etiqueta" />
-                              <input id={`prod-title-${product.id}`} placeholder="Título de imagen" />
-                              <button type="button" onClick={async () => {
-                                const fileInput = document.getElementById(`prod-file-${product.id}`) as HTMLSelectElement | null;
-                                const slotInput = document.getElementById(`prod-slot-${product.id}`) as HTMLSelectElement | null;
-                                const gradeInput = document.getElementById(`prod-grade-${product.id}`) as HTMLInputElement | null;
-                                const titleInput = document.getElementById(`prod-title-${product.id}`) as HTMLInputElement | null;
-                                if (!fileInput?.value) return;
-                                await assignMedia(product.id, fileInput.value, slotInput?.value, gradeInput?.value || undefined, titleInput?.value || undefined);
-                              }}>Asignar media</button>
+                              <select
+                                value={selectedGrade}
+                                onChange={(event) => setSelectedGradeByProduct((prev) => ({ ...prev, [product.id]: event.target.value }))}
+                              >
+                                <option value="">Seleccionar grado...</option>
+                                {gradeOptions.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                              </select>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={!selectedGrade || (uploading && uploadingProductId === product.id)}
+                                onChange={async (event) => {
+                                  const input = event.currentTarget;
+                                  const file = event.target.files?.[0];
+                                  if (!file || !selectedGrade) return;
+                                  await handleUploadImage(product.id, selectedGrade, file);
+                                  input.value = "";
+                                }}
+                              />
+                              <p className="muted" style={{ fontSize: 12 }}>
+                                Sube una imagen para este producto y grado.
+                              </p>
                             </div>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-                              {getProductAssets(product.id).map((asset) => (
-                                <div key={`${product.id}-${asset.filename}-${asset.slot || "slot"}`} className="card" style={{ width: 140, padding: 8 }}>
-                                  <img src={`/photos/${asset.filename}`} alt={asset.title || asset.filename} style={{ width: "100%", height: 88, objectFit: "cover", borderRadius: 10 }} />
-                                  <p className="muted" style={{ marginTop: 8 }}>{asset.slot || "galería"}</p>
-                                  <button type="button" className="secondary" onClick={() => void removeMedia(product.id, asset.filename)}>Quitar</button>
+                            <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                              {!selectedGrade ? <p className="muted">Selecciona un grado para ver sus imágenes.</p> : null}
+                              {selectedGrade && gradeAssets.length === 0 ? <p className="muted">Sin imágenes asignadas a este grado.</p> : null}
+                              {gradeAssets.map((asset) => (
+                                <div key={`${product.id}-${asset.filename}-${asset.grade || "grade"}`} className="card" style={{ padding: 10 }}>
+                                  <div style={{ display: "grid", gridTemplateColumns: "84px 1fr", gap: 10, alignItems: "center" }}>
+                                    <img src={`/photos/${asset.filename}`} alt={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} />
+                                    <div>
+                                      <strong>{asset.grade || "Sin grado"}</strong>
+                                      <p className="muted">{asset.title || asset.filename}</p>
+                                      <button type="button" className="secondary" onClick={() => void removeMedia(product.id, asset.filename)}>Quitar</button>
+                                    </div>
+                                  </div>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-                            <button type="button" className="secondary" onClick={() => void deleteProduct(product.id)}>Eliminar</button>
                           </div>
                         </article>
                       );
@@ -895,19 +1526,69 @@ export default function AdminPage() {
               ) : null}
 
               {activeTab === "stats" ? (
-                <section className="grid admin-kpi-grid">
-                  <article className="card admin-kpi"><p className="muted">Pedidos totales</p><strong>{orders.length}</strong></article>
-                  <article className="card admin-kpi"><p className="muted">Pendientes</p><strong>{pendingOrders}</strong></article>
-                  <article className="card admin-kpi"><p className="muted">Ingresos estimados</p><strong>Q {totalRevenue.toFixed(2)}</strong></article>
-                  <article className="card admin-kpi"><p className="muted">Variantes editadas</p><strong>{catalogDirtyCount}</strong></article>
-                  <article className="card admin-kpi"><p className="muted">Productos editables</p><strong>{products.length}</strong></article>
-                  <article className="card admin-kpi"><p className="muted">Imágenes cargadas</p><strong>{mediaFiles.length}</strong></article>
-                </section>
+                <div style={{ display: "grid", gap: 20 }}>
+                  <section className="grid admin-kpi-grid">
+                    <article className="card admin-kpi"><p className="muted">Pedidos totales</p><strong>{orders.length}</strong></article>
+                    <article className="card admin-kpi"><p className="muted">Pendientes</p><strong style={{ color: "#ff6b35" }}>{ordersByStatus.PENDING}</strong></article>
+                    <article className="card admin-kpi"><p className="muted">Confirmados</p><strong style={{ color: "#004e89" }}>{ordersByStatus.CONFIRMED}</strong></article>
+                    <article className="card admin-kpi"><p className="muted">Entregados</p><strong style={{ color: "#1b998b" }}>{ordersByStatus.DELIVERED}</strong></article>
+                    <article className="card admin-kpi"><p className="muted">Ingresos total</p><strong>Q {totalRevenue.toFixed(2)}</strong></article>
+                    <article className="card admin-kpi"><p className="muted">Ticket promedio</p><strong>Q {(orders.length > 0 ? totalRevenue / orders.length : 0).toFixed(2)}</strong></article>
+                  </section>
+
+                  <section className="card">
+                    <h3>Top 5 productos vendidos</h3>
+                    <div style={{ marginTop: 12 }}>
+                      {topProducts.length > 0 ? (
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid #e0e0e0" }}>
+                              <th style={{ padding: 8, textAlign: "left", fontWeight: 600 }}>Producto</th>
+                              <th style={{ padding: 8, textAlign: "right", fontWeight: 600 }}>Cantidad</th>
+                              <th style={{ padding: 8, textAlign: "right", fontWeight: 600 }}>Ingresos</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {topProducts.map((product, idx) => (
+                              <tr key={idx} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                                <td style={{ padding: 8 }}>{product.name}</td>
+                                <td style={{ padding: 8, textAlign: "right" }}>×{product.quantity}</td>
+                                <td style={{ padding: 8, textAlign: "right", fontWeight: 500 }}>Q {product.revenue.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="muted">Sin datos de ventas</p>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="card">
+                    <h3>Órdenes recientes</h3>
+                    <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                      {recentOrders.slice(0, 5).map((order) => (
+                        <div key={order.id} style={{ padding: 12, backgroundColor: "#f9f9f9", borderRadius: 8, borderLeft: "4px solid #004e89" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                            <div>
+                              <strong>{order.customerName}</strong>
+                              <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>{order.whatsapp} · {order.city}</p>
+                            </div>
+                            <span className="badge" style={{ backgroundColor: order.status === "DELIVERED" ? "#1b998b" : order.status === "CONFIRMED" ? "#004e89" : "#ff6b35" }}>
+                              {order.status === "DELIVERED" ? "Entregado" : order.status === "CONFIRMED" ? "Confirmado" : "Pendiente"}
+                            </span>
+                          </div>
+                          <p className="muted" style={{ fontSize: 12, marginTop: 8, marginBottom: 4 }}>{order.items.length} artículos</p>
+                          <strong style={{ color: "#1b998b" }}>Q {Number(order.total || 0).toFixed(2)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
               ) : null}
-            </>
-          )}
-        </section>
-      </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

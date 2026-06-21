@@ -113,10 +113,12 @@ export default function HomePage() {
     }, {})
   );
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
+  const [quickViewSlide, setQuickViewSlide] = useState(0);
+  const [quickViewQty, setQuickViewQty] = useState(1);
   const [instagramPosts, setInstagramPosts] = useState<SocialPost[]>([]);
   const [instagramProfile, setInstagramProfile] = useState<string | null>(null);
   const [mediaMapping, setMediaMapping] = useState<Record<string, MediaAsset[]>>({});
-  const [quickViewSlide, setQuickViewSlide] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<"all" | "neocaridinas" | "caridinas" | "suplementos" | "accesorios">("all");
   const [cartReady, setCartReady] = useState(false);
   const loadedWhatsappCartRef = useRef("");
 
@@ -387,6 +389,14 @@ export default function HomePage() {
     [catalogSections, catalogProducts]
   );
 
+  const filteredCatalogProducts = useMemo(
+    () =>
+      activeFilter === "all"
+        ? catalogProducts
+        : catalogProducts.filter((product) => product.category === activeFilter),
+    [activeFilter, catalogProducts]
+  );
+
   function getProductMediaAssets(productId: string) {
     return mediaMapping[productId] || [];
   }
@@ -467,6 +477,35 @@ export default function HomePage() {
     });
   }
 
+  function addProductQuantity(productId: string, variantId: string, quantity: number) {
+    if (quantity <= 0) return;
+    setCart((prev) => {
+      const existing = prev.find((item) => item.productId === productId && item.variantId === variantId);
+      const product = catalogProducts.find((item) => item.id === productId);
+      const variant = product?.variants.find((item) => item.id === variantId);
+
+      if (!product || !variant) {
+        return prev;
+      }
+
+      const nextQty = (existing?.qty || 0) + quantity;
+      if (variant.isActive === false || (typeof variant.stockAvailable === "number" && nextQty > variant.stockAvailable)) {
+        setMessage(`Sin stock suficiente para ${product.name} - ${variant.label}.`);
+        return prev;
+      }
+
+      if (existing) {
+        return prev.map((item) =>
+          item.productId === productId && item.variantId === variantId
+            ? { ...item, qty: item.qty + quantity }
+            : item
+        );
+      }
+
+      return [...prev, { productId, variantId, qty: quantity }];
+    });
+  }
+
   function decreaseProduct(productId: string, variantId: string) {
     setCart((prev) => {
       const current = prev.find((item) => item.productId === productId && item.variantId === variantId);
@@ -485,11 +524,13 @@ export default function HomePage() {
   function openQuickView(product: Product) {
     setQuickViewProductId(product.id);
     setQuickViewSlide(0);
+    setQuickViewQty(1);
   }
 
   function closeQuickView() {
     setQuickViewProductId(null);
     setQuickViewSlide(0);
+    setQuickViewQty(1);
   }
 
   function productStockAlert(variant: ProductVariant) {
@@ -629,60 +670,104 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="container with-floating-cart">
-        <section className="hero">
-          {getSiteMedia("hero") ? (
-            <div className="home-banner home-banner-top">
+      <main className="container with-floating-cart storefront-page">
+        <section className="hero storefront-hero">
+          <div className="hero-copy">
+            <span className="eyebrow">Cría local · Zona 8, Ciudad de Guatemala</span>
+            <h1>Gambas ornamentales criadas con <em>cuidado real</em>.</h1>
+            <p className="hero-intro">Neocaridinas y caridinas de grado seleccionado, accesorios para acuarios plantados y envío directo por WhatsApp.</p>
+            <div className="hero-ctas">
+              <a className="btn-primary" href="#catalogo">Ver catálogo</a>
+              <a className="btn-ghost" href="#checkout">Escribir por WhatsApp</a>
+            </div>
+            <div className="hero-trust">
+              <div className="trust-item"><span className="mono">23</span> productos activos</div>
+              <div className="trust-item"><span className="mono">Q 0</span> envío desde Q 50</div>
+              <div className="trust-item"><span className="mono">2</span> grados por línea</div>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            {getSiteMedia("hero") ? (
               <Image
                 src={`/photos/${getSiteMedia("hero")}`}
                 alt="Portada principal"
-                width={1400}
-                height={500}
-                sizes="(max-width: 1100px) 100vw, 1120px"
+                width={1200}
+                height={1200}
+                style={{ objectFit: "cover" }}
                 priority
               />
+            ) : (
+              <span className="hero-visual-glyph">🦐</span>
+            )}
+            <div className="hero-visual-card">
+              <div>
+                <div className="name">Bloody Mary — Grado Alto</div>
+                <div className="grade">Disponible · pack de 5</div>
+              </div>
+              <div className="price">Q 200</div>
             </div>
-          ) : null}
-          <div className="hero-bar">
-            <div>
-              <span className="badge">Venta directa</span>
-              <h1>Gambas y accesorios para tu acuario.</h1>
-            </div>
-            <a className="quick-link" href="#catalogo">
-              Ver catálogo
-            </a>
-          </div>
-          <div className="hero-summary">
-            <article className="summary-card accent-card">
-              <span className="summary-label">Ubicación</span>
-              <strong>Zona 8 - Entrega y compra en local</strong>
-              <p>Retira tus pedidos directamente en nuestras instalaciones en Ciudad de Guatemala.</p>
-            </article>
-            <article className="summary-card">
-              <span className="summary-label">Envío gratis</span>
-              <strong>Costo Q 0 con compras desde Q 50</strong>
-              <p>Entrega rápida a domicilio en zona 8 y alrededores sin costo adicional.</p>
-            </article>
-            <article className="summary-card">
-              <span className="summary-label">Pedido seguro</span>
-              <strong>Confirma por WhatsApp, paga al retirar</strong>
-              <p>Proceso simple: agrega al carrito, confirma por WhatsApp y completa tu compra.</p>
-            </article>
-          </div>
-          <div className="hero-tags hero-tags-tight">
-            <a href="#catalogo">Explorar productos</a>
-            <a href="#checkout">Finalizar pedido</a>
-            <a href="/admin">Administración</a>
           </div>
         </section>
 
-        <section className="section section-anchors">
-          <div className="anchor-strip">
-            {categoryAnchors.map((section) => (
-              <a key={section.id} href={`#${section.id}`} className="anchor-pill">
-                <span>{section.title}</span>
-                <strong>{section.count}</strong>
-              </a>
+        <section className="section storefront-strip">
+          <div className="strip-item">
+            <span className="tag">Ubicación</span>
+            <h3>Retiro en Zona 8</h3>
+            <p>Retira tu pedido en nuestras instalaciones en Ciudad de Guatemala.</p>
+          </div>
+          <div className="strip-item">
+            <span className="tag">Envío</span>
+            <h3>Gratis desde Q 50</h3>
+            <p>Entrega a domicilio en zona 8 y alrededores sin costo adicional.</p>
+          </div>
+          <div className="strip-item">
+            <span className="tag">Pedido</span>
+            <h3>Confirma por WhatsApp</h3>
+            <p>Agrega al carrito, confirma por WhatsApp y paga al retirar o por depósito previo.</p>
+          </div>
+        </section>
+
+        <section className="section storefront-categories">
+          <div className="section-head">
+            <div>
+              <span className="label">Explora por línea</span>
+              <h2>Categorías</h2>
+            </div>
+          </div>
+          <div className="cat-rail">
+            {catalogSections.map((section) => {
+              const cardClass = section.id === "neocaridinas" ? "c1" : section.id === "caridinas" ? "c2" : section.id === "suplementos" ? "c3" : "c4";
+              return (
+                <a key={section.id} href={`#${section.id}`} className={`cat-card ${cardClass}`}>
+                  <span className="count">{categoryAnchors.find((item) => item.id === section.id)?.count ?? 0} productos</span>
+                  <div>
+                    <h3>{section.title}</h3>
+                    <div className="sub">{section.description}</div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="section storefront-filters">
+          <div className="filter-row">
+            {[
+              { id: "all", label: "Todas" },
+              { id: "neocaridinas", label: "Neocaridinas" },
+              { id: "caridinas", label: "Caridinas" },
+              { id: "suplementos", label: "Suplementos" },
+              { id: "accesorios", label: "Accesorios" }
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                className={`chip${activeFilter === filter.id ? " active" : ""}`}
+                onClick={() => setActiveFilter(filter.id as typeof activeFilter)}
+              >
+                {filter.label}
+              </button>
             ))}
           </div>
         </section>
@@ -716,30 +801,30 @@ export default function HomePage() {
           <div className="section-head">
             <div>
               <h2>Productos disponibles</h2>
-              <p className="muted">Selecciona una categoría, elige variante y agrégala al carrito.</p>
+              <p className="muted">Filtra por línea, elige variante y agrégala al carrito en un clic.</p>
             </div>
           </div>
 
-          {catalogSections.map((section) => (
-            <div key={section.id} id={section.id} className="catalog-group">
-              <div className="catalog-group-head">
-                <div>
-                  <h3>{section.title}</h3>
-                  <p className="muted">{section.description}</p>
+          {catalogSections.map((section) => {
+            const sectionProducts = filteredCatalogProducts.filter((product) => product.category === section.id);
+            if (sectionProducts.length === 0) return null;
+            return (
+              <div key={section.id} id={section.id} className="catalog-group">
+                <div className="catalog-group-head">
+                  <div>
+                    <h3>{section.title}</h3>
+                    <p className="muted">{section.description}</p>
+                  </div>
+                  <span className="group-count">{sectionProducts.length} productos</span>
                 </div>
-                <span className="group-count">{categoryAnchors.find((item) => item.id === section.id)?.count} productos</span>
-              </div>
-              <div className="product-grid">
-                {catalogProducts
-                  .filter((product) => product.category === section.id)
-                  .map((product) => (
-                    <article key={product.id} className="product-card">
+                <div className="product-grid">
+                  {sectionProducts.map((product) => (
+                    <article key={product.id} className="storefront-product-card">
                       {(() => {
                         const selectedVariant = getSelectedVariant(product);
                         const selectedQty = getCartQty(product.id, selectedVariant.id);
                         const stockLabel = getVariantAvailabilityLabel(selectedVariant);
                         const stockAvailable = selectedVariant.stockAvailable;
-                        const media = getVariantMedia(product, selectedVariant);
                         const coverPhoto = pickProductCardImage(product, selectedVariant);
                         const canAdd =
                           selectedVariant.isActive !== false &&
@@ -747,7 +832,7 @@ export default function HomePage() {
                         return (
                           <>
                             {coverPhoto ? (
-                              <div className="product-card-media">
+                              <div className="storefront-product-visual">
                                 <Image
                                   src={coverPhoto.startsWith("/") ? coverPhoto : `/photos/${coverPhoto}`}
                                   alt={product.name}
@@ -755,89 +840,73 @@ export default function HomePage() {
                                   height={520}
                                   sizes="(max-width: 700px) 92vw, (max-width: 1100px) 45vw, 320px"
                                 />
+                                <div className="stock-pill">{stockLabel}</div>
                               </div>
                             ) : null}
-                            <div className="product-card-top">
-                              <span className={`badge badge-soft ${stockLabel === "Agotado" || stockLabel === "No disponible" ? "badge-danger" : ""}`}>
-                                {stockLabel}
-                              </span>
-                              <span className="product-price">Q {selectedVariant.price.toFixed(2)}</span>
+                            <div className="storefront-card-copy">
+                              <div className="storefront-card-labels">
+                                <span className="line-tag">{product.category === "neocaridinas" ? "Neocaridina" : product.category === "caridinas" ? "Caridina" : "Accesorio"}</span>
+                                <span className="product-price">Q {selectedVariant.price.toFixed(2)}</span>
+                              </div>
+                              <h3>{product.name}</h3>
+                              <p className="muted">{product.description}</p>
+                              {product.note ? <p className="product-note">{product.note}</p> : null}
                             </div>
-                            <h3>{product.name}</h3>
-                            <p className="muted">{product.description}</p>
-                            {product.note ? <p className="product-note">{product.note}</p> : null}
-                            {isShrimpProduct(product) ? (
-                              <div className="variant-stack">
-                                {groupVariantsByGrade(product).map(([grade, variants]) => (
-                                  <div key={grade} className="variant-group">
-                                    <div className="variant-group-title">{grade}</div>
-                                    <div className="variant-picker variant-picker-card">
-                                      {variants.map((variant) => (
-                                        <button
-                                          key={variant.id}
-                                          type="button"
-                                          className={selectedVariant.id === variant.id ? "variant-button active" : "variant-button"}
-                                          aria-pressed={selectedVariant.id === variant.id}
-                                          onClick={() => setSelectedVariant(product.id, variant.id)}
-                                        >
-                                          {getVariantDisplayLabel(variant)} - Q {variant.price.toFixed(2)}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="variant-picker variant-picker-card">
-                                {product.variants.map((variant) => (
-                                  <button
-                                    key={variant.id}
-                                    type="button"
-                                    className={selectedVariant.id === variant.id ? "variant-button active" : "variant-button"}
-                                    aria-pressed={selectedVariant.id === variant.id}
-                                    onClick={() => setSelectedVariant(product.id, variant.id)}
-                                  >
-                                    {variant.label} - Q {variant.price.toFixed(2)}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                            <p className="product-meta">{selectedVariant.unitLabel}</p>
-                            {productStockAlert(selectedVariant) ? (
-                              <p className="stock-chip">{productStockAlert(selectedVariant)}</p>
-                            ) : null}
-                            <div className="actions">
-                              {selectedQty === 0 ? (
-                                <button type="button" disabled={!canAdd} onClick={() => addProduct(product.id, selectedVariant.id)}>
-                                  {canAdd ? "Agregar al carrito" : "Agotado"}
+                            <div className="storefront-grade-grid">
+                              {(isShrimpProduct(product)
+                                ? groupVariantsByGrade(product).flatMap(([, variants]) => variants)
+                                : product.variants
+                              ).map((variant) => (
+                                <button
+                                  key={variant.id}
+                                  type="button"
+                                  className={`storefront-grade-pill${selectedVariant.id === variant.id ? " active" : ""}`}
+                                  aria-pressed={selectedVariant.id === variant.id}
+                                  onClick={() => setSelectedVariant(product.id, variant.id)}
+                                >
+                                  <span>{getVariantDisplayLabel(variant)}</span>
+                                  <strong>Q {variant.price.toFixed(2)}</strong>
                                 </button>
-                              ) : (
-                                <div className="qty-control">
-                                  <button
-                                    type="button"
-                                    className="secondary"
-                                    onClick={() => decreaseProduct(product.id, selectedVariant.id)}
-                                  >
-                                    -
-                                  </button>
-                                  <span>{selectedQty}</span>
+                              ))}
+                            </div>
+                            <div className="storefront-card-footer">
+                              <div className="storefront-card-meta">
+                                <span>{selectedVariant.unitLabel}</span>
+                              </div>
+                              <div className="storefront-card-actions">
+                                {selectedQty === 0 ? (
                                   <button type="button" disabled={!canAdd} onClick={() => addProduct(product.id, selectedVariant.id)}>
-                                    +
+                                    {canAdd ? "Agregar al carrito" : "Agotado"}
                                   </button>
-                                </div>
-                              )}
-                              <button type="button" className="secondary" onClick={() => openQuickView(product)}>
-                                Ver fotos
-                              </button>
+                                ) : (
+                                  <div className="qty-control">
+                                    <button
+                                      type="button"
+                                      className="secondary"
+                                      onClick={() => decreaseProduct(product.id, selectedVariant.id)}
+                                    >
+                                      -
+                                    </button>
+                                    <span>{selectedQty}</span>
+                                    <button type="button" disabled={!canAdd} onClick={() => addProduct(product.id, selectedVariant.id)}>
+                                      +
+                                    </button>
+                                  </div>
+                                )}
+                                <button type="button" className="secondary" onClick={() => openQuickView(product)}>
+                                  Ver detalle
+                                </button>
+                              </div>
                             </div>
                           </>
                         );
                       })()}
                     </article>
                   ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </section>
 
         {getSiteMedia("banner") ? (
@@ -1031,95 +1100,114 @@ export default function HomePage() {
 
       {quickViewProduct ? (
         <div className="modal-overlay" onClick={closeQuickView}>
-          <article className="modal-card" onClick={(event) => event.stopPropagation()}>
+          <article className="modal-card storefront-detail-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
-              <h3>{quickViewProduct.name}</h3>
+              <div>
+                <span className="eyebrow">{quickViewProduct.category === "neocaridinas" ? "Neocaridina" : quickViewProduct.category === "caridinas" ? "Caridina" : "Accesorio"}</span>
+                <h3>{quickViewProduct.name}</h3>
+                <p className="muted">{quickViewProduct.description}</p>
+              </div>
               <button type="button" className="secondary" onClick={closeQuickView}>
                 Cerrar
               </button>
             </div>
-            <p className="muted">{quickViewProduct.description}</p>
-            <div className="modal-media">
-              {quickViewSlides.length ? (
-                <>
-                  <div className="carousel-stage">
-                    {quickViewSlides[quickViewSlide]?.type === "photo" ? (
-                      <Image
-                        src={quickViewSlides[quickViewSlide].src}
-                        alt={quickViewProduct.name}
-                        width={960}
-                        height={540}
-                        sizes="(max-width: 900px) 92vw, 800px"
-                      />
-                    ) : (
-                      <video controls src={quickViewSlides[quickViewSlide].src} />
-                    )}
-                  </div>
-                  <div className="carousel-controls">
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() =>
-                        setQuickViewSlide((prev) =>
-                          prev === 0 ? quickViewSlides.length - 1 : prev - 1
-                        )
-                      }
-                    >
-                      Anterior
-                    </button>
-                    <span>
-                      {quickViewSlide + 1} / {quickViewSlides.length}
-                    </span>
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() =>
-                        setQuickViewSlide((prev) =>
-                          prev === quickViewSlides.length - 1 ? 0 : prev + 1
-                        )
-                      }
-                    >
-                      Siguiente
-                    </button>
-                  </div>
-                  <div className="carousel-thumbs">
-                    {quickViewSlides.map((slide, index) => (
+
+            <div className="storefront-detail-grid">
+              <div>
+                <div className="gallery-main">
+                  <span className="pill">{getVariantAvailabilityLabel(getSelectedVariant(quickViewProduct))}</span>
+                  {quickViewSlides.length > 0 && quickViewSlides[quickViewSlide]?.type === "photo" ? (
+                    <Image
+                      src={quickViewSlides[quickViewSlide].src}
+                      alt={quickViewProduct.name}
+                      width={960}
+                      height={960}
+                      sizes="(max-width: 900px) 92vw, 600px"
+                    />
+                  ) : quickViewSlides.length > 0 && quickViewSlides[quickViewSlide]?.type === "video" ? (
+                    <video controls src={quickViewSlides[quickViewSlide].src} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div className="gallery-empty">📷</div>
+                  )}
+                </div>
+                <div className="thumbs">
+                  {quickViewSlides.length ? (
+                    quickViewSlides.map((slide, index) => (
                       <button
                         key={`${slide.src}-${index}`}
                         type="button"
-                        className={index === quickViewSlide ? "secondary" : ""}
+                        className={index === quickViewSlide ? "thumb active" : "thumb"}
                         onClick={() => setQuickViewSlide(index)}
                       >
-                        {slide.type === "photo" ? `Foto ${index + 1}` : `Video ${index + 1}`}
+                        {slide.type === "photo" ? "Foto" : "Video"} {index + 1}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="muted">Pronto habrá más imágenes.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="storefront-detail-sidebar">
+                <div className="storefront-detail-price">
+                  <span>Precio</span>
+                  <strong>Q {getSelectedVariant(quickViewProduct).price.toFixed(2)}</strong>
+                  <span className="unit-label">{getSelectedVariant(quickViewProduct).unitLabel}</span>
+                </div>
+
+                <div className="selector-block">
+                  <div className="selector-label">
+                    <span className="name">Grado</span>
+                    <span className="hint">Elige tu presentación</span>
+                  </div>
+                  <div className="grade-options">
+                    {quickViewProduct.variants.map((variant) => (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        className={selectedVariants[quickViewProduct.id] === variant.id ? "grade-opt selected" : "grade-opt"}
+                        onClick={() => setSelectedVariant(quickViewProduct.id, variant.id)}
+                        aria-pressed={selectedVariants[quickViewProduct.id] === variant.id}
+                      >
+                        <span className="gname">{variant.label}</span>
+                        <span className="qprice">Q {variant.price.toFixed(2)}</span>
+                        <small>{variant.unitLabel}</small>
+                        {selectedVariants[quickViewProduct.id] === variant.id ? <span className="check">✓</span> : null}
                       </button>
                     ))}
                   </div>
-                </>
-              ) : (
-                <p className="muted">Proximamente, ya ire subiendo fotos y videos para este producto.</p>
-              )}
-              <div className="card">
-                <h4>Opciones disponibles</h4>
-                <div className="variant-picker">
-                  {quickViewProduct.variants.map((variant) => (
-                    <button
-                      key={variant.id}
-                      type="button"
-                      className={selectedVariants[quickViewProduct.id] === variant.id ? "secondary" : ""}
-                      onClick={() => setSelectedVariant(quickViewProduct.id, variant.id)}
-                    >
-                      {variant.label} - Q {variant.price.toFixed(2)}
-                    </button>
-                  ))}
                 </div>
-                <div className="actions">
+
+                <div className="selector-block">
+                  <div className="selector-label">
+                    <span className="name">Cantidad</span>
+                    <span className="hint">Ajusta antes de agregar</span>
+                  </div>
+                  <div className="stepper">
+                    <button type="button" onClick={() => setQuickViewQty((qty) => Math.max(1, qty - 1))}>–</button>
+                    <span className="count">{quickViewQty}</span>
+                    <button type="button" onClick={() => setQuickViewQty((qty) => qty + 1)}>+</button>
+                  </div>
+                </div>
+
+                <div className="cta-row">
                   <button
                     type="button"
-                    onClick={() => addProduct(quickViewProduct.id, getSelectedVariant(quickViewProduct).id)}
+                    className="btn-add"
+                    onClick={() => addProductQuantity(quickViewProduct.id, getSelectedVariant(quickViewProduct).id, quickViewQty)}
                   >
-                    Agregar al carrito
+                    Agregar {quickViewQty} · Q {(getSelectedVariant(quickViewProduct).price * quickViewQty).toFixed(2)}
                   </button>
+                  <button type="button" className="btn-wa" onClick={() => window.open(`https://wa.me/50243132549`, "_blank", "noopener,noreferrer")}>💬</button>
                 </div>
+
+                <div className="meta-row">
+                  <div className="meta-item"><span className="mono">{getVariantAvailabilityLabel(getSelectedVariant(quickViewProduct))}</span>Stock actual</div>
+                  <div className="meta-item"><span className="mono">Zona 8</span>Retiro local</div>
+                  <div className="meta-item"><span className="mono">Q 0</span>Envío desde Q 50</div>
+                </div>
+
+                <div className="note">📌 El precio y el total del carrito se actualizarán al seleccionar grado y cantidad.</div>
               </div>
             </div>
           </article>
