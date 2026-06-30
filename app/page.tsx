@@ -404,12 +404,18 @@ export default function HomePage() {
     return /\.(mp4|webm|mov|m4v)$/i.test(filename);
   }
 
+  function getMediaUrl(filename: string) {
+    if (!filename) return "";
+    if (filename.startsWith("/")) return filename;
+    return `/api/media/${filename.split("/").map(encodeURIComponent).join("/")}`;
+  }
+
   function renderSiteMedia(filename: string, alt: string, className: string, width: number, height: number, sizes: string, priority = false) {
     if (!filename) return null;
     if (isVideoFile(filename)) {
-      return <video className={className} src={`/photos/${filename}`} aria-label={alt} autoPlay muted loop playsInline controls={false} />;
+      return <video className={className} src={getMediaUrl(filename)} aria-label={alt} autoPlay muted loop playsInline controls={false} />;
     }
-    return <Image className={className} src={`/photos/${filename}`} alt={alt} width={width} height={height} sizes={sizes} priority={priority} />;
+    return <Image className={className} src={getMediaUrl(filename)} alt={alt} width={width} height={height} sizes={sizes} priority={priority} />;
   }
 
   function pickProductCardImage(product: Product, variant: ProductVariant) {
@@ -825,7 +831,7 @@ export default function HomePage() {
                             {coverPhoto ? (
                               <div className="storefront-product-visual">
                                 <Image
-                                  src={coverPhoto.startsWith("/") ? coverPhoto : `/photos/${coverPhoto}`}
+                                  src={coverPhoto.startsWith("/") ? coverPhoto : getMediaUrl(coverPhoto)}
                                   alt={product.name}
                                   width={640}
                                   height={520}

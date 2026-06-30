@@ -760,6 +760,12 @@ export default function AdminPage() {
     return /\.(mp4|webm|mov|m4v)$/i.test(filename);
   }
 
+  function getMediaUrl(filename: string) {
+    if (!filename) return "";
+    if (filename.startsWith("/")) return filename;
+    return `/api/media/${filename.split("/").map(encodeURIComponent).join("/")}`;
+  }
+
   function getMediaLabel(filename: string) {
     return filename.split(/[\\/]/).pop() || filename;
   }
@@ -822,8 +828,8 @@ export default function AdminPage() {
   }
 
   async function handleUploadImage(productId: string, grade: string, file: File) {
-    if (!file.type.startsWith("image/")) {
-      setError("Por favor selecciona una imagen válida");
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setError("Por favor selecciona una imagen o video válido");
       return;
     }
 
@@ -851,10 +857,10 @@ export default function AdminPage() {
         if (response.ok) {
           await assignMedia(productId, filename, grade, grade);
           setSelectedGradeByProduct((prev) => ({ ...prev, [productId]: grade }));
-          setNotice("Imagen subida y asignada al grado seleccionado.");
+          setNotice("Archivo subido y asignado al grado seleccionado.");
           await loadMedia();
         } else {
-          setError("Error al subir imagen");
+          setError("Error al subir archivo");
         }
 
         setUploading(false);
@@ -862,7 +868,7 @@ export default function AdminPage() {
       };
       reader.readAsDataURL(file);
     } catch {
-      setError("Error al procesar imagen");
+      setError("Error al procesar archivo");
       setUploading(false);
       setUploadingProductId("");
     }
@@ -917,9 +923,9 @@ export default function AdminPage() {
 
   function renderMediaPreview(filename: string, alt: string, className?: string) {
     if (isVideoFile(filename)) {
-      return <video className={className} src={`/photos/${filename}`} aria-label={alt} muted loop playsInline controls={false} preload="metadata" />;
+      return <video className={className} src={getMediaUrl(filename)} aria-label={alt} muted loop playsInline controls={false} preload="metadata" />;
     }
-    return <img className={className} src={`/photos/${filename}`} alt={alt} />;
+    return <img className={className} src={getMediaUrl(filename)} alt={alt} />;
   }
 
   const siteMediaSlots: Array<{ slot: SiteMediaSlot; title: string; current: string; description: string; aspectRatio: string }> = [
@@ -1187,7 +1193,7 @@ export default function AdminPage() {
                                   <span className="muted">JPG o PNG. Se guardará asociada al grado seleccionado.</span>
                                   <input
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/*,video/*"
                                     disabled={!selectedGrade || uploading && uploadingProductId === product.id}
                                     onChange={async (event) => {
                                       const input = event.currentTarget;
@@ -1205,7 +1211,11 @@ export default function AdminPage() {
                                 {selectedGrade && gradeAssets.length === 0 ? <p className="muted">Sin imágenes asignadas a este grado.</p> : null}
                                 {gradeAssets.map((asset) => (
                                   <div key={`${product.id}-${asset.filename}-${asset.grade || "grade"}`} className="admin-image-item">
-                                    <img src={`/photos/${asset.filename}`} alt={asset.title || asset.filename} />
+                                        {isVideoFile(asset.filename) ? (
+                                          <video src={getMediaUrl(asset.filename)} aria-label={asset.title || asset.filename} muted loop playsInline controls={false} />
+                                        ) : (
+                                          <img src={getMediaUrl(asset.filename)} alt={asset.title || asset.filename} />
+                                        )}
                                     <div>
                                       <strong>{asset.grade || "Sin grado"}</strong>
                                       <p className="muted">{asset.title || asset.filename}</p>
@@ -1427,15 +1437,15 @@ export default function AdminPage() {
                                   <div className="wizard-dropzone-text">
                                     Arrastra fotos aquí o toca para subir
                                   </div>
-                                  <div className="wizard-dropzone-subtext">JPG o PNG, hasta 5 fotos</div>
+                                  <div className="wizard-dropzone-subtext">JPG, PNG o video, hasta 5 archivos</div>
                                   <input
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/*,video/*"
                                     multiple
                                     className="wizard-file-input"
                                     onChange={(event) => {
                                       const files = Array.from(event.target.files || []);
-                                      files.filter((file) => file.type.startsWith("image/")).forEach(addWizardPhoto);
+                                      files.filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/")).forEach(addWizardPhoto);
                                       event.currentTarget.value = "";
                                     }}
                                   />
@@ -1443,12 +1453,20 @@ export default function AdminPage() {
                                 <div className="wizard-thumbs">
                                   {productWizard.existingPhotos.map((filename) => (
                                     <div key={filename} className="wizard-thumb">
-                                      <img src={`/photos/${filename}`} alt={filename} />
+                                      {isVideoFile(filename) ? (
+                                        <video src={getMediaUrl(filename)} aria-label={filename} muted loop playsInline controls={false} />
+                                      ) : (
+                                        <img src={getMediaUrl(filename)} alt={filename} />
+                                      )}
                                     </div>
                                   ))}
                                   {productWizard.photoPreviews.map((photo) => (
                                     <div key={photo.id} className="wizard-thumb">
-                                      <img src={photo.src} alt="Foto seleccionada" />
+                                      {photo.file && photo.file.type.startsWith("video/") ? (
+                                        <video src={photo.src} aria-label="Archivo seleccionado" muted loop playsInline controls={false} />
+                                      ) : (
+                                        <img src={photo.src} alt="Foto seleccionada" />
+                                      )}
                                       <button type="button" className="thumb-remove" onClick={() => removeWizardPhoto(photo.id)}>×</button>
                                     </div>
                                   ))}
@@ -1493,7 +1511,7 @@ export default function AdminPage() {
                                 </div>
                                 <div className="review-photos">
                                   <strong>Fotos</strong>
-                                  <p>{productWizard.existingPhotos.length + productWizard.photoPreviews.length} imagenes cargadas</p>
+                                  <p>{productWizard.existingPhotos.length + productWizard.photoPreviews.length} archivos cargados</p>
                                 </div>
                                 {wizardError ? <p className="admin-error" style={{ marginTop: 12 }}>{wizardError}</p> : null}
                               </div>
@@ -1602,7 +1620,7 @@ export default function AdminPage() {
                               </select>
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,video/*"
                                 disabled={!selectedGrade || (uploading && uploadingProductId === product.id)}
                                 onChange={async (event) => {
                                   const input = event.currentTarget;
@@ -1622,7 +1640,11 @@ export default function AdminPage() {
                               {gradeAssets.map((asset) => (
                                 <div key={`${product.id}-${asset.filename}-${asset.grade || "grade"}`} className="card" style={{ padding: 10 }}>
                                   <div style={{ display: "grid", gridTemplateColumns: "84px 1fr", gap: 10, alignItems: "center" }}>
-                                    <img src={`/photos/${asset.filename}`} alt={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} />
+                                    {isVideoFile(asset.filename) ? (
+                                      <video src={getMediaUrl(asset.filename)} aria-label={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} muted loop playsInline controls={false} />
+                                    ) : (
+                                      <img src={getMediaUrl(asset.filename)} alt={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} />
+                                    )}
                                     <div>
                                       <strong>{asset.grade || "Sin grado"}</strong>
                                       <p className="muted">{asset.title || asset.filename}</p>

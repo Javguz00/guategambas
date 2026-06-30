@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
 const PHOTOS_DIR = path.join(process.cwd(), "public", "photos");
-const MAPPING_FILE = path.join(process.cwd(), "data", "admin-media-mapping.json");
+
+function toMediaUrl(filename: string) {
+  return `/api/media/${filename.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+function mimeTypeFromFilename(filename: string) {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".avif")) return "image/avif";
+  if (lower.endsWith(".mp4")) return "video/mp4";
+  if (lower.endsWith(".webm")) return "video/webm";
+  if (lower.endsWith(".mov")) return "video/quicktime";
+  if (lower.endsWith(".m4v")) return "video/x-m4v";
+  return "image/jpeg";
+}
 
 function listImagesRecursive(dir: string, baseDir: string): string[] {
   if (!fs.existsSync(dir)) return [];
@@ -21,20 +38,27 @@ function listImagesRecursive(dir: string, baseDir: string): string[] {
   });
 }
 
-function ensureDataFile() {
-  const dir = path.dirname(MAPPING_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(MAPPING_FILE)) fs.writeFileSync(MAPPING_FILE, JSON.stringify({}), "utf-8");
-}
-
 export async function GET() {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  ensureDataFile();
-  const files = listImagesRecursive(PHOTOS_DIR, PHOTOS_DIR);
-  const mappingRaw = fs.readFileSync(MAPPING_FILE, "utf-8");
-  let mapping = {} as Record<string, Array<{ filename: string; grade?: string }>>;
-  try { mapping = JSON.parse(mappingRaw); } catch { mapping = {}; }
-  return NextResponse.json({ files, mapping });
+  const [dbAssets, mappingRows] = await Promise.all([
+    prisma.mediaAsset.findMany({ orderBy: { createdAt: "desc" }, select: { filename: true, mimeType: true, createdAt: true } }),
+    prisma.mediaMapping.findMany({ orderBy: { updatedAt: "desc" }, select: { productId: true, filename: true, grade: true, slot: true, title: true } })
+  ]);
+  const legacyFiles = listImagesRecursive(PHOTOS_DIR, PHOTOS_DIR);
+  const files = Array.from(new Set([...dbAssets.map((asset) => asset.filename), ...legacyFiles]));
+  const assets = dbAssets.map((asset) => ({
+    filename: asset.filename,
+    mimeType: asset.mimeType,
+    url: toMediaUrl(asset.filename),
+    source: "database" as const,
+    createdAt: asset.createdAt.toISOString()
+  }));
+  const mapping = mappingRows.reduce<Record<string, Array<{ filename: string; grade?: string; slot?: string; title?: string }>>>((acc, row) => {
+    acc[row.productId] = acc[row.productId] || [];
+    acc[row.productId].push({ filename: row.filename, grade: row.grade || undefined, slot: row.slot || undefined, title: row.title || undefined });
+    return acc;
+  }, {});
+  return NextResponse.json({ files, assets, mapping });
 }
 
 export async function POST(request: NextRequest) {
@@ -42,16 +66,15 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { filename, data } = body as { filename?: unknown; data?: unknown };
   if (!filename || typeof filename !== "string" || !data || typeof data !== "string") return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
-  // data should be a data URL like 'data:image/jpeg;base64,...' or 'data:video/mp4;base64,...'
   const match = data.match(/^data:((?:image|video)\/[^;]+);base64,(.+)$/);
-  let b64 = data;
-  if (match) {
-    b64 = match[2];
-  }
+  const mimeType = match?.[1] || mimeTypeFromFilename(filename);
+  const b64 = match ? match[2] : data;
   const buffer = Buffer.from(b64, "base64");
-  if (!fs.existsSync(PHOTOS_DIR)) fs.mkdirSync(PHOTOS_DIR, { recursive: true });
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const outPath = path.join(PHOTOS_DIR, safeName);
-  fs.writeFileSync(outPath, buffer);
-  return NextResponse.json({ ok: true, filename: safeName, url: `/photos/${safeName}` });
+  await prisma.mediaAsset.upsert({
+    where: { filename: safeName },
+    create: { filename: safeName, mimeType, data: buffer },
+    update: { mimeType, data: buffer }
+  });
+  return NextResponse.json({ ok: true, filename: safeName, url: toMediaUrl(safeName), mimeType });
 }

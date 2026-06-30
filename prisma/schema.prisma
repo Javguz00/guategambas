@@ -86,6 +86,30 @@ model CatalogVariantState {
   @@id([productId, variantId])
 }
 
+model MediaAsset {
+  id        String   @id @default(cuid())
+  filename  String   @unique
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MediaMapping {
+  id        String   @id @default(cuid())
+  productId String
+  filename  String
+  grade     String?
+  slot      String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([productId, slot])
+  @@index([productId, filename])
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
