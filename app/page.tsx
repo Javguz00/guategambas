@@ -1,10 +1,11 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { products } from "@/lib/data";
-import { OrderItem, Product, ProductVariant, SocialPost } from "@/lib/types";
-import { getVariantAvailabilityLabel, getVariantDisplayLabel, getVariantMedia, groupVariantsByGrade } from "@/lib/catalog";
+import { OrderItem, Product, ProductVariant } from "@/lib/types";
+import { getVariantDisplayLabel, getVariantMedia, groupVariantsByGrade } from "@/lib/catalog";
 import { calculateShipping } from "@/lib/shipping";
 
 interface CartLine {
@@ -115,8 +116,6 @@ export default function HomePage() {
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [quickViewSlide, setQuickViewSlide] = useState(0);
   const [quickViewQty, setQuickViewQty] = useState(1);
-  const [instagramPosts, setInstagramPosts] = useState<SocialPost[]>([]);
-  const [instagramProfile, setInstagramProfile] = useState<string | null>(null);
   const [mediaMapping, setMediaMapping] = useState<Record<string, MediaAsset[]>>({});
   const [activeFilter, setActiveFilter] = useState<"all" | "neocaridinas" | "caridinas" | "suplementos" | "accesorios">("all");
   const [cartReady, setCartReady] = useState(false);
@@ -161,16 +160,12 @@ export default function HomePage() {
       }
     })();
 
-    // load instagram posts for announcement
+    // load social link metadata for the footer/header if needed later
     (async () => {
       try {
         const resp = await fetch("/api/social");
         if (!resp.ok) return;
-        const json = await resp.json() as { profile?: string; posts?: SocialPost[] };
-        if (!cancelled) {
-          setInstagramProfile(json.profile || null);
-          setInstagramPosts((json.posts || []).slice(0, 6));
-        }
+        await resp.json();
       } catch {
         // ignore
       }
@@ -401,7 +396,7 @@ export default function HomePage() {
     return mediaMapping[productId] || [];
   }
 
-  function getSiteMedia(slot: "hero" | "banner") {
+  function getSiteMedia(slot: "hero" | "banner" | "promo") {
     return mediaMapping.__site__?.find((asset) => asset.slot === slot)?.filename || "";
   }
 
@@ -533,10 +528,6 @@ export default function HomePage() {
     setQuickViewQty(1);
   }
 
-  function productStockAlert(variant: ProductVariant) {
-    return getVariantAvailabilityLabel(variant);
-  }
-
   function isShrimpProduct(product: Product) {
     return product.category === "caridinas" || product.category === "neocaridinas";
   }
@@ -661,9 +652,12 @@ export default function HomePage() {
     <>
       <header className="header">
         <div className="container header-inner">
-          <div className="brand">Guate<span>Gambas</span></div>
+          <Link href="/" className="brand">Guate<span>Gambas</span></Link>
           <nav className="nav">
-            <a href="#catalogo">Catálogo</a>
+            <a href="#neocaridinas">Neocaridinas</a>
+            <a href="#caridinas">Caridinas</a>
+            <a href="#suplementos">Suplementos</a>
+            <a href="#accesorios">Accesorios</a>
             <a href="#checkout">Pedido</a>
             <a href="/admin">Admin</a>
           </nav>
@@ -692,21 +686,14 @@ export default function HomePage() {
               <Image
                 src={`/photos/${getSiteMedia("hero")}`}
                 alt="Portada principal"
-                width={1200}
-                height={1200}
+                width={1400}
+                height={1400}
                 style={{ objectFit: "cover" }}
                 priority
               />
             ) : (
               <span className="hero-visual-glyph">🦐</span>
             )}
-            <div className="hero-visual-card">
-              <div>
-                <div className="name">Bloody Mary — Grado Alto</div>
-                <div className="grade">Disponible · pack de 5</div>
-              </div>
-              <div className="price">Q 200</div>
-            </div>
           </div>
         </section>
 
@@ -773,27 +760,33 @@ export default function HomePage() {
         </section>
 
         <section className="section announcement">
-          <div className="card accent-card">
-            <h3>Anuncios y publicaciones</h3>
-            <p className="muted">Últimas publicaciones en Instagram</p>
+          <div className="card accent-card announcement-card">
+            <div className="announcement-card-head">
+              <div>
+                <h3>Anuncios y publicaciones</h3>
+                <p className="muted">Banner editable para promociones, anuncios y piezas destacadas.</p>
+              </div>
+              <a href="https://instagram.com/guategambas" target="_blank" rel="noreferrer">Instagram</a>
+            </div>
 
-            {instagramPosts.length > 0 ? (
-              <div className="import-gallery" style={{ marginTop: "1rem" }}>
-                {instagramPosts.map((post) => (
-                  <a key={post.id} href={post.url} target="_blank" rel="noreferrer" className="import-thumb" style={{ display: "block" }}>
-                    <Image src={post.thumbnailUrl || "/photos/importacion-plantas/1.jpeg"} alt={post.title} width={320} height={200} style={{ objectFit: "cover" }} />
-                  </a>
-                ))}
+            {getSiteMedia("promo") ? (
+              <div className="announcement-banner">
+                <Image
+                  src={`/photos/${getSiteMedia("promo")}`}
+                  alt="Banner de anuncios"
+                  width={1600}
+                  height={600}
+                  sizes="(max-width: 1100px) 100vw, 1120px"
+                />
               </div>
             ) : (
-              <p className="muted">No hay publicaciones recientes.</p>
+              <div className="announcement-banner announcement-banner-empty">
+                <div>
+                  <strong>Banner de anuncios</strong>
+                  <p className="muted">Sube aquí imágenes específicas para promociones y publicaciones del sitio.</p>
+                </div>
+              </div>
             )}
-
-            {instagramProfile ? (
-              <p style={{ marginTop: "0.75rem" }}>
-                <a href={instagramProfile} target="_blank" rel="noreferrer">Ver más en Instagram</a>
-              </p>
-            ) : null}
           </div>
         </section>
 
@@ -823,7 +816,6 @@ export default function HomePage() {
                       {(() => {
                         const selectedVariant = getSelectedVariant(product);
                         const selectedQty = getCartQty(product.id, selectedVariant.id);
-                        const stockLabel = getVariantAvailabilityLabel(selectedVariant);
                         const stockAvailable = selectedVariant.stockAvailable;
                         const coverPhoto = pickProductCardImage(product, selectedVariant);
                         const canAdd =
@@ -840,7 +832,6 @@ export default function HomePage() {
                                   height={520}
                                   sizes="(max-width: 700px) 92vw, (max-width: 1100px) 45vw, 320px"
                                 />
-                                <div className="stock-pill">{stockLabel}</div>
                               </div>
                             ) : null}
                             <div className="storefront-card-copy">
@@ -1115,7 +1106,6 @@ export default function HomePage() {
             <div className="storefront-detail-grid">
               <div>
                 <div className="gallery-main">
-                  <span className="pill">{getVariantAvailabilityLabel(getSelectedVariant(quickViewProduct))}</span>
                   {quickViewSlides.length > 0 && quickViewSlides[quickViewSlide]?.type === "photo" ? (
                     <Image
                       src={quickViewSlides[quickViewSlide].src}
@@ -1202,7 +1192,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="meta-row">
-                  <div className="meta-item"><span className="mono">{getVariantAvailabilityLabel(getSelectedVariant(quickViewProduct))}</span>Stock actual</div>
+                  <div className="meta-item"><span className="mono">{getSelectedVariant(quickViewProduct).unitLabel}</span>Unidad seleccionada</div>
                   <div className="meta-item"><span className="mono">Zona 8</span>Retiro local</div>
                   <div className="meta-item"><span className="mono">Q 0</span>Envío desde Q 50</div>
                 </div>
@@ -1231,3 +1221,4 @@ export default function HomePage() {
     </>
   );
 }
+

@@ -742,7 +742,7 @@ export default function AdminPage() {
     await loadMedia();
   }
 
-  async function assignSiteMedia(filename: string, slot: "hero" | "banner", title?: string) {
+  async function assignSiteMedia(filename: string, slot: "hero" | "banner" | "promo", title?: string) {
     await fetch("/api/admin/media/mapping", {
       method: "POST",
       credentials: "same-origin",
@@ -811,6 +811,7 @@ export default function AdminPage() {
   const productDirtyCount = useMemo(() => Object.keys(productDirty).length, [productDirty]);
   const homeHeroImage = mediaMapping.__site__?.find((asset) => asset.slot === "hero")?.filename || "";
   const homeBannerImage = mediaMapping.__site__?.find((asset) => asset.slot === "banner")?.filename || "";
+  const homePromoImage = mediaMapping.__site__?.find((asset) => asset.slot === "promo")?.filename || "";
   const categorySummary = useMemo(() => {
     const counts = new Map<string, number>();
     catalog.forEach((product) => counts.set(product.category, (counts.get(product.category) || 0) + 1));
@@ -923,14 +924,15 @@ export default function AdminPage() {
                     <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", marginTop: 12 }}>
                       {[
                         { slot: "hero" as const, title: "Portada superior", current: homeHeroImage },
-                        { slot: "banner" as const, title: "Anuncio inferior", current: homeBannerImage }
+                        { slot: "banner" as const, title: "Anuncio inferior", current: homeBannerImage },
+                        { slot: "promo" as const, title: "Banner de anuncios", current: homePromoImage }
                       ].map((item) => (
                         <div key={item.slot} className="card">
                           <strong>{item.title}</strong>
                           <p className="muted">Imagen rectangular visible en la página principal.</p>
                           {item.current ? (
                             <div style={{ margin: "10px 0" }}>
-                              <img src={`/photos/${item.current}`} alt={item.title} style={{ width: "100%", aspectRatio: item.slot === "banner" ? "21 / 9" : "16 / 9", objectFit: "cover", borderRadius: 12 }} />
+                              <img src={`/photos/${item.current}`} alt={item.title} style={{ width: "100%", aspectRatio: item.slot === "banner" ? "21 / 9" : item.slot === "promo" ? "16 / 8" : "16 / 9", objectFit: "cover", borderRadius: 12 }} />
                             </div>
                           ) : null}
                           <select id={`site-file-${item.slot}`} defaultValue="">
@@ -1054,10 +1056,13 @@ export default function AdminPage() {
                             </div>
                           </div>
 
-                          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 16 }}>
-                            <div>
-                              <strong>Imágenes del producto</strong>
-                              <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                          <div className="admin-image-panel">
+                            <div className="admin-image-card">
+                              <div>
+                                <strong>Imágenes del producto</strong>
+                                <p className="muted">Sube una foto por grado para controlar qué se ve en el catálogo y en el detalle.</p>
+                              </div>
+                              <div style={{ display: "grid", gap: 10 }}>
                                 <select
                                   id={gradeInputId}
                                   value={selectedGrade}
@@ -1066,42 +1071,42 @@ export default function AdminPage() {
                                   <option value="">Seleccionar grado...</option>
                                   {gradeOptions.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
                                 </select>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  disabled={!selectedGrade || uploading && uploadingProductId === product.id}
-                                  onChange={async (event) => {
-                                    const input = event.currentTarget;
-                                    const file = event.target.files?.[0];
-                                    if (!file || !selectedGrade) return;
-                                    await handleUploadImage(product.id, selectedGrade, file);
-                                    input.value = "";
-                                  }}
-                                />
-                                <p className="muted" style={{ fontSize: 12 }}>
-                                  Sube una imagen para este producto y grado. Se guardará y se mostrará solo en ese grado.
-                                </p>
+                                <label className="admin-upload-dropzone">
+                                  <span className="admin-upload-chip">Arrastra o elige una imagen</span>
+                                  <strong>{selectedGrade || "Selecciona un grado primero"}</strong>
+                                  <span className="muted">JPG o PNG. Se guardará asociada al grado seleccionado.</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    disabled={!selectedGrade || uploading && uploadingProductId === product.id}
+                                    onChange={async (event) => {
+                                      const input = event.currentTarget;
+                                      const file = event.target.files?.[0];
+                                      if (!file || !selectedGrade) return;
+                                      await handleUploadImage(product.id, selectedGrade, file);
+                                      input.value = "";
+                                    }}
+                                  />
+                                </label>
                               </div>
 
-                              <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                              <div className="admin-image-list">
                                 {!selectedGrade ? <p className="muted">Selecciona un grado para ver sus imágenes.</p> : null}
                                 {selectedGrade && gradeAssets.length === 0 ? <p className="muted">Sin imágenes asignadas a este grado.</p> : null}
                                 {gradeAssets.map((asset) => (
-                                  <div key={`${product.id}-${asset.filename}-${asset.grade || "grade"}`} className="card" style={{ padding: 10 }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "84px 1fr", gap: 10, alignItems: "center" }}>
-                                      <img src={`/photos/${asset.filename}`} alt={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} />
-                                      <div>
-                                        <strong>{asset.grade || "Sin grado"}</strong>
-                                        <p className="muted">{asset.title || asset.filename}</p>
-                                        <button type="button" className="secondary" onClick={() => void removeMedia(product.id, asset.filename)}>Quitar</button>
-                                      </div>
+                                  <div key={`${product.id}-${asset.filename}-${asset.grade || "grade"}`} className="admin-image-item">
+                                    <img src={`/photos/${asset.filename}`} alt={asset.title || asset.filename} />
+                                    <div>
+                                      <strong>{asset.grade || "Sin grado"}</strong>
+                                      <p className="muted">{asset.title || asset.filename}</p>
+                                      <button type="button" className="secondary" onClick={() => void removeMedia(product.id, asset.filename)}>Quitar</button>
                                     </div>
                                   </div>
                                 ))}
                               </div>
                             </div>
 
-                            <div>
+                            <div className="admin-image-card">
                               <strong>Variantes</strong>
                               <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
                                 {product.variants.map((variant) => {
@@ -1294,7 +1299,7 @@ export default function AdminPage() {
                             ) : null}
 
                             {productWizard.step === 3 ? (
-                              <div className="wizard-panel">
+                                <div className="wizard-panel wizard-panel-card">
                                 <div className="wizard-panel-head">
                                   <h4>3. Fotos</h4>
                                   <p className="muted">Arrastra imágenes o súbelas desde tu galería. La primera foto se usa como imagen principal.</p>
@@ -1327,12 +1332,12 @@ export default function AdminPage() {
                                 </div>
                                 <div className="wizard-thumbs">
                                   {productWizard.existingPhotos.map((filename) => (
-                                    <div key={filename} className="thumb">
+                                    <div key={filename} className="wizard-thumb">
                                       <img src={`/photos/${filename}`} alt={filename} />
                                     </div>
                                   ))}
                                   {productWizard.photoPreviews.map((photo) => (
-                                    <div key={photo.id} className="thumb">
+                                    <div key={photo.id} className="wizard-thumb">
                                       <img src={photo.src} alt="Foto seleccionada" />
                                       <button type="button" className="thumb-remove" onClick={() => removeWizardPhoto(photo.id)}>×</button>
                                     </div>
