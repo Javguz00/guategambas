@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 const statusOptions = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
@@ -165,6 +166,7 @@ export default function AdminPage() {
   const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<(typeof productCategories)[number]>("all");
   const [selectedGradeByProduct, setSelectedGradeByProduct] = useState<Record<string, string>>({});
   const [uploadingProductId, setUploadingProductId] = useState("");
+  const [uploadingSiteSlot, setUploadingSiteSlot] = useState<"hero" | "banner" | "promo" | "">("");
   const [uploading, setUploading] = useState(false);
   const [q, setQ] = useState("");
   const [city, setCity] = useState("");
@@ -752,6 +754,50 @@ export default function AdminPage() {
     await loadMedia();
   }
 
+  async function handleUploadSiteMedia(slot: "hero" | "banner" | "promo", title: string, file: File) {
+    if (!file.type.startsWith("image/")) {
+      setError("Por favor selecciona una imagen válida");
+      return;
+    }
+
+    setUploadingSiteSlot(slot);
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        void (async () => {
+          try {
+            const data = event.target?.result as string;
+            const filename = `site-${slot}-${Date.now()}-${file.name}`;
+            const response = await fetch("/api/admin/media", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filename, data })
+            });
+
+            if (response.ok) {
+              await assignSiteMedia(filename, slot, title);
+            } else {
+              setError("No se pudo guardar la imagen del banner.");
+            }
+          } catch {
+            setError("No se pudo subir la imagen.");
+          } finally {
+            setUploadingSiteSlot((current) => (current === slot ? "" : current));
+          }
+        })();
+      };
+      reader.onerror = () => {
+        setUploadingSiteSlot((current) => (current === slot ? "" : current));
+        setError("No se pudo leer la imagen.");
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUploadingSiteSlot("");
+      setError("No se pudo subir la imagen.");
+    }
+  }
+
   function getImagesByProductAndGrade(productId: string, grade?: string): MediaAsset[] {
     const assets = mediaMapping[productId] || [];
     if (!grade) return [];
@@ -864,6 +910,9 @@ export default function AdminPage() {
             <p className="muted">Solo tú puedes ver y administrar esta información.</p>
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Contraseña del admin" autoComplete="current-password" required />
             <button type="submit" disabled={authLoading}>{authLoading ? "Validando..." : "Entrar"}</button>
+            <Link className="secondary" href="/" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
+              Volver a la tienda
+            </Link>
             {error ? <p className="muted">{error}</p> : null}
           </form>
         </div>
@@ -872,11 +921,14 @@ export default function AdminPage() {
           <aside className="card" style={{ position: "sticky", top: 16, alignSelf: "start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
-                <span className="badge">Acceso privado</span>
+                <Link href="/" className="badge" style={{ display: "inline-flex", width: "fit-content", textDecoration: "none" }}>GuateGambas</Link>
                 <h1 style={{ marginTop: 10, marginBottom: 6 }}>Admin Ecommerce</h1>
                 <p className="muted">Pedidos, catálogo, productos e imágenes en una sola plataforma.</p>
               </div>
               <button type="button" className="secondary" onClick={handleLogout}>Cerrar sesión</button>
+              <Link href="/" className="secondary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
+                Ir a la página principal
+              </Link>
               <div style={{ display: "grid", gap: 8 }}>
                 {adminTabs.map((tab) => (
                   <button key={tab.id} type="button" className={activeTab === tab.id ? "accent" : "secondary"} onClick={() => setActiveTab(tab.id)}>
@@ -950,6 +1002,23 @@ export default function AdminPage() {
                           >
                             Guardar {item.title}
                           </button>
+                          <label className="admin-upload-dropzone" style={{ marginTop: 12 }}>
+                            <span className="admin-upload-chip">Subir nueva imagen</span>
+                            <strong>{uploadingSiteSlot === item.slot ? "Subiendo..." : `Archivo para ${item.title.toLowerCase()}`}</strong>
+                            <span className="muted">Sube un archivo y se guardará para este banner.</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingSiteSlot === item.slot}
+                              onChange={async (event) => {
+                                const input = event.currentTarget;
+                                const file = event.target.files?.[0];
+                                if (!file) return;
+                                await handleUploadSiteMedia(item.slot, item.title, file);
+                                input.value = "";
+                              }}
+                            />
+                          </label>
                         </div>
                       ))}
                     </div>
