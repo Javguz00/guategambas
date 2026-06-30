@@ -14,7 +14,7 @@ function listImagesRecursive(dir: string, baseDir: string): string[] {
     if (entry.isDirectory()) {
       return listImagesRecursive(fullPath, baseDir);
     }
-    if (/\.(jpe?g|png|webp|gif)$/i.test(entry.name)) {
+    if (/\.(jpe?g|png|webp|gif|avif|mp4|webm|mov|m4v)$/i.test(entry.name)) {
       return [relativePath];
     }
     return [];
@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { filename, data } = body as { filename?: unknown; data?: unknown };
   if (!filename || typeof filename !== "string" || !data || typeof data !== "string") return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
-  // data should be a data URL like 'data:image/jpeg;base64,...' or base64 content
-  const match = data.match(/^data:(image\/[^;]+);base64,(.+)$/);
+  // data should be a data URL like 'data:image/jpeg;base64,...' or 'data:video/mp4;base64,...'
+  const match = data.match(/^data:((?:image|video)\/[^;]+);base64,(.+)$/);
   let b64 = data;
   if (match) {
     b64 = match[2];

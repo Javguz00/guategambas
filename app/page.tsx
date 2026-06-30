@@ -400,6 +400,18 @@ export default function HomePage() {
     return mediaMapping.__site__?.find((asset) => asset.slot === slot)?.filename || "";
   }
 
+  function isVideoFile(filename: string) {
+    return /\.(mp4|webm|mov|m4v)$/i.test(filename);
+  }
+
+  function renderSiteMedia(filename: string, alt: string, className: string, width: number, height: number, sizes: string, priority = false) {
+    if (!filename) return null;
+    if (isVideoFile(filename)) {
+      return <video className={className} src={`/photos/${filename}`} aria-label={alt} autoPlay muted loop playsInline controls={false} />;
+    }
+    return <Image className={className} src={`/photos/${filename}`} alt={alt} width={width} height={height} sizes={sizes} priority={priority} />;
+  }
+
   function pickProductCardImage(product: Product, variant: ProductVariant) {
     const assigned = getProductMediaAssets(product.id);
     const grade = (variant.gradeLabel || variant.highlight || "").trim();
@@ -683,14 +695,7 @@ export default function HomePage() {
 
           <div className="hero-visual">
             {getSiteMedia("hero") ? (
-              <Image
-                src={`/photos/${getSiteMedia("hero")}`}
-                alt="Portada principal"
-                width={1400}
-                height={1400}
-                style={{ objectFit: "cover" }}
-                priority
-              />
+              renderSiteMedia(getSiteMedia("hero"), "Portada principal", "home-banner-media", 1400, 1400, "(max-width: 900px) 100vw, 55vw", true)
             ) : (
               <span className="hero-visual-glyph">🦐</span>
             )}
@@ -771,13 +776,7 @@ export default function HomePage() {
 
             {getSiteMedia("promo") ? (
               <div className="announcement-banner">
-                <Image
-                  src={`/photos/${getSiteMedia("promo")}`}
-                  alt="Banner de anuncios"
-                  width={1600}
-                  height={600}
-                  sizes="(max-width: 1100px) 100vw, 1120px"
-                />
+                {renderSiteMedia(getSiteMedia("promo"), "Banner de anuncios", "home-banner-media", 1600, 600, "(max-width: 1100px) 100vw, 1120px")}
               </div>
             ) : (
               <div className="announcement-banner announcement-banner-empty">
@@ -903,13 +902,7 @@ export default function HomePage() {
         {getSiteMedia("banner") ? (
           <section className="section">
             <div className="home-banner home-banner-bottom">
-              <Image
-                src={`/photos/${getSiteMedia("banner")}`}
-                alt="Anuncio principal"
-                width={1600}
-                height={500}
-                sizes="(max-width: 1100px) 100vw, 1120px"
-              />
+              {renderSiteMedia(getSiteMedia("banner"), "Anuncio principal", "home-banner-media", 1600, 500, "(max-width: 1100px) 100vw, 1120px")}
             </div>
           </section>
         ) : null}

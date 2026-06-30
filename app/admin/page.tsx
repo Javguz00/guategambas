@@ -107,6 +107,8 @@ type MediaAsset = {
   title?: string;
 };
 
+type SiteMediaSlot = "hero" | "banner" | "promo";
+
 const adminTabs = [
   { id: "overview", label: "Resumen" },
   { id: "orders", label: "Pedidos" },
@@ -166,7 +168,7 @@ export default function AdminPage() {
   const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<(typeof productCategories)[number]>("all");
   const [selectedGradeByProduct, setSelectedGradeByProduct] = useState<Record<string, string>>({});
   const [uploadingProductId, setUploadingProductId] = useState("");
-  const [uploadingSiteSlot, setUploadingSiteSlot] = useState<"hero" | "banner" | "promo" | "">("");
+  const [uploadingSiteSlot, setUploadingSiteSlot] = useState<SiteMediaSlot | "">("");
   const [uploading, setUploading] = useState(false);
   const [q, setQ] = useState("");
   const [city, setCity] = useState("");
@@ -754,9 +756,24 @@ export default function AdminPage() {
     await loadMedia();
   }
 
-  async function handleUploadSiteMedia(slot: "hero" | "banner" | "promo", title: string, file: File) {
+  function isVideoFile(filename: string) {
+    return /\.(mp4|webm|mov|m4v)$/i.test(filename);
+  }
+
+  function getMediaLabel(filename: string) {
+    return filename.split(/[\\/]/).pop() || filename;
+  }
+
+  async function handleUploadSiteMedia(slot: SiteMediaSlot, title: string, file: File) {
     if (!file.type.startsWith("image/")) {
-      setError("Por favor selecciona una imagen válida");
+      if (!file.type.startsWith("video/")) {
+        setError("Por favor selecciona una imagen o video válido");
+        return;
+      }
+    }
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setError("Por favor selecciona una imagen o video válido");
       return;
     }
 
@@ -778,10 +795,10 @@ export default function AdminPage() {
             if (response.ok) {
               await assignSiteMedia(filename, slot, title);
             } else {
-              setError("No se pudo guardar la imagen del banner.");
+              setError("No se pudo guardar el archivo del banner.");
             }
           } catch {
-            setError("No se pudo subir la imagen.");
+            setError("No se pudo subir el archivo.");
           } finally {
             setUploadingSiteSlot((current) => (current === slot ? "" : current));
           }
@@ -789,12 +806,12 @@ export default function AdminPage() {
       };
       reader.onerror = () => {
         setUploadingSiteSlot((current) => (current === slot ? "" : current));
-        setError("No se pudo leer la imagen.");
+        setError("No se pudo leer el archivo.");
       };
       reader.readAsDataURL(file);
     } catch {
       setUploadingSiteSlot("");
-      setError("No se pudo subir la imagen.");
+      setError("No se pudo subir el archivo.");
     }
   }
 
@@ -898,6 +915,19 @@ export default function AdminPage() {
     return item.variantLabel ? `${baseName} - ${item.variantLabel}` : baseName;
   }
 
+  function renderMediaPreview(filename: string, alt: string, className?: string) {
+    if (isVideoFile(filename)) {
+      return <video className={className} src={`/photos/${filename}`} aria-label={alt} muted loop playsInline controls={false} preload="metadata" />;
+    }
+    return <img className={className} src={`/photos/${filename}`} alt={alt} />;
+  }
+
+  const siteMediaSlots: Array<{ slot: SiteMediaSlot; title: string; current: string; description: string; aspectRatio: string }> = [
+    { slot: "hero", title: "Portada superior", current: homeHeroImage, description: "Portada principal de la tienda.", aspectRatio: "16 / 9" },
+    { slot: "banner", title: "Anuncio inferior", current: homeBannerImage, description: "Banner ancho para el bloque inferior.", aspectRatio: "21 / 9" },
+    { slot: "promo", title: "Banner de anuncios", current: homePromoImage, description: "Banner para promociones y publicaciones.", aspectRatio: "16 / 8" }
+  ];
+
   return (
     <main className="container section" style={{ paddingTop: 24, paddingBottom: 32 }}>
       {!authenticated ? (
@@ -970,45 +1000,38 @@ export default function AdminPage() {
                     <div className="admin-section-head">
                       <div>
                         <h3>Banners del inicio</h3>
-                        <p className="muted">Portada superior y anuncio rectangular inferior para la home.</p>
+                        <p className="muted">Sube una imagen o video, o elige uno ya guardado en la biblioteca visual.</p>
                       </div>
                     </div>
-                    <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", marginTop: 12 }}>
-                      {[
-                        { slot: "hero" as const, title: "Portada superior", current: homeHeroImage },
-                        { slot: "banner" as const, title: "Anuncio inferior", current: homeBannerImage },
-                        { slot: "promo" as const, title: "Banner de anuncios", current: homePromoImage }
-                      ].map((item) => (
-                        <div key={item.slot} className="card">
-                          <strong>{item.title}</strong>
-                          <p className="muted">Imagen rectangular visible en la página principal.</p>
-                          {item.current ? (
-                            <div style={{ margin: "10px 0" }}>
-                              <img src={`/photos/${item.current}`} alt={item.title} style={{ width: "100%", aspectRatio: item.slot === "banner" ? "21 / 9" : item.slot === "promo" ? "16 / 8" : "16 / 9", objectFit: "cover", borderRadius: 12 }} />
+                    <div className="admin-banner-grid" style={{ marginTop: 12 }}>
+                      {siteMediaSlots.map((item) => (
+                        <div key={item.slot} className="card admin-banner-card">
+                          <div className="admin-banner-card-head">
+                            <div>
+                              <strong>{item.title}</strong>
+                              <p className="muted">{item.description}</p>
                             </div>
-                          ) : null}
-                          <select id={`site-file-${item.slot}`} defaultValue="">
-                            <option value="">Seleccionar imagen...</option>
-                            {mediaFiles.map((file) => <option key={file} value={file}>{file}</option>)}
-                          </select>
-                          <button
-                            type="button"
-                            style={{ marginTop: 8 }}
-                            onClick={async () => {
-                              const select = document.getElementById(`site-file-${item.slot}`) as HTMLSelectElement | null;
-                              if (!select?.value) return;
-                              await assignSiteMedia(select.value, item.slot, item.title);
-                            }}
-                          >
-                            Guardar {item.title}
-                          </button>
-                          <label className="admin-upload-dropzone" style={{ marginTop: 12 }}>
-                            <span className="admin-upload-chip">Subir nueva imagen</span>
+                            <span className="badge">{item.current ? getMediaLabel(item.current) : "Sin imagen"}</span>
+                          </div>
+
+                          <div className="admin-banner-preview" style={{ aspectRatio: item.aspectRatio }}>
+                            {item.current ? (
+                              renderMediaPreview(item.current, item.title, "admin-banner-preview-media")
+                            ) : (
+                              <div className="admin-banner-empty">
+                                <strong>Sin banner asignado</strong>
+                                <p className="muted">Elige un medio existente o sube uno nuevo.</p>
+                              </div>
+                            )}
+                          </div>
+
+                          <label className="admin-upload-dropzone">
+                            <span className="admin-upload-chip">Subir imagen o video</span>
                             <strong>{uploadingSiteSlot === item.slot ? "Subiendo..." : `Archivo para ${item.title.toLowerCase()}`}</strong>
-                            <span className="muted">Sube un archivo y se guardará para este banner.</span>
+                            <span className="muted">JPG, PNG, WEBP, MP4 o WEBM. Se guardará para este banner.</span>
                             <input
                               type="file"
-                              accept="image/*"
+                              accept="image/*,video/*"
                               disabled={uploadingSiteSlot === item.slot}
                               onChange={async (event) => {
                                 const input = event.currentTarget;
@@ -1019,6 +1042,24 @@ export default function AdminPage() {
                               }}
                             />
                           </label>
+
+                          <div className="admin-media-picker">
+                            {mediaFiles.length > 0 ? mediaFiles.map((file) => (
+                              <button
+                                key={`${item.slot}-${file}`}
+                                type="button"
+                                className="admin-media-card"
+                                onClick={async () => {
+                                  await assignSiteMedia(file, item.slot, item.title);
+                                }}
+                              >
+                                <div className="admin-media-card-preview">
+                                  {renderMediaPreview(file, file, "admin-media-card-media")}
+                                </div>
+                                <span title={file}>{getMediaLabel(file)}</span>
+                              </button>
+                            )) : <p className="muted">No hay archivos guardados todavía.</p>}
+                          </div>
                         </div>
                       ))}
                     </div>
