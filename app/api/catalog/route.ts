@@ -2,12 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { products } from "@/lib/data";
-import { buildVariantKey, extractInventoryRows, inventoryToMap, mergeCatalogInventory } from "@/lib/catalog";
+import {
+  buildVariantKey,
+  extractInventoryRows,
+  inventoryToMap,
+  mergeCatalogInventory,
+  mergeCatalogProductState
+} from "@/lib/catalog";
 
 async function loadMergedCatalog() {
-  const rows = await prisma.catalogVariantState.findMany();
-  const inventory = inventoryToMap(rows);
-  return mergeCatalogInventory(products, inventory);
+  const [variantRows, productRows] = await Promise.all([
+    prisma.catalogVariantState.findMany(),
+    prisma.catalogProductState.findMany()
+  ]);
+  const inventory = inventoryToMap(variantRows);
+  const overrides = productRows.reduce<Record<string, { name?: string | null; category?: string | null; description?: string | null; highlight?: string | null; note?: string | null }>>((acc, row) => {
+    acc[row.productId] = {
+      name: row.name,
+      category: row.category,
+      description: row.description,
+      highlight: row.highlight,
+      note: row.note
+    };
+    return acc;
+  }, {});
+  return mergeCatalogProductState(mergeCatalogInventory(products, inventory), overrides);
 }
 
 export async function GET() {

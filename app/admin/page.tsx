@@ -42,6 +42,9 @@ type CatalogProduct = {
   id: string;
   name: string;
   category: string;
+  description?: string;
+  highlight?: string;
+  note?: string;
   variants: CatalogVariant[];
 };
 
@@ -100,6 +103,14 @@ type CatalogDraft = {
   isActive: boolean;
 };
 
+type CatalogMetaDraft = {
+  name: string;
+  category: string;
+  description: string;
+  highlight: string;
+  note: string;
+};
+
 type MediaAsset = {
   filename: string;
   grade?: string;
@@ -139,6 +150,8 @@ export default function AdminPage() {
   const [mediaMapping, setMediaMapping] = useState<Record<string, MediaAsset[]>>({});
   const [catalogDrafts, setCatalogDrafts] = useState<Record<string, CatalogDraft>>({});
   const [catalogDirty, setCatalogDirty] = useState<Record<string, true>>({});
+  const [catalogMetaDrafts, setCatalogMetaDrafts] = useState<Record<string, CatalogMetaDraft>>({});
+  const [catalogMetaDirty, setCatalogMetaDirty] = useState<Record<string, true>>({});
   const [productDrafts, setProductDrafts] = useState<Record<string, ProductDraft>>({});
   const [productDirty, setProductDirty] = useState<Record<string, true>>({});
   const [newProductDraft, setNewProductDraft] = useState<ProductDraft>({
@@ -213,7 +226,15 @@ export default function AdminPage() {
       if (!Array.isArray(data.products)) return;
       setCatalog(data.products);
       const next: Record<string, CatalogDraft> = {};
+      const nextMeta: Record<string, CatalogMetaDraft> = {};
       data.products.forEach((product) => {
+        nextMeta[product.id] = {
+          name: product.name,
+          category: product.category,
+          description: product.description || "",
+          highlight: product.highlight || "",
+          note: product.note || ""
+        };
         product.variants.forEach((variant) => {
           const key = `${product.id}:${variant.id}`;
           next[key] = {
@@ -224,11 +245,15 @@ export default function AdminPage() {
         });
       });
       setCatalogDrafts(next);
+      setCatalogMetaDrafts(nextMeta);
       setCatalogDirty({});
+      setCatalogMetaDirty({});
     } catch {
       setCatalog([]);
       setCatalogDrafts({});
       setCatalogDirty({});
+      setCatalogMetaDrafts({});
+      setCatalogMetaDirty({});
     }
   }
 
@@ -391,25 +416,10 @@ export default function AdminPage() {
   async function uploadWizardPhotos(productId: string, wizard: ProductWizardState) {
     const firstGrade = wizard.variants[0]?.grade || undefined;
     for (const photo of wizard.photoPreviews.filter((item) => item.file)) {
-      const reader = new FileReader();
-      await new Promise<void>((resolve, reject) => {
-        reader.onload = async (event) => {
-          const data = event.target?.result as string;
-          const filename = `${productId}-${Date.now()}-${photo.file?.name}`;
-          const response = await fetch("/api/admin/media", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filename, data })
-          });
-          if (response.ok) {
-            await assignMedia(productId, filename, firstGrade, firstGrade);
-          }
-          resolve();
-        };
-        reader.onerror = () => reject(new Error("Error leyendo imagen"));
-        if (photo.file) reader.readAsDataURL(photo.file);
-      });
+      if (!photo.file) continue;
+      const filename = `${productId}-${Date.now()}-${photo.file.name}`;
+      const uploaded = await uploadMediaFile(photo.file, filename);
+      await assignMedia(productId, uploaded.filename, firstGrade, firstGrade);
     }
     await loadMedia();
   }
@@ -567,9 +577,39 @@ export default function AdminPage() {
     setCatalogDirty((prev) => ({ ...prev, [key]: true }));
   }
 
+  function markCatalogMetaDraft(productId: string, changes: Partial<CatalogMetaDraft>) {
+    setCatalogMetaDrafts((prev) => ({
+      ...prev,
+      [productId]: {
+        ...(prev[productId] || { name: "", category: "", description: "", highlight: "", note: "" }),
+        ...changes
+      }
+    }));
+    setCatalogMetaDirty((prev) => ({ ...prev, [productId]: true }));
+  }
+
+  function resetCatalogMetaDraft(product: CatalogProduct) {
+    setCatalogMetaDrafts((prev) => ({
+      ...prev,
+      [product.id]: {
+        name: product.name,
+        category: product.category,
+        description: product.description || "",
+        highlight: product.highlight || "",
+        note: product.note || ""
+      }
+    }));
+    setCatalogMetaDirty((prev) => {
+      const next = { ...prev };
+      delete next[product.id];
+      return next;
+    });
+  }
+
   async function saveCatalogChanges() {
     const dirtyKeys = Object.keys(catalogDirty);
-    if (dirtyKeys.length === 0) {
+    const dirtyProductIds = Object.keys(catalogMetaDirty);
+    if (dirtyKeys.length === 0 && dirtyProductIds.length === 0) {
       setNotice("No hay cambios pendientes en el catálogo.");
       return;
     }
@@ -595,8 +635,28 @@ export default function AdminPage() {
         });
         if (!response.ok) throw new Error(`No se pudo guardar la variante ${variantId}`);
       }
+
+      for (const productId of dirtyProductIds) {
+        const draft = catalogMetaDrafts[productId];
+        if (!draft) continue;
+        const response = await fetch("/api/admin/catalog", {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId,
+            name: draft.name,
+            category: draft.category,
+            description: draft.description,
+            highlight: draft.highlight,
+            note: draft.note
+          })
+        });
+        if (!response.ok) throw new Error(`No se pudo guardar ${draft.name || productId}`);
+      }
+
       await loadCatalog();
-      setNotice(`Inventario actualizado (${dirtyKeys.length} cambios).`);
+      setNotice(`Catálogo actualizado (${dirtyKeys.length + dirtyProductIds.length} cambios).`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar inventario.");
     } finally {
@@ -770,6 +830,24 @@ export default function AdminPage() {
     return filename.split(/[\\/]/).pop() || filename;
   }
 
+  async function uploadMediaFile(file: File, filename: string) {
+    const formData = new FormData();
+    formData.append("filename", filename);
+    formData.append("file", file);
+
+    const response = await fetch("/api/admin/media", {
+      method: "POST",
+      credentials: "same-origin",
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return (await response.json()) as { filename: string; url: string; mimeType: string };
+  }
+
   async function handleUploadSiteMedia(slot: SiteMediaSlot, title: string, file: File) {
     if (!file.type.startsWith("image/")) {
       if (!file.type.startsWith("video/")) {
@@ -785,39 +863,13 @@ export default function AdminPage() {
 
     setUploadingSiteSlot(slot);
     try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        void (async () => {
-          try {
-            const data = event.target?.result as string;
-            const filename = `site-${slot}-${Date.now()}-${file.name}`;
-            const response = await fetch("/api/admin/media", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ filename, data })
-            });
-
-            if (response.ok) {
-              await assignSiteMedia(filename, slot, title);
-            } else {
-              setError("No se pudo guardar el archivo del banner.");
-            }
-          } catch {
-            setError("No se pudo subir el archivo.");
-          } finally {
-            setUploadingSiteSlot((current) => (current === slot ? "" : current));
-          }
-        })();
-      };
-      reader.onerror = () => {
-        setUploadingSiteSlot((current) => (current === slot ? "" : current));
-        setError("No se pudo leer el archivo.");
-      };
-      reader.readAsDataURL(file);
+      const filename = `site-${slot}-${Date.now()}-${file.name}`;
+      const uploaded = await uploadMediaFile(file, filename);
+      await assignSiteMedia(uploaded.filename, slot, title);
     } catch {
-      setUploadingSiteSlot("");
       setError("No se pudo subir el archivo.");
+    } finally {
+      setUploadingSiteSlot((current) => (current === slot ? "" : current));
     }
   }
 
@@ -842,33 +894,15 @@ export default function AdminPage() {
     setUploadingProductId(productId);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const data = e.target?.result as string;
-        const filename = `${productId}-${Date.now()}-${file.name}`;
-
-        const response = await fetch("/api/admin/media", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename, data })
-        });
-
-        if (response.ok) {
-          await assignMedia(productId, filename, grade, grade);
-          setSelectedGradeByProduct((prev) => ({ ...prev, [productId]: grade }));
-          setNotice("Archivo subido y asignado al grado seleccionado.");
-          await loadMedia();
-        } else {
-          setError("Error al subir archivo");
-        }
-
-        setUploading(false);
-        setUploadingProductId("");
-      };
-      reader.readAsDataURL(file);
+      const filename = `${productId}-${Date.now()}-${file.name}`;
+      const uploaded = await uploadMediaFile(file, filename);
+      await assignMedia(productId, uploaded.filename, grade, grade);
+      setSelectedGradeByProduct((prev) => ({ ...prev, [productId]: grade }));
+      setNotice("Archivo subido y asignado al grado seleccionado.");
+      await loadMedia();
     } catch {
       setError("Error al procesar archivo");
+    } finally {
       setUploading(false);
       setUploadingProductId("");
     }
@@ -877,6 +911,7 @@ export default function AdminPage() {
   const totalRevenue = useMemo(() => orders.reduce((sum, order) => sum + Number(order.total || 0), 0), [orders]);
   const pendingOrders = useMemo(() => orders.filter((order) => order.status === "PENDING").length, [orders]);
   const catalogDirtyCount = useMemo(() => Object.keys(catalogDirty).length, [catalogDirty]);
+  const catalogMetaDirtyCount = useMemo(() => Object.keys(catalogMetaDirty).length, [catalogMetaDirty]);
   const productDirtyCount = useMemo(() => Object.keys(productDirty).length, [productDirty]);
   const homeHeroImage = mediaMapping.__site__?.find((asset) => asset.slot === "hero")?.filename || "";
   const homeBannerImage = mediaMapping.__site__?.find((asset) => asset.slot === "banner")?.filename || "";
@@ -1145,7 +1180,7 @@ export default function AdminPage() {
                       <p className="muted">Edita stock, precio y media por producto desde una sola vista por categoría.</p>
                     </div>
                     <button type="button" onClick={() => void saveCatalogChanges()} disabled={savingCatalog}>
-                      {savingCatalog ? "Guardando inventario..." : `Guardar cambios (${catalogDirtyCount})`}
+                      {savingCatalog ? "Guardando catálogo..." : `Guardar cambios (${catalogDirtyCount + catalogMetaDirtyCount})`}
                     </button>
                   </div>
 
@@ -1170,8 +1205,27 @@ export default function AdminPage() {
                               <h3>{product.name}</h3>
                               <p className="muted">{product.category} · {product.variants.length} variantes</p>
                             </div>
+                            <span className="badge">{catalogMetaDirty[product.id] ? "Sin guardar" : "Actualizado"}</span>
                           </div>
 
+                          <div className="admin-grid-2" style={{ gap: 10, marginTop: 12 }}>
+                            <input value={catalogMetaDrafts[product.id]?.name || ""} placeholder="Nombre del producto" onChange={(event) => markCatalogMetaDraft(product.id, { name: event.target.value })} />
+                            <input value={catalogMetaDrafts[product.id]?.category || ""} placeholder="Categoría" onChange={(event) => markCatalogMetaDraft(product.id, { category: event.target.value })} />
+                            <input value={catalogMetaDrafts[product.id]?.highlight || ""} placeholder="Etiqueta o highlight" onChange={(event) => markCatalogMetaDraft(product.id, { highlight: event.target.value })} />
+                            <input value={catalogMetaDrafts[product.id]?.note || ""} placeholder="Nota corta" onChange={(event) => markCatalogMetaDraft(product.id, { note: event.target.value })} />
+                          </div>
+                          <textarea
+                            rows={3}
+                            value={catalogMetaDrafts[product.id]?.description || ""}
+                            placeholder="Descripción del producto"
+                            onChange={(event) => markCatalogMetaDraft(product.id, { description: event.target.value })}
+                            style={{ marginTop: 10 }}
+                          />
+                          <div className="actions" style={{ marginTop: 10 }}>
+                            <button type="button" className="secondary" onClick={() => resetCatalogMetaDraft(product)}>
+                              Revertir
+                            </button>
+                          </div>
                           <div className="admin-image-panel">
                             <div className="admin-image-card">
                               <div>

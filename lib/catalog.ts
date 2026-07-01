@@ -8,6 +8,16 @@ export type CatalogInventoryState = {
 
 export type CatalogInventoryMap = Record<string, CatalogInventoryState>;
 
+export type CatalogProductState = {
+  name?: string | null;
+  category?: string | null;
+  description?: string | null;
+  highlight?: string | null;
+  note?: string | null;
+};
+
+export type CatalogProductMap = Record<string, CatalogProductState>;
+
 export function buildVariantKey(productId: string, variantId: string) {
   return `${productId}:${variantId}`;
 }
@@ -90,6 +100,22 @@ export function mergeCatalogInventory(products: Product[], inventory: CatalogInv
       };
     })
   }));
+}
+
+export function mergeCatalogProductState(products: Product[], overrides: CatalogProductMap) {
+  return products.map((product) => {
+    const override = overrides[product.id];
+    if (!override) return product;
+
+    return {
+      ...product,
+      ...(override.name ? { name: override.name } : {}),
+      ...(override.category ? { category: override.category as Product["category"] } : {}),
+      ...(override.description ? { description: override.description } : {}),
+      ...(override.highlight ? { highlight: override.highlight } : {}),
+      ...(override.note ? { note: override.note } : {})
+    };
+  });
 }
 
 export function inventoryToMap(

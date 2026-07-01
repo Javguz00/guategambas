@@ -23,6 +23,47 @@ function mimeTypeFromFilename(filename: string) {
   return "image/jpeg";
 }
 
+function safeFilename(value: string) {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+async function readUploadPayload(request: NextRequest) {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const file = formData.get("file");
+    const filename = formData.get("filename");
+
+    if (!(file instanceof File) || typeof filename !== "string" || !filename) {
+      return null;
+    }
+
+    return {
+      filename: safeFilename(filename),
+      mimeType: file.type || mimeTypeFromFilename(filename),
+      buffer: Buffer.from(await file.arrayBuffer())
+    };
+  }
+
+  const body = await request.json();
+  const { filename, data } = body as { filename?: unknown; data?: unknown };
+
+  if (!filename || typeof filename !== "string" || !data || typeof data !== "string") {
+    return null;
+  }
+
+  const match = data.match(/^data:((?:image|video)\/[^;]+);base64,(.+)$/);
+  const mimeType = match?.[1] || mimeTypeFromFilename(filename);
+  const b64 = match ? match[2] : data;
+
+  return {
+    filename: safeFilename(filename),
+    mimeType,
+    buffer: Buffer.from(b64, "base64")
+  };
+}
+
 function listImagesRecursive(dir: string, baseDir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -63,18 +104,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  const body = await request.json();
-  const { filename, data } = body as { filename?: unknown; data?: unknown };
-  if (!filename || typeof filename !== "string" || !data || typeof data !== "string") return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
-  const match = data.match(/^data:((?:image|video)\/[^;]+);base64,(.+)$/);
-  const mimeType = match?.[1] || mimeTypeFromFilename(filename);
-  const b64 = match ? match[2] : data;
-  const buffer = Buffer.from(b64, "base64");
-  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const upload = await readUploadPayload(request);
+  if (!upload) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
   await prisma.mediaAsset.upsert({
-    where: { filename: safeName },
-    create: { filename: safeName, mimeType, data: buffer },
-    update: { mimeType, data: buffer }
+    where: { filename: upload.filename },
+    create: { filename: upload.filename, mimeType: upload.mimeType, data: upload.buffer },
+    update: { mimeType: upload.mimeType, data: upload.buffer }
   });
-  return NextResponse.json({ ok: true, filename: safeName, url: toMediaUrl(safeName), mimeType });
+  return NextResponse.json({ ok: true, filename: upload.filename, url: toMediaUrl(upload.filename), mimeType: upload.mimeType });
 }

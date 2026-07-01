@@ -86,6 +86,17 @@ model CatalogVariantState {
   @@id([productId, variantId])
 }
 
+model CatalogProductState {
+  productId   String   @id
+  name        String?
+  category    String?
+  description String?
+  highlight   String?
+  note        String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
 model MediaAsset {
   id        String   @id @default(cuid())
   filename  String   @unique
