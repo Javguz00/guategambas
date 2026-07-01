@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { products } from "@/lib/data";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/catalog";
 
 async function loadMergedCatalog() {
+  await ensureAdminStorage();
   const [variantRows, productRows] = await Promise.all([
     prisma.catalogVariantState.findMany(),
     prisma.catalogProductState.findMany()
@@ -30,6 +32,7 @@ async function loadMergedCatalog() {
 }
 
 export async function GET() {
+  await ensureAdminStorage();
   try {
     const catalog = await loadMergedCatalog();
     return NextResponse.json({ products: catalog, inventory: extractInventoryRows(catalog) });

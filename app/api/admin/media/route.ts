@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
@@ -81,6 +82,7 @@ function listImagesRecursive(dir: string, baseDir: string): string[] {
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  await ensureAdminStorage();
   const [dbAssets, mappingRows] = await Promise.all([
     prisma.mediaAsset.findMany({ orderBy: { createdAt: "desc" }, select: { filename: true, mimeType: true, createdAt: true } }),
     prisma.mediaMapping.findMany({ orderBy: { updatedAt: "desc" }, select: { productId: true, filename: true, grade: true, slot: true, title: true } })
@@ -104,6 +106,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  await ensureAdminStorage();
   const upload = await readUploadPayload(request);
   if (!upload) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
   await prisma.mediaAsset.upsert({

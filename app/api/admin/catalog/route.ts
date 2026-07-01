@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { products } from "@/lib/data";
@@ -11,6 +12,7 @@ function normalizeText(value: unknown, maxLength: number) {
 }
 
 async function loadMergedCatalog() {
+  await ensureAdminStorage();
   const [variantRows, productRows] = await Promise.all([
     prisma.catalogVariantState.findMany(),
     prisma.catalogProductState.findMany()
@@ -36,6 +38,7 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  await ensureAdminStorage();
   const [catalog, productStates] = await Promise.all([loadMergedCatalog(), prisma.catalogProductState.findMany()]);
   return NextResponse.json({
     products: catalog,
@@ -57,6 +60,8 @@ export async function PATCH(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+
+  await ensureAdminStorage();
 
   const body = (await request.json()) as {
     productId?: unknown;
@@ -112,6 +117,8 @@ export async function DELETE(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+
+  await ensureAdminStorage();
 
   const body = (await request.json()) as { productId?: unknown };
   const productId = normalizeText(body.productId, 80);

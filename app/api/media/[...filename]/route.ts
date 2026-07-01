@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 
 const PHOTOS_DIR = path.join(process.cwd(), "public", "photos");
@@ -25,6 +26,7 @@ function toSafePath(filename: string) {
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ filename: string[] }> }) {
+  await ensureAdminStorage();
   const { filename } = await context.params;
   const relativeName = decodeURIComponent(filename.join("/"));
 

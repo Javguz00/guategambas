@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
@@ -17,12 +18,14 @@ function groupMappings(rows: Array<{ productId: string; filename: string; grade?
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  await ensureAdminStorage();
   const rows = await prisma.mediaMapping.findMany({ orderBy: { updatedAt: "desc" } });
   return NextResponse.json({ mapping: groupMappings(rows) });
 }
 
 export async function POST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  await ensureAdminStorage();
   const body = await request.json();
   const { productId, filename, grade, slot, title } = body as { productId?: unknown; filename?: unknown; grade?: unknown; slot?: unknown; title?: unknown };
   if (!productId || typeof productId !== "string" || !filename || typeof filename !== "string") return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
@@ -54,6 +57,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  await ensureAdminStorage();
   const body = await request.json();
   const { productId, filename } = body as { productId?: unknown; filename?: unknown };
   if (!productId || typeof productId !== "string" || !filename || typeof filename !== "string") return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
