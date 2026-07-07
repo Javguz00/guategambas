@@ -2,10 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import CartSummary from '@/app/components/cart/CartSummary';
-import Button from '@/app/components/ui/Button';
-import Input from '@/app/components/ui/Input';
-import Loading from '@/app/components/ui/Loading';
+import Link from 'next/link';
+import CartSummary from '@/components/cart/CartSummary';
+import { Button, Input, Loading } from '@/components/ui';
 import {
   PaymentMethod,
   type ApiResponse,
@@ -48,12 +47,6 @@ const getInitialFormState = (): CheckoutFormState => ({
   address: '',
   notes: '',
   paymentMethod: PaymentMethod.CONTRAENTREGA,
-});
-
-const currencyFormatter = new Intl.NumberFormat('es-GT', {
-  style: 'currency',
-  currency: 'GTQ',
-  minimumFractionDigits: 2,
 });
 
 const validateForm = (formData: CheckoutFormState, items: CheckoutDisplayItem[]) => {
@@ -101,13 +94,18 @@ export default function CheckoutPage() {
   const [loadingCart, setLoadingCart] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const summaryItems = useMemo<CartItem[]>(
-    () =>
-      items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-      })),
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const tax = subtotal * 0.12; // 12% tax
+  const shipping = subtotal > 100 ? 0 : 50; // Free shipping over Q100
+
+  const summaryItems = useMemo(() =>
+    items.map((item) => ({
+      id: item.productId,
+      name: item.product?.name || `Producto ${item.productId.slice(0, 8)}`,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.product?.image || undefined,
+    })),
     [items]
   );
 
@@ -279,205 +277,244 @@ export default function CheckoutPage() {
   };
 
   if (loadingCart) {
-    return <Loading size="lg" message="Cargando carrito..." />;
+    return <Loading fullScreen text="Cargando carrito..." />;
   }
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-      <div className="space-y-8 lg:col-span-2">
-        <div>
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">Checkout</h1>
-          <p className="text-sm text-gray-500">
-            Revisa tu carrito y completa los datos para finalizar la compra.
-          </p>
-        </div>
-
-        {pageError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {pageError}
-          </div>
-        )}
-
-        <div className="overflow-hidden rounded-lg bg-white shadow">
-          <div className="border-b border-gray-200 px-6 py-4">
-            <h2 className="text-xl font-semibold">Carrito</h2>
+    <div className="min-h-screen py-12 bg-gray-50">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Main Content */}
+        <div className="space-y-8 lg:col-span-2">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-dark mb-2">
+              Carrito de compras
+            </h1>
+            <p className="text-gray-500">
+              Revisa tu carrito y completa los datos para finalizar la compra.
+            </p>
           </div>
 
-          {items.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Producto
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Precio
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Cantidad
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Subtotal
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {items.map((item) => (
-                    <tr key={item.productId}>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">
-                          {item.product?.name || `Producto ${item.productId.slice(0, 8)}`}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {item.product?.category?.name || 'Sin categoría'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{currencyFormatter.format(item.price)}</td>
-                      <td className="px-6 py-4">
-                        <input
-                          type="number"
-                          min={1}
-                          max={item.product?.stock || undefined}
-                          value={item.quantity}
-                          onChange={(event) => handleQuantityChange(item.productId, event.target.value)}
-                          className="w-24 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        {item.product && item.product.stock > 0 && (
-                          <p className="mt-1 text-xs text-gray-500">
-                            Stock disponible: {item.product.stock}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {currencyFormatter.format(item.price * item.quantity)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleRemoveItem(item.productId)}
-                        >
-                          Eliminar
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {pageError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-soft">
+              ⚠ {pageError}
             </div>
-          ) : (
-            <div className="px-6 py-10 text-center text-gray-500">Tu carrito está vacío.</div>
           )}
-        </div>
 
-        {errors.items && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errors.items}
-          </div>
-        )}
+          {/* Cart Table */}
+          <div className="card overflow-hidden">
+            <div className="border-b border-gray-200 px-6 py-4 bg-gray-50">
+              <h2 className="text-lg font-semibold text-dark">Productos</h2>
+            </div>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="rounded-lg bg-white p-8 shadow">
-          <h2 className="mb-6 text-xl font-semibold">Información del cliente</h2>
-
-          <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Input
-              label="Nombre"
-              name="customerName"
-              value={formData.customerName}
-              onChange={handleFieldChange}
-              error={errors.customerName}
-              required
-            />
-            <Input
-              label="Email"
-              type="email"
-              name="customerEmail"
-              value={formData.customerEmail}
-              onChange={handleFieldChange}
-              error={errors.customerEmail}
-              required
-            />
-          </div>
-
-          <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Input
-              label="Teléfono"
-              name="customerPhone"
-              value={formData.customerPhone}
-              onChange={handleFieldChange}
-              error={errors.customerPhone}
-              required
-            />
-            <Input
-              label="Ciudad"
-              name="city"
-              value={formData.city}
-              onChange={handleFieldChange}
-              error={errors.city}
-              required
-            />
-          </div>
-
-          <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Input
-              label="Departamento"
-              name="department"
-              value={formData.department}
-              onChange={handleFieldChange}
-            />
-            <Input
-              label="Dirección"
-              name="address"
-              value={formData.address}
-              onChange={handleFieldChange}
-              error={errors.address}
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Método de pago</label>
-            <select
-              name="paymentMethod"
-              value={formData.paymentMethod}
-              onChange={handleFieldChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {PAYMENT_METHOD_OPTIONS.map((paymentMethodOption) => (
-                <option key={paymentMethodOption} value={paymentMethodOption}>
-                  {paymentMethodOption}
-                </option>
-              ))}
-            </select>
-            {errors.paymentMethod && (
-              <p className="mt-1 text-sm text-red-500">{errors.paymentMethod}</p>
+            {items.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Producto
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Precio
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Cantidad
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Subtotal
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Acción
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {items.map((item, index) => (
+                      <tr key={item.productId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-dark">
+                            {item.product?.name || `Producto ${item.productId.slice(0, 8)}`}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {typeof item.product?.category === 'string' 
+                              ? item.product.category 
+                              : item.product?.category?.name || 'Sin categoría'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium">
+                          Q{item.price.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="number"
+                            min={1}
+                            max={item.product?.stock || undefined}
+                            value={item.quantity}
+                            onChange={(event) => handleQuantityChange(item.productId, event.target.value)}
+                            className="w-16 rounded-lg border border-gray-300 px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-primary">
+                          Q{(item.price * item.quantity).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleRemoveItem(item.productId)}
+                          >
+                            Eliminar
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="px-6 py-12 text-center">
+                <p className="text-gray-500 text-lg mb-4">Tu carrito está vacío</p>
+                <Button asChild>
+                  <Link href="/products">Explorar productos</Link>
+                </Button>
+              </div>
             )}
           </div>
 
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Notas</label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleFieldChange}
-              rows={4}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Indicaciones de entrega, referencias, etc."
-            />
+          {errors.items && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-soft">
+              {errors.items}
+            </div>
+          )}
+
+          {/* Checkout Form */}
+          <form ref={formRef} onSubmit={handleSubmit} className="card space-y-6">
+            <h2 className="text-lg font-semibold text-dark">Información del envío</h2>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Input
+                label="Nombre completo"
+                name="customerName"
+                placeholder="Juan Pérez"
+                value={formData.customerName}
+                onChange={handleFieldChange}
+                error={errors.customerName}
+                required
+              />
+              <Input
+                label="Email"
+                type="email"
+                name="customerEmail"
+                placeholder="juan@example.com"
+                value={formData.customerEmail}
+                onChange={handleFieldChange}
+                error={errors.customerEmail}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Input
+                label="Teléfono"
+                name="customerPhone"
+                placeholder="+502 7XXX XXXX"
+                value={formData.customerPhone}
+                onChange={handleFieldChange}
+                error={errors.customerPhone}
+                required
+              />
+              <Input
+                label="Ciudad"
+                name="city"
+                placeholder="Guatemala"
+                value={formData.city}
+                onChange={handleFieldChange}
+                error={errors.city}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Input
+                label="Departamento (opcional)"
+                name="department"
+                placeholder="Guatemala"
+                value={formData.department}
+                onChange={handleFieldChange}
+              />
+              <Input
+                label="Dirección"
+                name="address"
+                placeholder="Calle Principal, Zona 10"
+                value={formData.address}
+                onChange={handleFieldChange}
+                error={errors.address}
+                required
+              />
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-dark">Método de pago</label>
+              <div className="space-y-2">
+                {PAYMENT_METHOD_OPTIONS.map((method) => (
+                  <label key={method} className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={method}
+                      checked={formData.paymentMethod === method}
+                      onChange={handleFieldChange}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <span className="text-sm font-medium text-dark">{method}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.paymentMethod && (
+                <p className="text-sm text-red-600">{errors.paymentMethod}</p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-semibold text-dark mb-2">
+                Notas adicionales (opcional)
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleFieldChange}
+                rows={3}
+                placeholder="Indicaciones de entrega, referencias, instrucciones especiales..."
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              size="lg" 
+              className="w-full"
+              disabled={items.length === 0 || submitting}
+            >
+              {submitting ? 'Procesando...' : '✓ Confirmar pedido'}
+            </Button>
+          </form>
+        </div>
+
+        {/* Sidebar - Order Summary */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-24">
+            <CartSummary items={summaryItems} subtotal={subtotal} tax={tax} shipping={shipping} />
+            <div className="mt-4 card bg-blue-50 border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">✓ Envíos a todo Guatemala</span>
+                <br />
+                <span className="text-blue-700">Consulta disponibilidad en tu zona</span>
+              </p>
+            </div>
           </div>
-
-          <Button type="submit" size="lg" variant="primary" isLoading={submitting} disabled={items.length === 0}>
-            Confirmar pedido
-          </Button>
-        </form>
-      </div>
-
-      <div>
-        <CartSummary items={summaryItems} onContinue={() => formRef.current?.requestSubmit()} />
+        </div>
       </div>
     </div>
   );

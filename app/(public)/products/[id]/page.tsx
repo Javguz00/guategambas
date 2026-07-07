@@ -4,11 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import ProductGrid from '@/app/components/products/ProductGrid';
-import Badge from '@/app/components/ui/Badge';
-import Button from '@/app/components/ui/Button';
-import Input from '@/app/components/ui/Input';
-import Loading from '@/app/components/ui/Loading';
+import ProductGrid from '@/components/products/ProductGrid';
+import { Button, Input, Loading } from '@/components/ui';
 import { addToCart } from '@/lib/cart';
 import type { ApiResponse, Product } from '@/lib/types';
 
@@ -103,121 +100,153 @@ export default function ProductDetailPage() {
     window.setTimeout(() => setFeedback(null), 2500);
   };
 
-  const handleRelatedAddToCart = (relatedProductId: string) => {
-    const relatedProduct = relatedProducts.find((item) => item.id === relatedProductId);
-    if (!relatedProduct) {
-      return;
-    }
-
-    addToCart(
-      {
-        productId: relatedProduct.id,
-        quantity: 1,
-        price: relatedProduct.price,
-      },
-      { maxStock: relatedProduct.stock }
-    );
-
-    setFeedback(`${relatedProduct.name} se agregó al carrito.`);
-    window.setTimeout(() => setFeedback(null), 2500);
-  };
-
   if (loading) {
-    return <Loading size="lg" message="Cargando producto..." />;
+    return <Loading fullScreen text="Cargando producto..." />;
   }
 
   if (error || !product) {
     return (
-      <div className="py-12 text-center">
-        <p className="text-red-600 text-lg">Error: {error || 'Producto no encontrado'}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 text-lg font-semibold mb-4">Error: {error || 'Producto no encontrado'}</p>
+          <Button asChild>
+            <Link href="/products">Volver a productos</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
   const imageUrl = product.image || '/placeholder-product.jpg';
+  const isLowStock = product.stock > 0 && product.stock < 5;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 py-8">
+      {/* Breadcrumb */}
       <nav className="text-sm text-gray-500">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
-            <Link href="/" className="hover:text-blue-600">
-              Home
+            <Link href="/" className="hover:text-primary transition-colors">
+              Inicio
             </Link>
           </li>
-          <li>&gt;</li>
+          <li>/</li>
           <li>
-            <Link href="/products" className="hover:text-blue-600">
+            <Link href="/products" className="hover:text-primary transition-colors">
               Productos
             </Link>
           </li>
           {product.category && (
             <>
-              <li>&gt;</li>
+              <li>/</li>
               <li>
                 <Link
                   href={`/products?category=${encodeURIComponent(product.category.slug)}`}
-                  className="hover:text-blue-600"
+                  className="hover:text-primary transition-colors"
                 >
-                  {product.category.name}
+                  {typeof product.category === 'string' ? product.category : product.category.name}
                 </Link>
               </li>
             </>
           )}
-          <li>&gt;</li>
-          <li className="font-medium text-gray-900">{product.name}</li>
+          <li>/</li>
+          <li className="font-medium text-dark">{product.name}</li>
         </ol>
       </nav>
 
+      {/* Feedback Alert */}
       {feedback && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {feedback}
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-soft">
+          ✓ {feedback}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-8 rounded-2xl bg-white p-6 shadow md:grid-cols-2 md:p-8">
-        <div className="relative min-h-[320px] overflow-hidden rounded-xl bg-gray-100">
-          <Image src={imageUrl} alt={product.name} fill className="object-cover" priority />
+      {/* Product Detail */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        {/* Image Gallery */}
+        <div className="space-y-4">
+          <div className="relative h-96 w-full overflow-hidden rounded-lg bg-gray-100 shadow-card">
+            <Image 
+              src={imageUrl} 
+              alt={product.name} 
+              fill 
+              className="object-cover hover:scale-105 transition-transform duration-300"
+              priority 
+            />
+            {product.stock === 0 && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <span className="text-white font-bold text-2xl">AGOTADO</span>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Product Info */}
         <div className="space-y-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-              {product.category && (
-                <p className="mt-2 text-sm text-gray-500">Categoría: {product.category.name}</p>
-              )}
-            </div>
-            {product.featured && <Badge variant="warning">Destacado</Badge>}
+          {/* Header */}
+          <div className="space-y-2">
+            {product.category && (
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                {typeof product.category === 'string' ? product.category : product.category.name}
+              </p>
+            )}
+            <h1 className="text-3xl lg:text-4xl font-bold text-dark">
+              {product.name}
+            </h1>
+            {product.featured && (
+              <div className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
+                ⭐ Destacado
+              </div>
+            )}
           </div>
 
-          <p className="text-4xl font-bold text-blue-600">Q{product.price.toFixed(2)}</p>
-
-          <div className="flex flex-wrap gap-3">
-            <Badge variant={product.stock > 0 ? 'success' : 'danger'} size="lg">
-              {product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
-            </Badge>
+          {/* Price */}
+          <div className="space-y-1">
+            <p className="text-sm text-gray-500">Precio</p>
+            <p className="text-4xl font-bold text-primary">
+              Q{product.price.toFixed(2)}
+            </p>
           </div>
 
-          <div>
-            <h2 className="mb-2 text-lg font-semibold text-gray-900">Descripción</h2>
-            <p className="leading-7 text-gray-700">
+          {/* Stock Status */}
+          <div className="flex items-center gap-2">
+            {product.stock === 0 ? (
+              <div className="px-4 py-2 bg-red-100 text-red-800 rounded-lg font-semibold text-sm">
+                ✗ Agotado
+              </div>
+            ) : isLowStock ? (
+              <div className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg font-semibold text-sm">
+                ⚠ Solo {product.stock} disponibles
+              </div>
+            ) : (
+              <div className="px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold text-sm">
+                ✓ En stock
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="border-t pt-6">
+            <h2 className="text-lg font-semibold text-dark mb-3">Descripción</h2>
+            <p className="text-gray-700 leading-relaxed text-sm lg:text-base">
               {product.description?.trim() || 'Este producto no tiene descripción disponible.'}
             </p>
           </div>
 
+          {/* Add to Cart Section */}
           {product.stock > 0 ? (
-            <div className="space-y-4 rounded-xl border border-gray-200 p-4">
+            <div className="border-t pt-6 space-y-4">
+              {/* Quantity Selector */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Cantidad</label>
-                <div className="flex max-w-xs items-center gap-3">
+                <label className="block text-sm font-semibold text-dark mb-3">Cantidad:</label>
+                <div className="flex items-center gap-2">
                   <Button
-                    type="button"
-                    variant="secondary"
+                    size="sm"
+                    variant="outline"
                     onClick={() => setQuantity((current) => clampQuantity(current - 1))}
                     disabled={quantity <= 1}
                   >
-                    -
+                    −
                   </Button>
                   <Input
                     type="number"
@@ -225,39 +254,67 @@ export default function ProductDetailPage() {
                     max={product.stock}
                     value={quantity}
                     onChange={(event) => setQuantity(clampQuantity(Number(event.target.value) || 1))}
-                    className="text-center"
+                    className="w-16 text-center"
                   />
                   <Button
-                    type="button"
-                    variant="secondary"
+                    size="sm"
+                    variant="outline"
                     onClick={() => setQuantity((current) => clampQuantity(current + 1))}
                     disabled={quantity >= product.stock}
                   >
                     +
                   </Button>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">Máximo disponible: {product.stock}</p>
               </div>
 
-              <Button type="button" size="lg" className="w-full" onClick={handleAddToCart}>
-                Agregar al carrito
+              {/* Add to Cart Button */}
+              <Button 
+                size="lg" 
+                className="w-full"
+                onClick={handleAddToCart}
+              >
+                🛒 Agregar al carrito
+              </Button>
+
+              <Button 
+                variant="outline"
+                size="lg" 
+                className="w-full"
+                asChild
+              >
+                <Link href="/products">Continuar comprando</Link>
               </Button>
             </div>
           ) : (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Este producto está agotado por el momento.
+            <div className="border-t pt-6">
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-700">
+                <p className="font-semibold mb-2">Producto agotado</p>
+                <p className="text-sm">Este producto está agotado por el momento. Vuelve pronto.</p>
+              </div>
+              <Button 
+                size="lg" 
+                className="w-full mt-4"
+                asChild
+              >
+                <Link href="/products">Explorar otros productos</Link>
+              </Button>
             </div>
           )}
         </div>
       </div>
 
+      {/* Related Products */}
       {relatedProducts.length > 0 && (
-        <section className="space-y-4">
+        <section className="border-t pt-12 space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Productos relacionados</h2>
-            <p className="text-sm text-gray-500">Más opciones dentro de la misma categoría.</p>
+            <h2 className="text-2xl lg:text-3xl font-bold text-dark">
+              Productos relacionados
+            </h2>
+            <p className="text-gray-500 mt-1">
+              Más opciones dentro de la categoría {typeof product.category === 'string' ? product.category : product.category?.name}
+            </p>
           </div>
-          <ProductGrid products={relatedProducts} onAddToCart={handleRelatedAddToCart} />
+          <ProductGrid products={relatedProducts} />
         </section>
       )}
     </div>

@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Button from '@/app/components/ui/Button';
-import Input from '@/app/components/ui/Input';
+import { Button, Input } from '@/components/ui';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,68 +42,83 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-900">
-          🦐 GuateGambas
-        </h1>
-        <p className="text-center text-gray-600 mb-8">Admin Panel</p>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-secondary/5 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Card */}
+        <div className="card shadow-card">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-3">🦐</div>
+            <h1 className="text-3xl font-bold text-dark mb-1">
+              GuateGambas
+            </h1>
+            <p className="text-gray-500">Admin Panel</p>
           </div>
-        )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              ⚠ {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-5">
             <Input
               type="email"
+              label="Email"
               placeholder="admin@guategambas.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña
-            </label>
             <Input
               type="password"
-              placeholder="Ingrese su contraseña"
+              label="Contraseña"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? '⏳ Iniciando sesión...' : '✓ Iniciar sesión'}
+            </Button>
+          </form>
+
+          {/* Demo Credentials */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-xs text-gray-500 text-center">
+              <strong className="text-gray-700">Demo:</strong>
+              <br />
+              admin@guategambas.com
+              <br />
+              admin123
+            </p>
           </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            className="w-full"
-            isLoading={isLoading}
-          >
-            Iniciar Sesión
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Demo: admin@guategambas.com / admin123
-          </p>
+          {/* Back Link */}
+          <div className="mt-6 text-center">
+            <Button
+              variant="outline"
+              className="w-full"
+              asChild
+            >
+              <Link href="/">Volver a inicio</Link>
+            </Button>
+          </div>
         </div>
 
-        <div className="mt-6 border-t pt-6 text-center">
-          <Link href="/" className="text-blue-600 hover:text-blue-700 font-medium">
-            Volver a inicio
-          </Link>
-        </div>
+        {/* Footer Message */}
+        <p className="text-center text-xs text-gray-400 mt-6">
+          Solo para administradores autorizados
+        </p>
       </div>
     </div>
   );
