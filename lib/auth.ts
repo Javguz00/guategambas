@@ -1,43 +1,102 @@
+import { hashSync, compareSync } from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { jwtEncode, jwtDecode } from './jwt-utils';
+import { prisma } from './db';
 
-const ADMIN_TOKEN_KEY = 'admin_token';
-const ADMIN_EMAIL_KEY = 'admin_email';
+const AUTH_COOKIE_KEY = 'auth-token';
 
-export async function setAdminSession(token: string, email: string) {
-  const cookieStore = await cookies();
-  cookieStore.set(ADMIN_TOKEN_KEY, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  });
-  cookieStore.set(ADMIN_EMAIL_KEY, email, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
-  });
+export interface AuthSession {
+  userId: string;
+  email: string;
+  role: string;
+  name: string;
 }
 
-export async function getAdminSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(ADMIN_TOKEN_KEY)?.value;
-  const email = cookieStore.get(ADMIN_EMAIL_KEY)?.value;
+// Hash password with bcryptjs
+export function hashPassword(password: string): string {
+  return hashSync(password, 12);
+}
 
-  if (!token || !email) {
+// Verify password
+export function verifyPassword(password: string, hash: string): boolean {
+  return compareSync(password, hash);
+}
+
+// Login user - returns session and sets cookie
+export async function login(
+  email: string,
+  password: string
+): Promise<AuthSession | null> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user || !user.active) {
+      return null;
+    }
+
+    const isValidPassword = verifyPassword(password, user.password);
+    if (!isValidPassword) {
+      return null;
+    }
+
+    const session: AuthSession = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
+
+    // Set session cookie
+    const cookieStore = await cookies();
+    const token = jwtEncode(session);
+    cookieStore.set(AUTH_COOKIE_KEY, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return session;
+  } catch (error) {
+    console.error('Login error:', error);
     return null;
   }
-
-  return { token, email };
 }
 
-export async function clearAdminSession() {
+// Logout user
+export async function logout(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(ADMIN_TOKEN_KEY);
-  cookieStore.delete(ADMIN_EMAIL_KEY);
+  cookieStore.delete(AUTH_COOKIE_KEY);
 }
 
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+// Get current session from cookie
+export async function getSession(): Promise<AuthSession | null> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(AUTH_COOKIE_KEY)?.value;
+
+    if (!token) {
+      return null;
+    }
+
+    const session = jwtDecode<AuthSession>(token);
+    return session;
+  } catch (error) {
+    console.error('Session decode error:', error);
+    return null;
+  }
+}
+
+// Check if user is authenticated
+export async function isAuthenticated(): Promise<boolean> {
+  const session = await getSession();
+  return !!session;
+}
+
+// Check if user is admin
+export async function isAdmin(): Promise<boolean> {
+  const session = await getSession();
+  return session?.role === 'ADMIN' || session?.role === 'OWNER';
 }

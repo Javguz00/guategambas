@@ -9,10 +9,12 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "ts-node --transpile-only prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
     "next": "15.5.14",
     "react": "19.0.0",
     "react-dom": "19.0.0"
@@ -24,6 +26,10 @@
     "eslint": "8.57.1",
     "eslint-config-next": "15.5.14",
     "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
     "typescript": "5.8.2"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }
