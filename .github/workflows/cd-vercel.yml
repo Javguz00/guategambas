@@ -39,12 +39,15 @@ jobs:
             exit 1
           fi
 
+          ORIGINAL_DATABASE_URL="${DATABASE_URL:-}"
+          ORIGINAL_DIRECT_URL="${DIRECT_URL:-}"
+
           set -a
           . .vercel/.env.production.local
           set +a
 
-          RUNTIME_URL="${POSTGRES_PRISMA_URL:-${POSTGRES_URL:-${DATABASE_URL:-}}}"
-          DIRECT_DB_URL="${POSTGRES_URL_NON_POOLING:-${DIRECT_URL:-${POSTGRES_URL:-$RUNTIME_URL}}}"
+          RUNTIME_URL="${POSTGRES_PRISMA_URL:-${POSTGRES_URL:-${DATABASE_URL:-$ORIGINAL_DATABASE_URL}}}"
+          DIRECT_DB_URL="${POSTGRES_URL_NON_POOLING:-${DIRECT_URL:-${POSTGRES_URL:-${ORIGINAL_DIRECT_URL:-$RUNTIME_URL}}}}"
 
           if [ -z "$RUNTIME_URL" ]; then
             echo "::error::No production database URL found in Vercel env or GitHub secrets."
