@@ -124,13 +124,12 @@ http://localhost:3000
 Para evitar el error `Base de datos no disponible` en producción, configura PostgreSQL en Vercel y usa CI/CD con migraciones:
 
 1. En Vercel, crea/adjunta una base de datos Postgres al proyecto.
-2. Copia la cadena de conexión en `DATABASE_URL` (Project Settings → Environment Variables) para **Production**.
+2. Verifica que en Vercel aparezcan variables de producción de Postgres (`POSTGRES_PRISMA_URL` y `POSTGRES_URL_NON_POOLING`).
 3. En GitHub, agrega estos secretos del repositorio:
-   - `DATABASE_URL`
    - `VERCEL_TOKEN`
    - `VERCEL_ORG_ID`
    - `VERCEL_PROJECT_ID`
-4. Haz push a `main`: el workflow `.github/workflows/cd-vercel.yml` ejecuta `prisma migrate deploy` antes del deploy.
+4. Haz push a `main`: el workflow `.github/workflows/cd-vercel.yml` hace `vercel pull`, resuelve `DATABASE_URL`/`DIRECT_URL` desde variables nativas de Vercel y ejecuta `prisma migrate deploy` antes del deploy.
 
 Con eso, el admin de productos y órdenes funciona en producción usando la BD real.
 
@@ -314,8 +313,8 @@ git push origin javguz00-cleanup-restructure
    - Deploy automático
 
 3. **Configurar Base de Datos**
-   - Usar **Vercel Postgres** o **AWS RDS**
-   - Actualizar `DATABASE_URL` en Vercel
+   - Crear o enlazar **Vercel Postgres** en el proyecto
+   - Verificar `POSTGRES_PRISMA_URL` y `POSTGRES_URL_NON_POOLING` en Production
 
 ## 🐛 Solución de Problemas
 
@@ -343,8 +342,9 @@ npm run build
 ## 📧 Variables de Entorno
 
 ```env
-# Base de Datos
+# Base de Datos local
 DATABASE_URL="postgresql://user:password@localhost:5432/guategambas"
+DIRECT_URL="postgresql://user:password@localhost:5432/guategambas"
 
 # Seguridad (cambiar en producción)
 JWT_SECRET="tu-secreto-super-seguro"
