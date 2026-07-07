@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import Button from '@/app/components/ui/Button';
-import Loading from '@/app/components/ui/Loading';
+import { Button, Loading } from '@/components/ui';
 import type { ApiResponse, Order, Product } from '@/lib/types';
 
 interface DashboardStats {
@@ -66,93 +65,97 @@ export default function AdminDashboard() {
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
 
   if (loading) {
-    return <Loading size="lg" message="Cargando dashboard..." />;
+    return <Loading fullScreen text="Cargando dashboard..." />;
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-4xl font-bold text-dark">Dashboard</h1>
         <p className="mt-2 text-sm text-gray-500">Resumen rápido de productos, órdenes e ingresos.</p>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-soft">
+          ⚠ {error}
         </div>
       )}
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Productos" value={stats.totalProducts.toString()} accent="blue" />
-        <StatCard label="Órdenes" value={stats.totalOrders.toString()} accent="indigo" />
+        <StatCard label="Productos" value={stats.totalProducts.toString()} accent="primary" />
+        <StatCard label="Órdenes" value={stats.totalOrders.toString()} accent="secondary" />
         <StatCard label="Ingresos" value={formatCurrency(stats.totalRevenue)} accent="green" />
         <StatCard label="Stock bajo" value={stats.lowStockProducts.toString()} accent="yellow" />
       </div>
 
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <section className="rounded-xl bg-white p-6 shadow">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Acciones rápidas</h2>
+      {/* Main Content */}
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[280px_minmax(0,1fr)]">
+        {/* Quick Actions */}
+        <section className="card">
+          <h2 className="mb-4 text-lg font-bold text-dark border-b pb-3">Acciones rápidas</h2>
           <div className="space-y-3">
-            <Link href="/admin/products/new" className="block">
-              <Button size="lg" className="w-full">
-                Crear producto
-              </Button>
-            </Link>
-            <Link href="/admin/products" className="block">
-              <Button size="lg" variant="secondary" className="w-full">
-                Administrar productos
-              </Button>
-            </Link>
-            <Link href="/admin/orders" className="block">
-              <Button size="lg" variant="secondary" className="w-full">
-                Ver órdenes
-              </Button>
-            </Link>
-            <Link href="/admin/inventory" className="block">
-              <Button size="lg" variant="ghost" className="w-full border border-gray-200">
-                Revisar inventario
-              </Button>
-            </Link>
+            <Button size="lg" className="w-full" asChild>
+              <Link href="/admin/products/new">
+                ➕ Crear producto
+              </Link>
+            </Button>
+            <Button size="lg" variant="secondary" className="w-full" asChild>
+              <Link href="/admin/products">
+                📦 Administrar productos
+              </Link>
+            </Button>
+            <Button size="lg" variant="secondary" className="w-full" asChild>
+              <Link href="/admin/orders">
+                📋 Ver órdenes
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="w-full" asChild>
+              <Link href="/admin/inventory">
+                📊 Revisar inventario
+              </Link>
+            </Button>
           </div>
         </section>
 
-        <section className="rounded-xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Últimas órdenes</h2>
-              <p className="text-sm text-gray-500">Las 5 órdenes más recientes.</p>
-            </div>
-            <Link href="/admin/orders" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-              Ver todas
-            </Link>
-          </div>
-
+        {/* Recent Orders */}
+        <section className="card">
+          <h2 className="mb-4 text-lg font-bold text-dark border-b pb-3">Órdenes recientes</h2>
           {recentOrders.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">
                       Cliente
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">
                       Total
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">
                       Estado
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">
                       Fecha
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {recentOrders.map((order) => (
-                    <tr key={order.id}>
-                      <td className="px-4 py-3 text-sm text-gray-900">{order.customerName}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(order.total)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{order.status}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                <tbody className="divide-y">
+                  {recentOrders.map((order, idx) => (
+                    <tr key={order.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 font-medium text-dark">{order.customerName}</td>
+                      <td className="px-4 py-3 font-semibold text-primary">{formatCurrency(order.total)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                          order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                          order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                          order.status === 'SHIPPED' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString('es-GT')}
                       </td>
                     </tr>
@@ -161,7 +164,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           ) : (
-            <p className="text-gray-500">No hay órdenes aún.</p>
+            <p className="text-center py-8 text-gray-500">No hay órdenes aún.</p>
           )}
         </section>
       </div>
@@ -176,19 +179,19 @@ function StatCard({
 }: {
   label: string;
   value: string;
-  accent: 'blue' | 'indigo' | 'green' | 'yellow';
+  accent: 'primary' | 'secondary' | 'green' | 'yellow';
 }) {
   const accentStyles = {
-    blue: 'border-blue-500 bg-blue-50',
-    indigo: 'border-indigo-500 bg-indigo-50',
-    green: 'border-green-500 bg-green-50',
-    yellow: 'border-yellow-500 bg-yellow-50',
+    primary: 'border-l-4 border-primary bg-primary/5',
+    secondary: 'border-l-4 border-secondary bg-secondary/5',
+    green: 'border-l-4 border-green-500 bg-green-50',
+    yellow: 'border-l-4 border-yellow-500 bg-yellow-50',
   };
 
   return (
-    <div className={`rounded-xl border-l-4 p-6 shadow-sm ${accentStyles[accent]}`}>
-      <p className="text-sm font-medium uppercase tracking-wide text-gray-600">{label}</p>
-      <p className="mt-3 text-3xl font-bold text-gray-900">{value}</p>
+    <div className={`card ${accentStyles[accent]}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-2">{label}</p>
+      <p className="text-3xl lg:text-4xl font-bold text-dark">{value}</p>
     </div>
   );
 }
