@@ -7,6 +7,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,11 +43,11 @@ jobs:
           . .vercel/.env.production.local
           set +a
 
-          RUNTIME_URL="${DATABASE_URL:-${POSTGRES_PRISMA_URL:-${POSTGRES_URL:-}}}"
-          DIRECT_DB_URL="${DIRECT_URL:-${POSTGRES_URL_NON_POOLING:-${POSTGRES_URL:-$RUNTIME_URL}}}"
+          RUNTIME_URL="${POSTGRES_PRISMA_URL:-${POSTGRES_URL:-${DATABASE_URL:-}}}"
+          DIRECT_DB_URL="${POSTGRES_URL_NON_POOLING:-${DIRECT_URL:-${POSTGRES_URL:-$RUNTIME_URL}}}"
 
           if [ -z "$RUNTIME_URL" ]; then
-            echo "::error::No production database URL found. Create/link Vercel Postgres first."
+            echo "::error::No production database URL found in Vercel env or GitHub secrets."
             exit 1
           fi
 
@@ -55,6 +58,16 @@ jobs:
 
           echo "DATABASE_URL=$RUNTIME_URL" >> "$GITHUB_ENV"
           echo "DIRECT_URL=$DIRECT_DB_URL" >> "$GITHUB_ENV"
+
+      - name: Sync resolved DB URLs to Vercel production env
+        run: |
+          vercel env rm DATABASE_URL production --yes --token=${{ secrets.VERCEL_TOKEN }} || true
+          vercel env rm DIRECT_URL production --yes --token=${{ secrets.VERCEL_TOKEN }} || true
+          printf "%s" "$DATABASE_URL" | vercel env add DATABASE_URL production --token=${{ secrets.VERCEL_TOKEN }}
+          printf "%s" "$DIRECT_URL" | vercel env add DIRECT_URL production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Prisma generate
         run: npx prisma generate
