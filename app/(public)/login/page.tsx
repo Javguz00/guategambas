@@ -7,7 +7,7 @@ import { Button, Input } from '@/components/ui';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: username, password }),
       });
 
       const data = await response.json();
@@ -65,11 +65,11 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">
             <Input
-              type="email"
-              label="Email"
-              placeholder="admin@guategambas.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              label="Usuario"
+              placeholder="javguz00"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
             />
 
@@ -91,17 +91,6 @@ export default function LoginPage() {
               {isLoading ? '⏳ Iniciando sesión...' : '✓ Iniciar sesión'}
             </Button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              <strong className="text-gray-700">Demo:</strong>
-              <br />
-              admin@guategambas.com
-              <br />
-              admin123
-            </p>
-          </div>
 
           {/* Back Link */}
           <div className="mt-6 text-center">

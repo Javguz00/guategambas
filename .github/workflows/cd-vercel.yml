@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,6 +25,9 @@ jobs:
 
       - name: Prisma generate
         run: npx prisma generate
+
+      - name: Validate production database URLs
+        run: node scripts/validate-db-url.mjs
 
       - name: Run production migrations
         run: npx prisma migrate deploy

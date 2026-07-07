@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/api-helpers';
 import { login } from '@/lib/auth';
-import { validateEmail } from '@/lib/validators';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,17 +8,13 @@ export async function POST(request: NextRequest) {
     const { email, password } = body;
 
     if (!email || !password) {
-      return errorResponse('Email and password are required', 400);
-    }
-
-    if (!validateEmail(email)) {
-      return errorResponse('Invalid email format', 400);
+      return errorResponse('Usuario y contraseña son requeridos', 400);
     }
 
     const session = await login(email, password);
 
     if (!session) {
-      return errorResponse('Invalid email or password', 401);
+      return errorResponse('Usuario o contraseña inválidos', 401);
     }
 
     // Return session data (excluding password)
