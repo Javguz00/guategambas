@@ -73,8 +73,7 @@ export async function GET() {
         return successResponse([] as HeroMediaItem[]);
       }
     }
-    const detail = error instanceof Error ? error.message : 'Unknown error';
-    return errorResponse(`No se pudo cargar el hero multimedia: ${detail}`, 500);
+    return errorResponse('No se pudo cargar el hero multimedia', 500);
   }
 }
 
