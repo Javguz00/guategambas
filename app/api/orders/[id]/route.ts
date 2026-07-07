@@ -1,6 +1,11 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { successResponse, errorResponse, notFoundResponse } from '@/lib/api-helpers';
+import { prisma } from '@/lib/db';
+import {
+  successResponse,
+  errorResponse,
+  notFoundResponse,
+} from '@/lib/api-helpers';
+import { isAdmin } from '@/lib/auth';
 
 interface Params {
   params: {
@@ -10,7 +15,7 @@ interface Params {
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const order = await db.order.findUnique({
+    const order = await prisma.order.findUnique({
       where: { id: params.id },
       include: { items: { include: { product: true } } },
     });
@@ -21,26 +26,61 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return successResponse(order);
   } catch (error) {
+    console.error('Error fetching order:', error);
     return errorResponse('Error fetching order', 500);
   }
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
+    // Check admin authentication
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      return errorResponse('Unauthorized', 401);
+    }
+
     const body = await request.json();
     const { status, paymentStatus } = body;
 
-    const order = await db.order.update({
+    // Verify order exists
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!existingOrder) {
+      return notFoundResponse('Order not found');
+    }
+
+    // Validate status values if provided
+    const validStatuses = [
+      'PENDING',
+      'CONFIRMED',
+      'PROCESSING',
+      'SHIPPED',
+      'DELIVERED',
+      'CANCELLED',
+    ];
+    if (status && !validStatuses.includes(status)) {
+      return errorResponse('Invalid status value', 400);
+    }
+
+    const validPaymentStatuses = ['PENDING', 'PAID', 'FAILED', 'CANCELLED'];
+    if (paymentStatus && !validPaymentStatuses.includes(paymentStatus)) {
+      return errorResponse('Invalid payment status value', 400);
+    }
+
+    const order = await prisma.order.update({
       where: { id: params.id },
       data: {
-        status,
-        paymentStatus,
+        ...(status && { status }),
+        ...(paymentStatus && { paymentStatus }),
       },
       include: { items: { include: { product: true } } },
     });
 
     return successResponse(order, 'Order updated successfully');
   } catch (error) {
+    console.error('Error updating order:', error);
     return errorResponse('Error updating order', 500);
   }
 }

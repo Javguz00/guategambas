@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { createdResponse, errorResponse } from '@/lib/api-helpers';
 import { validateEmail, validatePhone } from '@/lib/validators';
 
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       address,
       notes,
       items,
+      paymentMethod = 'CONTRAENTREGA',
     } = body;
 
     // Validar datos
@@ -38,12 +39,12 @@ export async function POST(request: NextRequest) {
       return errorResponse('Cart is empty', 400);
     }
 
-    // Calcular totales
+    // Calcular totales y validar stock
     let subtotal = 0;
     const orderItems = [];
 
     for (const item of items) {
-      const product = await db.product.findUnique({
+      const product = await prisma.product.findUnique({
         where: { id: item.productId },
       });
 
@@ -52,7 +53,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (product.stock < item.quantity) {
-        return errorResponse(`Insufficient stock for ${product.name}`, 400);
+        return errorResponse(
+          `Insufficient stock for ${product.name}. Available: ${product.stock}`,
+          400
+        );
       }
 
       const itemTotal = product.price * item.quantity;
@@ -69,7 +73,7 @@ export async function POST(request: NextRequest) {
     const total = subtotal + shippingCost;
 
     // Crear orden
-    const order = await db.order.create({
+    const order = await prisma.order.create({
       data: {
         customerName,
         customerEmail,
@@ -81,13 +85,25 @@ export async function POST(request: NextRequest) {
         subtotal,
         shippingCost,
         total,
-        paymentMethod: 'CONTRAENTREGA',
+        paymentMethod,
         items: {
           create: orderItems,
         },
       },
       include: { items: { include: { product: true } } },
     });
+
+    // Actualizar stock de productos
+    for (const item of items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: {
+          stock: {
+            decrement: item.quantity,
+          },
+        },
+      });
+    }
 
     return createdResponse(order, 'Order created successfully');
   } catch (error) {
