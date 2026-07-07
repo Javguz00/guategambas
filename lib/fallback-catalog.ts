@@ -389,3 +389,13 @@ export function getFallbackProducts(categorySlug?: string): Product[] {
 export function getFallbackProductById(id: string): Product | null {
   return products.find((item) => item.id === id) || null;
 }
+
+export function getFallbackCatalogData(): {
+  categories: Category[];
+  products: Product[];
+} {
+  return {
+    categories: categories.map((category) => ({ ...category })),
+    products: products.map((item) => ({ ...item })),
+  };
+}

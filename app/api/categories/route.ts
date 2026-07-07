@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, createdResponse, errorResponse } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
+import { ensureCatalogBootstrap } from '@/lib/catalog-bootstrap';
 import { getFallbackCategories } from '@/lib/fallback-catalog';
 
 const isDatabaseUnavailableError = (error: unknown) =>
@@ -10,6 +11,8 @@ const isDatabaseUnavailableError = (error: unknown) =>
 
 export async function GET() {
   try {
+    await ensureCatalogBootstrap();
+
     const categories = await prisma.category.findMany({
       include: { _count: { select: { products: true } } },
       orderBy: { createdAt: 'desc' },
