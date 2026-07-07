@@ -15,7 +15,7 @@ export default async function CheckoutSuccessPage({
   return (
     <div className="mx-auto max-w-2xl rounded-lg bg-white p-10 text-center shadow">
       <h1 className="mb-4 text-3xl font-bold text-gray-900">¡Pedido realizado!</h1>
-      <p className="mb-2 text-gray-600">Gracias por tu compra. Tu orden fue creada exitosamente.</p>
+      <p className="mb-2 text-gray-600">Tu pedido fue preparado y enviado por WhatsApp para confirmación.</p>
       <p className="mb-8 text-sm text-gray-500">
         {orderId ? `Número de orden: ${orderId}` : 'Recibirás la confirmación pronto.'}
       </p>

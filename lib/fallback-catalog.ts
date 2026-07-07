@@ -91,7 +91,7 @@ const products: Product[] = [
     15,
     'caridinas',
     'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
-    '/photos/tibee/tibee.jpg'
+    '/photos/tibee/product4.jpg'
   ),
   product(
     'prod-car-crs',
@@ -111,7 +111,7 @@ const products: Product[] = [
     12,
     'caridinas',
     'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
-    '/photos/taiwan-cbs/taiwan-cbs.jpg'
+    '/photos/taiwan-cbs/cbs.jpg'
   ),
   product(
     'prod-car-bluebolt',
@@ -155,7 +155,7 @@ const products: Product[] = [
     20,
     'neocaridinas',
     'Pack de 5 por Q150. En detalle puedes elegir grado normal con 15% de descuento.',
-    '/photos/orange/orange.jpg'
+    '/photos/importacion-plantas/orange.jpeg'
   ),
   product(
     'prod-neo-blue-diamond',
@@ -165,7 +165,7 @@ const products: Product[] = [
     15,
     'neocaridinas',
     'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
-    '/photos/blue-velvet/blue-velvet.jpg'
+    '/photos/importacion-plantas/blue velvet.jpeg'
   ),
   product(
     'prod-neo-cherries',
@@ -197,7 +197,7 @@ const products: Product[] = [
     200,
     'suplementos',
     'Q10 por porcion. Promocion 3 porciones por Q25.',
-    '/photos/salty-shrimp-gh/salty-shrimp-gh.jpg',
+    '/photos/salty-shrimp-gh/alimento-para-gambas.jpg',
     true
   ),
   product(
@@ -218,7 +218,7 @@ const products: Product[] = [
     40,
     'suplementos',
     'Alimento en polvo para juveniles y mantenimiento de colonia.',
-    '/photos/magic-powder/magic-powder.jpg'
+    '/photos/magic-powder/magic-powder-10g.jpg'
   ),
 
   // Accesorios
@@ -239,7 +239,7 @@ const products: Product[] = [
     60,
     'accesorios',
     'Tronco de cholla 4 pulgadas.',
-    '/photos/tronco-cholla/tronco-cholla.jpg'
+    '/photos/tronco-cholla/troncos-de-cholla.jpg'
   ),
   product(
     'prod-acc-cholla-5',
@@ -294,7 +294,7 @@ const products: Product[] = [
     40,
     'accesorios',
     'Pack de 10 hojas de almendro para acondicionar agua.',
-    '/photos/almendro-hojas-10/almendro-hojas-10.jpg'
+    '/photos/almendro-hojas-10/hojas-de-almendro.jpg'
   ),
   product(
     'prod-acc-filtro-pulmon',
@@ -304,7 +304,7 @@ const products: Product[] = [
     20,
     'accesorios',
     'Filtro completo para gambarios.',
-    '/photos/filtro-pulmon-material/filtro-pulmon-material.jpg'
+    '/photos/filtro-pulmon-material/filtro.jpg'
   ),
   product(
     'prod-acc-bomba-sobo-1',
@@ -314,7 +314,7 @@ const products: Product[] = [
     25,
     'accesorios',
     'Bomba de aire de 1 salida.',
-    '/photos/bomba-sobo/bomba-sobo.jpg'
+    '/photos/bomba-sobo/sobo-548a.jpg'
   ),
   product(
     'prod-acc-bomba-sobo-2',
@@ -344,7 +344,7 @@ const products: Product[] = [
     120,
     'accesorios',
     'Q35 por libra.',
-    '/photos/shrimp-sand/shrimp-sand.jpg'
+    '/photos/shrimp-sand/shrim-sand.jpg'
   ),
   product(
     'prod-acc-wa-30',
@@ -354,7 +354,7 @@ const products: Product[] = [
     35,
     'accesorios',
     'Lampara WA One Energy 30 cm.',
-    '/photos/wanenergy-30/wanenergy-30.jpg'
+    '/photos/wanenergy-30/wanenergy-28-cm.jpg'
   ),
   product(
     'prod-acc-wa-60',
@@ -364,7 +364,7 @@ const products: Product[] = [
     35,
     'accesorios',
     'Lampara WA One Energy 60 cm.',
-    '/photos/wanenergy-60/wanenergy-60.jpg'
+    '/photos/wanenergy-60/wanenergy-58-cm.jpg'
   ),
 ];
 
@@ -389,4 +389,3 @@ export function getFallbackProducts(categorySlug?: string): Product[] {
 export function getFallbackProductById(id: string): Product | null {
   return products.find((item) => item.id === id) || null;
 }
-

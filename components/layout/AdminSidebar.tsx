@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 export default function AdminSidebar() {
@@ -29,6 +30,11 @@ export default function AdminSidebar() {
       label: 'Inventario',
       icon: '🏪',
     },
+    {
+      href: '/admin/media',
+      label: 'Multimedia',
+      icon: '🎬',
+    },
   ];
 
   const isActive = (href: string) => pathname.startsWith(href);
@@ -51,10 +57,14 @@ export default function AdminSidebar() {
       } md:translate-x-0 z-40`}>
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
-          <Link href="/admin/dashboard" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-red-700 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">🦐</span>
-            </div>
+          <Link href="/admin/dashboard" className="flex items-center gap-3">
+            <Image
+              src="/photos/cliente/logo.jpg"
+              alt="Logo Guategambas"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-full object-cover border border-gray-200"
+            />
             <span className="font-bold text-lg text-dark">Admin</span>
           </Link>
         </div>

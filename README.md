@@ -119,6 +119,21 @@ http://localhost:3000
 
 ⚠️ **IMPORTANTE**: Cambiar credenciales en producción
 
+## ☁️ Producción en Vercel (sin error de base de datos)
+
+Para evitar el error `Base de datos no disponible` en producción, configura PostgreSQL en Vercel y usa CI/CD con migraciones:
+
+1. En Vercel, crea/adjunta una base de datos Postgres al proyecto.
+2. Copia la cadena de conexión en `DATABASE_URL` (Project Settings → Environment Variables) para **Production**.
+3. En GitHub, agrega estos secretos del repositorio:
+   - `DATABASE_URL`
+   - `VERCEL_TOKEN`
+   - `VERCEL_ORG_ID`
+   - `VERCEL_PROJECT_ID`
+4. Haz push a `main`: el workflow `.github/workflows/cd-vercel.yml` ejecuta `prisma migrate deploy` antes del deploy.
+
+Con eso, el admin de productos y órdenes funciona en producción usando la BD real.
+
 ## 🔌 API Endpoints
 
 ### 📦 Productos

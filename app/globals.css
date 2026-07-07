@@ -47,21 +47,21 @@
   }
 
   .btn-primary {
-    @apply btn text-white focus:ring-[#FF6B6B] shadow-soft hover:shadow-card;
-    background-color: #FF6B6B;
+    @apply btn text-white focus:ring-[#0EA5E9] shadow-soft hover:shadow-card;
+    background-color: #0EA5E9;
   }
 
   .btn-primary:hover {
-    background-color: #DD5555;
+    background-color: #0369A1;
   }
 
   .btn-secondary {
-    @apply btn text-white focus:ring-[#4ECDC4] shadow-soft hover:shadow-card;
-    background-color: #4ECDC4;
+    @apply btn text-white focus:ring-[#22C55E] shadow-soft hover:shadow-card;
+    background-color: #22C55E;
   }
 
   .btn-secondary:hover {
-    background-color: #3DB8B0;
+    background-color: #15803D;
   }
 
   .btn-danger {
@@ -74,12 +74,12 @@
   }
 
   .btn-outline {
-    @apply btn border-2 text-[#FF6B6B] transition-colors;
-    border-color: #FF6B6B;
+    @apply btn border-2 text-[#0EA5E9] transition-colors;
+    border-color: #0EA5E9;
   }
 
   .btn-outline:hover {
-    background-color: #FF6B6B;
+    background-color: #0EA5E9;
     color: white;
   }
 
@@ -97,11 +97,11 @@
 
   .input-base {
     @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors;
-    focus-ring-color: #FF6B6B;
+    focus-ring-color: #0EA5E9;
   }
 
   .input-base:focus {
-    --tw-ring-color: #FF6B6B;
+    --tw-ring-color: #0EA5E9;
   }
 
   .label {
@@ -204,4 +204,3 @@
     }
   }
 }
-

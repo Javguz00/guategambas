@@ -1,6 +1,8 @@
 import type { Cart, CartItem } from './types';
 
 export const CART_STORAGE_KEY = 'cart';
+export const CART_UPDATED_EVENT = 'guategambas:cart-updated';
+export const CART_OPEN_EVENT = 'guategambas:open-cart';
 
 interface StoredCart {
   items: CartItem[];
@@ -85,9 +87,21 @@ export function writeCart(cart: StoredCart): StoredCart {
     } else {
       window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedCart));
     }
+    window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: normalizedCart }));
   }
 
   return normalizedCart;
+}
+
+export function getCartItemCount(items?: CartItem[]): number {
+  const sourceItems = items || readCart().items;
+  return sourceItems.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+export function openCartDrawer() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(CART_OPEN_EVENT));
+  }
 }
 
 export function addToCart(

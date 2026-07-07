@@ -2,14 +2,14 @@
 
 :root {
   /* Colores primarios */
-  --primary: #2563eb;
-  --primary-dark: #1e40af;
-  --primary-light: #3b82f6;
+  --primary: #0ea5e9;
+  --primary-dark: #0369a1;
+  --primary-light: #38bdf8;
 
   /* Colores secundarios */
-  --secondary: #16a34a;
+  --secondary: #22c55e;
   --secondary-dark: #15803d;
-  --secondary-light: #22c55e;
+  --secondary-light: #4ade80;
 
   /* Colores neutrales */
   --gray-50: #f9fafb;
@@ -59,9 +59,9 @@
 /* Tema oscuro */
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #3b82f6;
-    --primary-dark: #2563eb;
-    --primary-light: #60a5fa;
+    --primary: #38bdf8;
+    --primary-dark: #0ea5e9;
+    --primary-light: #7dd3fc;
 
     --gray-50: #1f2937;
     --gray-100: #374151;

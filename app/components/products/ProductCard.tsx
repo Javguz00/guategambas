@@ -12,7 +12,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
-  const imageUrl = product.image || '/placeholder-product.jpg';
+  const imageUrl = product.image || '/placeholder-product.svg';
 
   return (
     <div className="rounded-lg bg-white shadow transition-shadow duration-200 hover:shadow-lg">

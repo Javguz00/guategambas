@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -8,9 +10,13 @@ export default function Footer() {
           {/* Info Column */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-red-700 rounded flex items-center justify-center">
-                <span className="text-lg">🦐</span>
-              </div>
+              <Image
+                src="/photos/cliente/logo.jpg"
+                alt="Logo Guategambas"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full object-cover border border-white/30"
+              />
               <h3 className="font-bold text-lg">Guategambas</h3>
             </div>
             <p className="text-gray-400 text-sm">

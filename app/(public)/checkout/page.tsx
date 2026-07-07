@@ -13,17 +13,23 @@ import {
   type Product,
 } from '@/lib/types';
 import { readCart, writeCart } from '@/lib/cart';
-import { validateEmail, validatePhone } from '@/lib/validators';
+import { validatePhone } from '@/lib/validators';
 
 const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
   PaymentMethod.CONTRAENTREGA,
   PaymentMethod.DEPOSITO_PREVIO,
-  PaymentMethod.TARJETA,
 ];
+
+const WHATSAPP_NUMBER = '50243132549';
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  [PaymentMethod.CONTRAENTREGA]: 'Contra entrega',
+  [PaymentMethod.DEPOSITO_PREVIO]: 'Depósito previo',
+  [PaymentMethod.TARJETA]: 'Tarjeta',
+};
 
 interface CheckoutFormState {
   customerName: string;
-  customerEmail: string;
   customerPhone: string;
   city: string;
   department: string;
@@ -40,7 +46,6 @@ interface CheckoutDisplayItem extends CartItem {
 
 const getInitialFormState = (): CheckoutFormState => ({
   customerName: '',
-  customerEmail: '',
   customerPhone: '',
   city: '',
   department: '',
@@ -58,10 +63,6 @@ const validateForm = (formData: CheckoutFormState, items: CheckoutDisplayItem[])
 
   if (formData.customerName.trim().length < 2) {
     errors.customerName = 'Ingresa el nombre del cliente.';
-  }
-
-  if (!validateEmail(formData.customerEmail.trim())) {
-    errors.customerEmail = 'Ingresa un correo válido.';
   }
 
   if (!validatePhone(formData.customerPhone.trim())) {
@@ -95,7 +96,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.12; // 12% tax
+  const tax = 0;
   const shipping = subtotal > 100 ? 0 : 50; // Free shipping over Q100
 
   const summaryItems = useMemo(() =>
@@ -245,37 +246,81 @@ export default function CheckoutPage() {
       setSubmitting(true);
       setPageError(null);
 
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customerName: formData.customerName.trim(),
-          customerEmail: formData.customerEmail.trim(),
-          customerPhone: formData.customerPhone.trim(),
-          city: formData.city.trim(),
-          department: formData.department.trim() || null,
-          address: formData.address.trim(),
-          notes: formData.notes.trim() || null,
-          paymentMethod: formData.paymentMethod,
-          items: items.map((item) => ({
-            productId: item.productId,
-            grade: item.grade,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        }),
-      });
+      let orderId = `TEMP-${Date.now()}`;
 
-      const result: ApiResponse<Order> = await response.json();
+      try {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customerName: formData.customerName.trim(),
+            customerPhone: formData.customerPhone.trim(),
+            city: formData.city.trim(),
+            department: formData.department.trim() || null,
+            address: formData.address.trim(),
+            notes: formData.notes.trim() || null,
+            paymentMethod: formData.paymentMethod,
+            items: items.map((item) => ({
+              productId: item.productId,
+              grade: item.grade,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          }),
+        });
 
-      if (!response.ok || !result.success || !result.data) {
-        throw new Error(result.error || 'No se pudo completar la orden');
+        const result: ApiResponse<Order> = await response.json();
+        if (response.ok && result.success && result.data) {
+          orderId = result.data.id;
+        } else if (response.status !== 503) {
+          throw new Error(result.error || 'No se pudo completar la orden');
+        }
+      } catch (apiError) {
+        if (apiError instanceof Error) {
+          throw apiError;
+        }
       }
 
+      const paymentLabel = PAYMENT_METHOD_LABELS[formData.paymentMethod];
+      const orderLines = items
+        .map((item) => {
+          const productName = item.product?.name || `Producto ${item.productId.slice(0, 8)}`;
+          const gradeLabel = item.grade
+            ? ` (${item.grade === 'NORMAL' ? 'Grado normal' : 'Grado alto'})`
+            : '';
+          return `- ${productName}${gradeLabel}: ${item.quantity} x Q${item.price.toFixed(2)} = Q${(item.quantity * item.price).toFixed(2)}`;
+        })
+        .join('\n');
+
+      const whatsappMessage = [
+        'Hola, quiero confirmar este pedido de Guategambas:',
+        '',
+        `Pedido: ${orderId}`,
+        `Nombre: ${formData.customerName.trim()}`,
+        `Teléfono: ${formData.customerPhone.trim()}`,
+        `Ciudad: ${formData.city.trim()}`,
+        `Departamento: ${formData.department.trim() || 'N/A'}`,
+        `Dirección: ${formData.address.trim()}`,
+        `Método de pago: ${paymentLabel}`,
+        formData.notes.trim() ? `Notas: ${formData.notes.trim()}` : null,
+        '',
+        'Detalle:',
+        orderLines,
+        '',
+        `Subtotal: Q${subtotal.toFixed(2)}`,
+        `Envío: Q${shipping.toFixed(2)}`,
+        `Total: Q${(subtotal + shipping).toFixed(2)}`,
+      ]
+        .filter((line) => line !== null)
+        .join('\n');
+
+      const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+
       writeCart({ items: [] });
-      router.push(`/checkout/success?orderId=${result.data.id}`);
+      router.push(`/checkout/success?orderId=${encodeURIComponent(orderId)}`);
     } catch (err) {
       setPageError(err instanceof Error ? err.message : 'No se pudo completar la orden');
     } finally {
@@ -416,19 +461,6 @@ export default function CheckoutPage() {
                 required
               />
               <Input
-                label="Email"
-                type="email"
-                name="customerEmail"
-                placeholder="juan@example.com"
-                value={formData.customerEmail}
-                onChange={handleFieldChange}
-                error={errors.customerEmail}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Input
                 label="Teléfono"
                 name="customerPhone"
                 placeholder="+502 7XXX XXXX"
@@ -481,7 +513,7 @@ export default function CheckoutPage() {
                       onChange={handleFieldChange}
                       className="w-4 h-4 text-primary"
                     />
-                    <span className="text-sm font-medium text-dark">{method}</span>
+                    <span className="text-sm font-medium text-dark">{PAYMENT_METHOD_LABELS[method]}</span>
                   </label>
                 ))}
               </div>
@@ -511,7 +543,7 @@ export default function CheckoutPage() {
               className="w-full"
               disabled={items.length === 0 || submitting}
             >
-              {submitting ? 'Procesando...' : '✓ Confirmar pedido'}
+              {submitting ? 'Enviando...' : 'Enviar pedido por WhatsApp'}
             </Button>
           </form>
         </div>
@@ -519,7 +551,15 @@ export default function CheckoutPage() {
         {/* Sidebar - Order Summary */}
         <div className="lg:col-span-1">
           <div className="sticky top-24">
-            <CartSummary items={summaryItems} subtotal={subtotal} tax={tax} shipping={shipping} />
+            <CartSummary
+              items={summaryItems}
+              subtotal={subtotal}
+              tax={tax}
+              shipping={shipping}
+              primaryActionLabel={submitting ? 'Enviando...' : 'Enviar pedido por WhatsApp'}
+              primaryActionDisabled={items.length === 0 || submitting}
+              onPrimaryAction={() => formRef.current?.requestSubmit()}
+            />
             <div className="mt-4 card bg-blue-50 border border-blue-200">
               <p className="text-sm text-blue-800">
                 <span className="font-semibold">✓ Envíos a todo Guatemala</span>

@@ -15,7 +15,7 @@ interface ProductDetailProps {
 export default function ProductDetail({ product, onAddToCart }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
 
-  const imageUrl = product.image || '/placeholder-product.jpg';
+  const imageUrl = product.image || '/placeholder-product.svg';
 
   const handleAddToCart = () => {
     if (quantity > 0 && quantity <= product.stock) {

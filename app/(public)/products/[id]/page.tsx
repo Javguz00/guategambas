@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import ProductGrid from '@/components/products/ProductGrid';
 import { Button, Input, Loading } from '@/components/ui';
-import { addToCart } from '@/lib/cart';
+import { addToCart, openCartDrawer } from '@/lib/cart';
+import { isVideoMediaUrl } from '@/lib/media';
 import type { ApiResponse, Product } from '@/lib/types';
 
 export default function ProductDetailPage() {
@@ -20,6 +21,7 @@ export default function ProductDetailPage() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [grade, setGrade] = useState<'ALTO' | 'NORMAL'>('ALTO');
+  const [imageSrc, setImageSrc] = useState('/placeholder-product.svg');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -42,6 +44,7 @@ export default function ProductDetailPage() {
         const productResult: ApiResponse<Product> = await productResponse.json();
         const nextProduct = productResult.data || null;
         setProduct(nextProduct);
+        setImageSrc(nextProduct?.image || '/placeholder-product.svg');
         setQuantity(1);
 
         if (!nextProduct?.category?.slug) {
@@ -108,6 +111,7 @@ export default function ProductDetailPage() {
     );
 
     setFeedback(`${quantity} unidad${quantity === 1 ? '' : 'es'} agregada${quantity === 1 ? '' : 's'} al carrito.`);
+    openCartDrawer();
     window.setTimeout(() => setFeedback(null), 2500);
   };
 
@@ -128,7 +132,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  const imageUrl = product.image || '/placeholder-product.jpg';
+  const imageUrl = imageSrc || '/placeholder-product.svg';
+  const isVideo = isVideoMediaUrl(imageUrl);
   const isLowStock = product.stock > 0 && product.stock < 5;
   const categorySlug =
     typeof product.category === 'string' ? '' : (product.category?.slug || '');
@@ -184,13 +189,25 @@ export default function ProductDetailPage() {
         {/* Image Gallery */}
         <div className="space-y-4">
           <div className="relative h-96 w-full overflow-hidden rounded-lg bg-gray-100 shadow-card">
-            <Image 
-              src={imageUrl} 
-              alt={product.name} 
-              fill 
-              className="object-cover hover:scale-105 transition-transform duration-300"
-              priority 
-            />
+            {isVideo ? (
+              <video
+                src={imageUrl}
+                className="h-full w-full object-cover"
+                controls
+                muted
+                loop
+                playsInline
+              />
+            ) : (
+              <Image 
+                src={imageUrl} 
+                alt={product.name} 
+                fill 
+                className="object-cover hover:scale-105 transition-transform duration-300"
+                priority 
+                onError={() => setImageSrc('/placeholder-product.svg')}
+              />
+            )}
             {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <span className="text-white font-bold text-2xl">AGOTADO</span>

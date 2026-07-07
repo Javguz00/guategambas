@@ -88,6 +88,32 @@ model OrderItem {
   @@index([productId])
 }
 
+// Almacenamiento de multimedia para productos y hero
+model MediaAsset {
+  id        String   @id @default(cuid())
+  filename  String   @unique
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Mapeo de multimedia a producto o hero
+model MediaMapping {
+  id        String   @id @default(cuid())
+  productId String
+  filename  String
+  grade     String?
+  slot      String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([productId, slot])
+  @@index([productId, filename])
+}
+
 // Enums
 enum UserRole {
   ADMIN

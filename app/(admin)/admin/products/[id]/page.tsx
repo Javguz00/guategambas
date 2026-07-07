@@ -6,6 +6,7 @@ import Button from '@/app/components/ui/Button';
 import Input from '@/app/components/ui/Input';
 import Loading from '@/app/components/ui/Loading';
 import type { ApiResponse, Category, Product } from '@/lib/types';
+import { isVideoMediaUrl } from '@/lib/media';
 
 interface ProductFormState {
   name: string;
@@ -20,12 +21,17 @@ interface ProductFormState {
 type ProductFormErrors = Partial<Record<keyof ProductFormState, string>>;
 
 const isValidImageUrl = (value: string) => {
-  if (!value.trim()) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  if (trimmed.startsWith('/')) {
     return true;
   }
 
   try {
-    new URL(value);
+    new URL(trimmed);
     return true;
   } catch {
     return false;
@@ -92,6 +98,8 @@ export default function EditProductPage() {
   const [errors, setErrors] = useState<ProductFormErrors>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -206,6 +214,44 @@ export default function EditProductPage() {
       setPageError(err instanceof Error ? err.message : 'No se pudo actualizar el producto');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUploadImage = async () => {
+    if (!selectedImageFile || !productId) {
+      setPageError('Selecciona un archivo para subir.');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      setPageError(null);
+
+      const formData = new FormData();
+      formData.append('file', selectedImageFile);
+      formData.append('scope', 'product');
+      formData.append('productId', productId);
+      formData.append('title', selectedImageFile.name || '');
+
+      const response = await fetch('/api/media/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success || !result.data?.url) {
+        throw new Error(result.error || 'No se pudo subir la imagen');
+      }
+
+      setFormData((current) => ({
+        ...current,
+        image: result.data.url,
+      }));
+      setSelectedImageFile(null);
+    } catch (err) {
+      setPageError(err instanceof Error ? err.message : 'No se pudo subir la imagen');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -334,13 +380,53 @@ export default function EditProductPage() {
 
           <div className="admin-form-group">
             <Input
-              label="URL de imagen"
+              label="URL de imagen o video"
               name="image"
               value={formData.image}
               onChange={handleChange}
               error={errors.image}
               placeholder="https://..."
             />
+            {formData.image && (
+              <div className="mt-3">
+                {isVideoMediaUrl(formData.image) ? (
+                  <video
+                    src={formData.image}
+                    className="h-32 w-32 rounded-lg object-cover border border-gray-200"
+                    controls
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={formData.image}
+                    alt="Vista previa"
+                    className="h-32 w-32 rounded-lg object-cover border border-gray-200"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="admin-form-group">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subir multimedia</label>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <input
+                type="file"
+                accept="image/*,video/*"
+                onChange={(event) => setSelectedImageFile(event.target.files?.[0] || null)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleUploadImage}
+                isLoading={uploadingImage}
+                disabled={!selectedImageFile}
+              >
+                Subir
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">

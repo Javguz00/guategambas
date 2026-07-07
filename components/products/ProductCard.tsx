@@ -1,28 +1,67 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
 import { Button } from '@/components/ui';
+import { addToCart, openCartDrawer } from '@/lib/cart';
+import { isVideoMediaUrl } from '@/lib/media';
 import type { Product } from '@/lib/types';
 
 export default function ProductCard(product: Product) {
   const { id, name, price, image, stock, category } = product;
+  const [imageSrc, setImageSrc] = useState(image || '/placeholder-product.svg');
+  const [showGradePicker, setShowGradePicker] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const isLowStock = stock < 5;
   const isOutOfStock = stock === 0;
+  const categorySlug = typeof category === 'string' ? '' : category?.slug || '';
+  const supportsGrade = categorySlug === 'caridinas' || categorySlug === 'neocaridinas';
+  const isVideo = isVideoMediaUrl(imageSrc);
+
+  const addItem = (grade?: 'ALTO' | 'NORMAL') => {
+    const selectedGrade = supportsGrade ? (grade || 'ALTO') : undefined;
+    const currentPrice =
+      supportsGrade && selectedGrade === 'NORMAL'
+        ? Number((price * 0.85).toFixed(2))
+        : price;
+
+    addToCart(
+      {
+        productId: id,
+        variantKey: `${id}:${selectedGrade || 'STD'}`,
+        grade: selectedGrade,
+        quantity: 1,
+        price: currentPrice,
+      },
+      { maxStock: stock }
+    );
+
+    setShowGradePicker(false);
+    setFeedback(selectedGrade ? `Agregado (${selectedGrade === 'NORMAL' ? 'normal' : 'alto'})` : 'Agregado');
+    openCartDrawer();
+    window.setTimeout(() => setFeedback(''), 1500);
+  };
 
   return (
     <div className="card group overflow-hidden hover:shadow-hover transition-shadow">
       {/* Image Container */}
-      <div className="relative h-48 bg-gray-200 rounded-lg overflow-hidden mb-4">
-        {image ? (
+      <div className="relative h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
+        {isVideo ? (
+          <video
+            src={imageSrc}
+            className="h-full w-full object-cover"
+            muted
+            loop
+            playsInline
+            controls
+          />
+        ) : (
           <Image
-            src={image}
+            src={imageSrc}
             alt={name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImageSrc('/placeholder-product.svg')}
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-4xl">
-            🦐
-          </div>
         )}
 
         {/* Stock Badge */}
@@ -70,7 +109,27 @@ export default function ProductCard(product: Product) {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
+      <div className="space-y-2">
+        {showGradePicker && supportsGrade && !isOutOfStock && (
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2">
+            <button
+              type="button"
+              className="rounded-md border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-white"
+              onClick={() => addItem('ALTO')}
+            >
+              Grado alto
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-primary/40 px-2 py-2 text-xs font-semibold text-primary hover:bg-white"
+              onClick={() => addItem('NORMAL')}
+            >
+              Normal -15%
+            </button>
+          </div>
+        )}
+
+        <div className="flex gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -83,9 +142,18 @@ export default function ProductCard(product: Product) {
           size="sm"
           className="flex-1"
           disabled={isOutOfStock}
+          onClick={() => {
+            if (supportsGrade) {
+              setShowGradePicker((current) => !current);
+              return;
+            }
+            addItem();
+          }}
         >
           {isOutOfStock ? 'Agotado' : 'Agregar'}
         </Button>
+        </div>
+        {feedback && <p className="text-xs font-semibold text-green-700">{feedback}</p>}
       </div>
     </div>
   );

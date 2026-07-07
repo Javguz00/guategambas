@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui';
+import { isVideoMediaUrl } from '@/lib/media';
 
 interface CartItem {
   id: string;
@@ -16,6 +17,9 @@ interface CartSummaryProps {
   tax?: number;
   shipping?: number;
   loading?: boolean;
+  primaryActionLabel?: string;
+  primaryActionDisabled?: boolean;
+  onPrimaryAction?: () => void;
 }
 
 export default function CartSummary({
@@ -24,6 +28,9 @@ export default function CartSummary({
   tax = 0,
   shipping = 0,
   loading = false,
+  primaryActionLabel = 'Proceder al pago',
+  primaryActionDisabled = false,
+  onPrimaryAction,
 }: CartSummaryProps) {
   const total = subtotal + tax + shipping;
 
@@ -62,13 +69,23 @@ export default function CartSummary({
           {items.map((item) => (
             <div key={item.id} className="py-3 flex gap-4">
               {item.image && (
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  width={64}
-                  height={64}
-                  className="w-16 h-16 object-cover rounded"
-                />
+                isVideoMediaUrl(item.image) ? (
+                  <video
+                    src={item.image}
+                    className="w-16 h-16 object-cover rounded"
+                    muted
+                    loop
+                    playsInline
+                  />
+                ) : (
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    width={64}
+                    height={64}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                )
               )}
               <div className="flex-1">
                 <h4 className="font-semibold">{item.name}</h4>
@@ -113,7 +130,14 @@ export default function CartSummary({
 
       {/* Actions */}
       <div className="space-y-2">
-        <Button className="w-full">Proceder al pago</Button>
+        <Button
+          type="button"
+          className="w-full"
+          disabled={primaryActionDisabled}
+          onClick={onPrimaryAction}
+        >
+          {primaryActionLabel}
+        </Button>
         <Button variant="outline" className="w-full" asChild>
           <Link href="/products">Seguir comprando</Link>
         </Button>

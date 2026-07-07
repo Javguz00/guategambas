@@ -1,44 +1,146 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui';
+import type { ApiResponse, Product } from '@/lib/types';
+
+interface HeroMediaItem {
+  id: string;
+  filename: string;
+  url: string;
+  mimeType: string;
+  title?: string | null;
+}
 
 export default function HomePage() {
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [heroItems, setHeroItems] = useState<HeroMediaItem[]>([]);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [heroImageSrc, setHeroImageSrc] = useState('/placeholder-product.svg');
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [productsResponse, heroResponse] = await Promise.all([
+          fetch('/api/products', { cache: 'no-store' }),
+          fetch('/api/media/hero', { cache: 'no-store' }),
+        ]);
+
+        if (productsResponse.ok) {
+          const productsResult: ApiResponse<Product[]> = await productsResponse.json();
+          const products = productsResult.data || [];
+          setFeaturedProducts(products.filter((product) => product.featured).slice(0, 4));
+        }
+
+        if (heroResponse.ok) {
+          const heroResult: ApiResponse<HeroMediaItem[]> = await heroResponse.json();
+          const media = heroResult.data || [];
+          setHeroItems(media);
+          if (media.length > 0 && media[0].mimeType.startsWith('image/')) {
+            setHeroImageSrc(media[0].url);
+          }
+        }
+      } catch {
+        setFeaturedProducts([]);
+        setHeroItems([]);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (heroItems.length <= 1) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setHeroIndex((current) => (current + 1) % heroItems.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [heroItems.length]);
+
+  useEffect(() => {
+    const activeItem = heroItems[heroIndex];
+    if (activeItem && activeItem.mimeType.startsWith('image/')) {
+      setHeroImageSrc(activeItem.url);
+    }
+  }, [heroIndex, heroItems]);
+
+  const currentHero = useMemo(() => heroItems[heroIndex] || null, [heroItems, heroIndex]);
+
   return (
     <>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-red-600 to-secondary py-20 md:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-sky-700 to-secondary py-20 md:py-32">
         <div className="container grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div className="text-white">
-            <span className="inline-block text-4xl mb-4">🦐</span>
+            <div className="mb-4">
+              <Image
+                src="/photos/cliente/logo.jpg"
+                alt="Logo Guategambas"
+                width={64}
+                height={64}
+                className="h-16 w-16 rounded-full object-cover border border-white/40 shadow-lg"
+                priority
+              />
+            </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
               Gambas Ornamentales para tu Gambario
             </h1>
-            <p className="text-xl text-red-50 mb-8 leading-relaxed">
+            <p className="text-xl text-sky-50 mb-8 leading-relaxed">
               Especialistas en Neocaridinas, Caridinas e insumos para gambarios y acuarios en Guatemala.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="bg-white text-primary hover:bg-gray-100" asChild>
-                <Link href="/products">
-                  Explorar Catálogo →
-                </Link>
+                <Link href="/products">Explorar Catálogo →</Link>
               </Button>
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary" asChild>
-                <Link href="#contact">
-                  Contactarnos
-                </Link>
+                <Link href="#contact">Contactarnos</Link>
               </Button>
             </div>
           </div>
-          <div className="relative h-96 md:h-full min-h-96">
-            <div className="absolute inset-0 bg-gradient-to-br from-red-100 to-red-50 rounded-2xl flex items-center justify-center text-9xl shadow-2xl">
-              🦐
-            </div>
+
+          <div className="relative h-96 md:h-full min-h-96 overflow-hidden rounded-2xl shadow-2xl bg-black/10">
+            {currentHero ? (
+              currentHero.mimeType.startsWith('video/') ? (
+                <video
+                  key={currentHero.id}
+                  src={currentHero.url}
+                  className="h-full w-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                />
+              ) : (
+                <img
+                  src={heroImageSrc}
+                  alt={currentHero.title || 'Hero multimedia'}
+                  className="h-full w-full object-cover"
+                  onError={() => setHeroImageSrc('/placeholder-product.svg')}
+                />
+              )
+            ) : (
+              <img
+                src="/placeholder-product.svg"
+                alt="Hero multimedia pendiente"
+                className="h-full w-full object-cover"
+              />
+            )}
+
+            {currentHero?.title && (
+              <div className="absolute inset-x-0 bottom-0 bg-black/45 px-4 py-3 text-sm text-white">
+                {currentHero.title}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-16 md:py-24 bg-light">
         <div className="container">
           <div className="text-center mb-16">
@@ -74,7 +176,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Products Preview Section */}
       <section className="py-16 md:py-24 bg-white">
         <div className="container">
           <div className="text-center mb-16">
@@ -83,21 +184,40 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {[
-              { name: 'Neocaridina Bloody Mary', price: 'Q25.00', icon: '🦐' },
-              { name: 'Caridina CRS', price: 'Q55.00', icon: '💎' },
-              { name: 'Bacter AE', price: 'Q135.00', icon: '🧪' },
-              { name: 'Fluval Stratum', price: 'Q230.00', icon: '⚙️' },
-            ].map((product, idx) => (
-              <div key={idx} className="card hover:shadow-hover transition-all">
-                <div className="h-40 bg-gradient-to-br from-secondary to-teal-100 rounded-lg flex items-center justify-center mb-4 text-6xl">
-                  {product.icon}
+            {featuredProducts.length > 0 ? (
+              featuredProducts.map((product) => (
+                <div key={product.id} className="card hover:shadow-hover transition-all">
+                  <div className="h-40 rounded-lg overflow-hidden mb-4 bg-gray-100">
+                    <img
+                      src={product.image || '/placeholder-product.svg'}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                      onError={(event) => {
+                        event.currentTarget.src = '/placeholder-product.svg';
+                      }}
+                    />
+                  </div>
+                  <h3 className="font-semibold text-lg text-dark mb-2">{product.name}</h3>
+                  <p className="text-2xl font-bold text-primary mb-4">Q{product.price.toFixed(2)}</p>
+                  <Button size="sm" className="w-full" asChild>
+                    <Link href={`/products/${product.id}`}>Ver detalles</Link>
+                  </Button>
                 </div>
-                <h3 className="font-semibold text-lg text-dark mb-2">{product.name}</h3>
-                <p className="text-2xl font-bold text-primary mb-4">{product.price}</p>
-                <Button size="sm" className="w-full">Ver detalles</Button>
-              </div>
-            ))}
+              ))
+            ) : (
+              [1, 2, 3, 4].map((item) => (
+                <div key={item} className="card hover:shadow-hover transition-all">
+                  <div className="h-40 rounded-lg overflow-hidden mb-4 bg-gray-100">
+                    <img src="/placeholder-product.svg" alt="Producto pendiente" className="h-full w-full object-cover" />
+                  </div>
+                  <h3 className="font-semibold text-lg text-dark mb-2">Producto destacado</h3>
+                  <p className="text-2xl font-bold text-primary mb-4">Q0.00</p>
+                  <Button size="sm" className="w-full" asChild>
+                    <Link href="/products">Ver catálogo</Link>
+                  </Button>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="text-center">
@@ -108,57 +228,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-16 md:py-24 bg-light">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-dark mb-4">Lo que dicen nuestros clientes</h2>
-            <p className="text-lg text-gray-600">Experiencias de criadores y acuaristas</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Kevin Morales',
-                role: 'Criador de neocaridinas',
-                text: 'Excelente coloración y adaptación. Las Bloody Mary llegaron en perfecto estado.',
-                rating: 5,
-              },
-              {
-                name: 'Andrea Castillo',
-                role: 'Acuarista',
-                text: 'Me ayudaron con insumos y parámetros para mis caridinas. Muy buena asesoría.',
-                rating: 5,
-              },
-              {
-                name: 'Luis Mejía',
-                role: 'Hobby Shrimp Keeper',
-                text: 'Los alimentos y bacterias sí se sienten en la salud de la colonia. Recomendados.',
-                rating: 5,
-              },
-            ].map((testimonial, idx) => (
-              <div key={idx} className="card">
-                <div className="flex gap-1 mb-3">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <span key={i} className="text-yellow-400 text-lg">★</span>
-                  ))}
-                </div>
-                <p className="text-gray-600 italic mb-4">{testimonial.text}</p>
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="font-semibold text-dark">{testimonial.name}</p>
-                  <p className="text-sm text-gray-500">{testimonial.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section id="contact" className="py-16 md:py-24 bg-gradient-to-r from-primary to-red-700">
+      <section id="contact" className="py-16 md:py-24 bg-gradient-to-r from-primary to-sky-800">
         <div className="container text-center">
           <h2 className="text-4xl font-bold text-white mb-6">¿Listo para mejorar tu gambario?</h2>
-          <p className="text-xl text-red-50 mb-8">
+          <p className="text-xl text-sky-50 mb-8">
             Revisa neocaridinas, caridinas y todos los insumos para mantener un acuario sano y estable.
           </p>
           <Button size="lg" className="bg-white text-primary hover:bg-gray-100" asChild>

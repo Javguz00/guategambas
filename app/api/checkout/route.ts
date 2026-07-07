@@ -36,10 +36,10 @@ export async function POST(request: NextRequest) {
     if (!customerName || customerName.trim().length < 2) {
       return errorResponse('Invalid customer name', 400);
     }
-
-    if (!validateEmail(customerEmail)) {
-      return errorResponse('Invalid email', 400);
-    }
+    const normalizedEmail =
+      typeof customerEmail === 'string' && validateEmail(customerEmail.trim())
+        ? customerEmail.trim()
+        : `sin-correo+${Date.now()}@guategambas.local`;
 
     if (!validatePhone(customerPhone)) {
       return errorResponse('Invalid phone number', 400);
@@ -100,14 +100,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const shippingCost = 50;
+    const shippingCost = subtotal > 100 ? 0 : 50;
     const total = subtotal + shippingCost;
 
     // Crear orden
     const order = await prisma.order.create({
       data: {
         customerName,
-        customerEmail,
+        customerEmail: normalizedEmail,
         customerPhone,
         city,
         department,

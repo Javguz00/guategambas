@@ -115,6 +115,11 @@ export default function AdminDashboard() {
                 📊 Revisar inventario
               </Link>
             </Button>
+            <Button size="lg" variant="outline" className="w-full" asChild>
+              <Link href="/admin/media">
+                🎬 Gestionar multimedia
+              </Link>
+            </Button>
           </div>
         </section>
 
