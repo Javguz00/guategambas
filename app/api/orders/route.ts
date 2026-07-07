@@ -1,208 +1,179 @@
-import { NextResponse } from "next/server";
-import { Prisma, type PaymentMethod as PrismaPaymentMethod } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { sanitizeOrderPayload } from "@/lib/security";
-import { calculateShipping } from "@/lib/shipping";
-import { sendWhatsAppNotification } from "@/lib/notify";
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/db';
+import { successResponse, createdResponse, errorResponse } from '@/lib/api-helpers';
+import { isAdmin } from '@/lib/auth';
+import type { Order } from '@/lib/types';
 
-const allowedStatus = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
+const isDatabaseUnavailableError = (error: unknown) =>
+  error instanceof Error &&
+  (error.message.includes("Can't reach database server") ||
+    error.message.includes('PrismaClientInitializationError'));
 
-function buildDate(value: string | null) {
-  if (!value) return undefined;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date;
+interface OrderRequestItem {
+  productId: string;
+  quantity: number;
+  price: number;
 }
 
-export async function GET(request: Request) {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+const normalizeOrderItems = (value: unknown): OrderRequestItem[] => {
+  if (!Array.isArray(value)) {
+    return [];
   }
 
-  const url = new URL(request.url);
-  const city = url.searchParams.get("city")?.trim();
-  const q = url.searchParams.get("q")?.trim();
-  const paymentMethod = url.searchParams.get("paymentMethod")?.trim();
-  const from = buildDate(url.searchParams.get("from"));
-  const to = buildDate(url.searchParams.get("to"));
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
 
+      const candidate = item as Partial<OrderRequestItem>;
+      const quantity = Number(candidate.quantity);
+      const price = Number(candidate.price);
+
+      if (
+        typeof candidate.productId !== 'string' ||
+        candidate.productId.trim().length === 0 ||
+        Number.isNaN(quantity) ||
+        Number.isNaN(price)
+      ) {
+        return null;
+      }
+
+      return {
+        productId: candidate.productId,
+        quantity: Math.max(1, Math.floor(quantity)),
+        price: Math.max(0, price),
+      };
+    })
+    .filter((item): item is OrderRequestItem => item !== null);
+};
+
+export async function GET() {
   try {
+    // Only admin can see all orders
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      return errorResponse('Unauthorized', 401);
+    }
+
     const orders = await prisma.order.findMany({
-      where: {
-        ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
-        ...(paymentMethod ? { paymentMethod: paymentMethod as PrismaPaymentMethod } : {}),
-        ...(q
-          ? {
-              OR: [
-                { customerName: { contains: q, mode: "insensitive" } },
-                { whatsapp: { contains: q, mode: "insensitive" } },
-                { city: { contains: q, mode: "insensitive" } }
-              ]
-            }
-          : {}),
-        ...(from || to
-          ? {
-              createdAt: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {})
-              }
-            }
-          : {})
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
+      include: { items: { include: { product: true } } },
+      orderBy: { createdAt: 'desc' },
     });
-
-    return NextResponse.json({ orders });
-  } catch {
-    return NextResponse.json({ orders: [] });
+    return successResponse(orders);
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return successResponse([] as Order[], 'Sin base de datos configurada aun');
+    }
+    return errorResponse('Error fetching orders', 500);
   }
 }
 
-export async function POST(request: Request) {
-  const raw = await request.json();
-
-  // simple honeypot anti-bot
-  if (raw && typeof raw === "object" && "hp" in raw && Boolean((raw as Record<string, unknown>)["hp"])) {
-    return NextResponse.json({ error: "Bot detectado" }, { status: 400 });
-  }
-
-  const sanitized = sanitizeOrderPayload(raw);
-
-  if (!sanitized) {
-    return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
-  }
-
-  // server-side shipping validation
-  const cartItems = sanitized.items.map((it) => ({ productId: it.productId, variantId: it.variantId, quantity: it.quantity, price: it.unitPrice }));
-  const shippingCheck = calculateShipping({ departamento: sanitized.departamento, paymentMethod: sanitized.paymentMethod, orderTotal: sanitized.total, cartItems });
-  if (!shippingCheck.isValid) {
-    return NextResponse.json({ error: shippingCheck.message || "Envio no disponible" }, { status: 400 });
-  }
-
-  const shippingCost = shippingCheck.shippingCost;
-
-  const orderPayload = {
-    customerName: sanitized.customerName,
-    email: sanitized.email || null,
-    whatsapp: sanitized.whatsapp,
-    city: sanitized.city,
-    departamento: sanitized.departamento,
-    paymentMethod: sanitized.paymentMethod,
-    paymentStatus: "PENDING" as const,
-    paymentProvider: sanitized.paymentMethod === "TARJETA_CUBO" ? "CUBO" : "MANUAL",
-    paymentReference: null,
-    notes: sanitized.notes,
-    items: sanitized.items as unknown as Prisma.InputJsonValue,
-    total: sanitized.total,
-    shippingCost,
-    status: "PENDING" as const,
-    createdAt: new Date().toISOString(),
-    persisted: true
-  };
-
-  let order = {
-    id: "",
-    ...orderPayload
-  };
-
+export async function POST(request: NextRequest) {
   try {
-    await prisma.customer.upsert({
-      where: { whatsapp: sanitized.whatsapp },
-      create: {
-        fullName: sanitized.customerName,
-        whatsapp: sanitized.whatsapp,
-        department: sanitized.departamento || null,
-        notes: sanitized.notes || null
-      },
-      update: {
-        fullName: sanitized.customerName,
-        department: sanitized.departamento || null,
-        notes: sanitized.notes || null
-      }
+    const body = await request.json();
+    const {
+      customerName,
+      customerEmail,
+      customerPhone,
+      city,
+      department,
+      address,
+      notes,
+      items: rawItems,
+      subtotal,
+      shippingCost = 0,
+      total,
+      paymentMethod = 'CONTRAENTREGA',
+    } = body;
+    const items = normalizeOrderItems(rawItems);
+
+    // Validation
+    if (
+      !customerName ||
+      !customerEmail ||
+      !customerPhone ||
+      !city ||
+      !items ||
+      items.length === 0
+    ) {
+      return errorResponse('Missing required fields', 400);
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) {
+      return errorResponse('Invalid email format', 400);
+    }
+
+    // Validate and fetch products
+    const productIds = items.map((item) => item.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
     });
 
-    const createdOrder = await prisma.order.create({
+    if (products.length !== items.length) {
+      return errorResponse('One or more products not found', 400);
+    }
+
+    // Check stock availability
+    for (const item of items) {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product || product.stock < item.quantity) {
+        return errorResponse(
+          `Insufficient stock for product: ${product?.name}`,
+          400
+        );
+      }
+    }
+
+    // Create order
+    const order = await prisma.order.create({
       data: {
-        customerName: sanitized.customerName,
-        email: sanitized.email || null,
-        whatsapp: sanitized.whatsapp,
-        city: sanitized.city,
-        departamento: sanitized.departamento,
-        paymentMethod: sanitized.paymentMethod,
-        paymentStatus: "PENDING",
-        paymentProvider: sanitized.paymentMethod === "TARJETA_CUBO" ? "CUBO" : "MANUAL",
-        notes: sanitized.notes,
-        items: sanitized.items as unknown as Prisma.InputJsonValue,
-        total: sanitized.total,
-        shippingCost
-      }
+        customerName,
+        customerEmail,
+        customerPhone,
+        city,
+        department,
+        address,
+        notes,
+        subtotal: parseFloat(subtotal.toString()),
+        shippingCost: parseFloat(shippingCost.toString()),
+        total: parseFloat(total.toString()),
+        paymentMethod,
+        items: {
+          create: items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+      },
+      include: { items: { include: { product: true } } },
     });
 
-    order = { ...orderPayload, id: createdOrder.id, createdAt: createdOrder.createdAt.toISOString() };
-  } catch {
-    order = { ...orderPayload, id: `manual-${Date.now()}` };
-  }
-
-  // Notify admin via WhatsApp if possible (best-effort)
-  try {
-    const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER || "50243132549";
-    const itemsList = (sanitized.items || []) as Array<{ name?: string; variantLabel?: string; quantity?: number }>;
-    const lines = [
-      "Nuevo pedido registrado:",
-      ...itemsList.map((it) => `${it.name || "item"} - ${it.variantLabel || "-"} x ${it.quantity || 0}`),
-      "",
-      `Cliente: ${sanitized.customerName}`,
-      `WhatsApp: ${sanitized.whatsapp}`,
-      `Ciudad: ${sanitized.city}`,
-      `Departamento: ${sanitized.departamento}`,
-      `Metodo: ${sanitized.paymentMethod}`,
-      `Subtotal: Q ${sanitized.total.toFixed(2)}`,
-      `Envio: Q ${shippingCost.toFixed(2)}`,
-      shippingCheck.message ? `Nota de envío: ${shippingCheck.message}` : "",
-      `Total: Q ${(sanitized.total + shippingCost).toFixed(2)}`
-    ];
-
-    const msg = lines.join("\n");
-    // best-effort, do not block order creation
-    void sendWhatsAppNotification(adminNumber, msg);
-  } catch {
-    // ignore notification failures
-  }
-
-  // send email receipt to customer when email provided (best-effort)
-  try {
-    if (sanitized.email) {
-      const { sendEmailReceipt, renderReceiptTemplate } = await import("@/lib/mailer");
-      const html = renderReceiptTemplate({ ...sanitized });
-      void sendEmailReceipt(sanitized.email, "Confirmación de tu pedido — GuateGambas", html);
+    // Update product stock
+    for (const item of items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: {
+          stock: {
+            decrement: item.quantity,
+          },
+        },
+      });
     }
-  } catch {
-    // ignore
-  }
 
-  return NextResponse.json({ ok: true, order }, { status: 201 });
-}
-
-export async function PATCH(request: Request) {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  const body = (await request.json()) as { id?: string; status?: string };
-
-  if (!body.id || !body.status || !allowedStatus.includes(body.status as (typeof allowedStatus)[number])) {
-    return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
-  }
-
-  const order = await prisma.order.update({
-    where: { id: body.id },
-    data: {
-      status: body.status as "PENDING" | "CONFIRMED" | "DELIVERED"
+    return createdResponse(order, 'Order created successfully');
+  } catch (error) {
+    console.error('Error creating order:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para guardar ordenes.',
+        503
+      );
     }
-  });
-
-  return NextResponse.json({ ok: true, order });
+    return errorResponse('Error creating order', 500);
+  }
 }
