@@ -7,16 +7,23 @@ import {
 } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
 
-interface Params {
-  params: {
+interface RouteContext {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      return errorResponse('Unauthorized', 401);
+    }
+
+    const { id } = await context.params;
+
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { items: { include: { product: true } } },
     });
 
@@ -31,7 +38,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     // Check admin authentication
     const isAdminUser = await isAdmin();
@@ -39,12 +46,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
       return errorResponse('Unauthorized', 401);
     }
 
+    const { id } = await context.params;
+
     const body = await request.json();
     const { status, paymentStatus } = body;
 
     // Verify order exists
     const existingOrder = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingOrder) {
@@ -70,7 +79,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),

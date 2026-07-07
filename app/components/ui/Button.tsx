@@ -9,7 +9,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', isLoading = false, children, disabled, ...props }, ref) => {
+  (
+    { variant = 'primary', size = 'md', isLoading = false, children, disabled, className = '', ...props },
+    ref
+  ) => {
     const baseStyles = 'font-medium rounded transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
 
     const variantStyles = {
@@ -25,14 +28,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       lg: 'px-6 py-3 text-lg',
     };
 
-    const className = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${
+    const buttonClassName = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${
       disabled || isLoading ? 'opacity-50 cursor-not-allowed' : ''
-    }`;
+    } ${className}`;
 
     return (
       <button
         ref={ref}
-        className={className}
+        className={buttonClassName}
         disabled={disabled || isLoading}
         {...props}
       >
