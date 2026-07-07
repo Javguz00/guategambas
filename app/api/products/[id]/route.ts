@@ -6,6 +6,12 @@ import {
   notFoundResponse,
 } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
+import { getFallbackProductById } from '@/lib/fallback-catalog';
+
+const isDatabaseUnavailableError = (error: unknown) =>
+  error instanceof Error &&
+  (error.message.includes("Can't reach database server") ||
+    error.message.includes('PrismaClientInitializationError'));
 
 interface RouteContext {
   params: Promise<{
@@ -28,6 +34,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return successResponse(product);
   } catch (error) {
     console.error('Error fetching product:', error);
+    if (isDatabaseUnavailableError(error)) {
+      const { id } = await context.params;
+      const fallbackProduct = getFallbackProductById(id);
+      if (!fallbackProduct) {
+        return notFoundResponse('Product not found');
+      }
+      return successResponse(fallbackProduct);
+    }
     return errorResponse('Error fetching product', 500);
   }
 }
@@ -83,6 +97,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return successResponse(product, 'Product updated successfully');
   } catch (error) {
     console.error('Error updating product:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para editar productos.',
+        503
+      );
+    }
     return errorResponse('Error updating product', 500);
   }
 }
@@ -103,6 +123,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return successResponse(product, 'Product deleted successfully');
   } catch (error) {
     console.error('Error deleting product:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para eliminar productos.',
+        503
+      );
+    }
     return errorResponse('Error deleting product', 500);
   }
 }

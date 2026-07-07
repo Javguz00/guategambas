@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/db';
 import { successResponse, createdResponse, errorResponse } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
+import { getFallbackCategories } from '@/lib/fallback-catalog';
+
+const isDatabaseUnavailableError = (error: unknown) =>
+  error instanceof Error &&
+  (error.message.includes("Can't reach database server") ||
+    error.message.includes('PrismaClientInitializationError'));
 
 export async function GET() {
   try {
@@ -11,6 +17,12 @@ export async function GET() {
     return successResponse(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return successResponse(
+        getFallbackCategories(),
+        'Categorias en modo local mientras configuras la base de datos'
+      );
+    }
     return errorResponse('Error fetching categories', 500);
   }
 }
@@ -56,6 +68,12 @@ export async function POST(request: Request) {
     return createdResponse(category, 'Category created successfully');
   } catch (error) {
     console.error('Error creating category:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para administrar categorias.',
+        503
+      );
+    }
     return errorResponse('Error creating category', 500);
   }
 }

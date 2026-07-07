@@ -103,9 +103,9 @@ export default function CatalogPage() {
       {/* Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-dark mb-2">Catálogo de Gambas</h1>
+          <h1 className="text-4xl font-bold text-dark mb-2">Catálogo de gambas ornamentales</h1>
           <p className="text-gray-600">
-            Explora <span className="font-semibold text-primary">{filteredProducts.length}</span> producto{filteredProducts.length === 1 ? '' : 's'} disponible{filteredProducts.length === 1 ? '' : 's'}.
+            Explora <span className="font-semibold text-primary">{filteredProducts.length}</span> producto{filteredProducts.length === 1 ? '' : 's'} de neocaridinas, caridinas e insumos especializados.
           </p>
         </div>
         <div className="w-full md:max-w-md">

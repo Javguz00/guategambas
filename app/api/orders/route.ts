@@ -2,6 +2,12 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, createdResponse, errorResponse } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
+import type { Order } from '@/lib/types';
+
+const isDatabaseUnavailableError = (error: unknown) =>
+  error instanceof Error &&
+  (error.message.includes("Can't reach database server") ||
+    error.message.includes('PrismaClientInitializationError'));
 
 interface OrderRequestItem {
   productId: string;
@@ -57,6 +63,9 @@ export async function GET() {
     return successResponse(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return successResponse([] as Order[], 'Sin base de datos configurada aun');
+    }
     return errorResponse('Error fetching orders', 500);
   }
 }
@@ -159,6 +168,12 @@ export async function POST(request: NextRequest) {
     return createdResponse(order, 'Order created successfully');
   } catch (error) {
     console.error('Error creating order:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para guardar ordenes.',
+        503
+      );
+    }
     return errorResponse('Error creating order', 500);
   }
 }

@@ -9,11 +9,17 @@ import {
   getQueryParam,
 } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
+import { getFallbackProducts } from '@/lib/fallback-catalog';
+
+const isDatabaseUnavailableError = (error: unknown) =>
+  error instanceof Error &&
+  (error.message.includes("Can't reach database server") ||
+    error.message.includes('PrismaClientInitializationError'));
 
 export async function GET(request: NextRequest) {
-  try {
-    const category = getQueryParam(request, 'category');
+  const category = getQueryParam(request, 'category') || undefined;
 
+  try {
     const where: Prisma.ProductWhereInput = { active: true };
     if (category) {
       where.category = {
@@ -30,6 +36,12 @@ export async function GET(request: NextRequest) {
     return successResponse(products);
   } catch (error) {
     console.error('Error fetching products:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return successResponse(
+        getFallbackProducts(category),
+        'Catalogo en modo local mientras configuras la base de datos'
+      );
+    }
     return errorResponse('Error fetching products', 500);
   }
 }
@@ -77,6 +89,12 @@ export async function POST(request: NextRequest) {
     return createdResponse(product, 'Product created successfully');
   } catch (error) {
     console.error('Error creating product:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para administrar productos.',
+        503
+      );
+    }
     return errorResponse('Error creating product', 500);
   }
 }

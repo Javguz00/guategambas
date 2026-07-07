@@ -7,6 +7,11 @@ import {
 } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
 
+const isDatabaseUnavailableError = (error: unknown) =>
+  error instanceof Error &&
+  (error.message.includes("Can't reach database server") ||
+    error.message.includes('PrismaClientInitializationError'));
+
 interface RouteContext {
   params: Promise<{
     id: string;
@@ -34,6 +39,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return successResponse(order);
   } catch (error) {
     console.error('Error fetching order:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return successResponse(null, 'Sin base de datos configurada aun');
+    }
     return errorResponse('Error fetching order', 500);
   }
 }
@@ -90,6 +98,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return successResponse(order, 'Order updated successfully');
   } catch (error) {
     console.error('Error updating order:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para actualizar ordenes.',
+        503
+      );
+    }
     return errorResponse('Error updating order', 500);
   }
 }

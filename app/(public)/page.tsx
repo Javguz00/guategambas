@@ -12,10 +12,10 @@ export default function HomePage() {
           <div className="text-white">
             <span className="inline-block text-4xl mb-4">🦐</span>
             <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              Gambas Frescas de la Mejor Calidad
+              Gambas Ornamentales para tu Gambario
             </h1>
             <p className="text-xl text-red-50 mb-8 leading-relaxed">
-              Directamente a tu puerta. Cultivadas en Guatemala con estándares internacionales. Frescas, deliciosas y disponibles.
+              Especialistas en Neocaridinas, Caridinas e insumos para gambarios y acuarios en Guatemala.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="bg-white text-primary hover:bg-gray-100" asChild>
@@ -49,19 +49,19 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: '⭐',
-                title: 'Calidad Premium',
-                description: 'Seleccionamos las mejores gambas para garantizar frescura, sabor y textura óptimos.',
+                icon: '🧬',
+                title: 'Genética Seleccionada',
+                description: 'Líneas de Neocaridina y Caridina cuidadas para color, salud y reproducción estable.',
               },
               {
-                icon: '🚚',
-                title: 'Entrega Rápida',
-                description: 'Envío directo a tu domicilio en las principales ciudades de Guatemala en 24-48h.',
+                icon: '🧪',
+                title: 'Insumos Especializados',
+                description: 'Bacterias, alimentos y minerales para mantener parámetros ideales en tu gambario.',
               },
               {
-                icon: '💰',
-                title: 'Mejor Precio',
-                description: 'Compra directa del productor sin intermediarios innecesarios. Calidad a precio justo.',
+                icon: '📦',
+                title: 'Envíos Nacionales',
+                description: 'Coordinamos envíos a toda Guatemala con atención personalizada por WhatsApp.',
               },
             ].map((feature, idx) => (
               <div key={idx} className="card text-center">
@@ -79,15 +79,15 @@ export default function HomePage() {
         <div className="container">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-dark mb-4">Productos Destacados</h2>
-            <p className="text-lg text-gray-600">Explora nuestra variedad de gambas premium</p>
+            <p className="text-lg text-gray-600">Gambas ornamentales e insumos para acuarios y gambarios</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
-              { name: 'Gambas Jumbo', price: 'Q89.99', icon: '🦐' },
-              { name: 'Gambas Medianas', price: 'Q59.99', icon: '🦐' },
-              { name: 'Gambas Pequeñas', price: 'Q39.99', icon: '🦐' },
-              { name: 'Mix Gambas', price: 'Q69.99', icon: '🦐' },
+              { name: 'Neocaridina Bloody Mary', price: 'Q25.00', icon: '🦐' },
+              { name: 'Caridina CRS', price: 'Q55.00', icon: '💎' },
+              { name: 'Bacter AE', price: 'Q135.00', icon: '🧪' },
+              { name: 'Fluval Stratum', price: 'Q230.00', icon: '⚙️' },
             ].map((product, idx) => (
               <div key={idx} className="card hover:shadow-hover transition-all">
                 <div className="h-40 bg-gradient-to-br from-secondary to-teal-100 rounded-lg flex items-center justify-center mb-4 text-6xl">
@@ -113,27 +113,27 @@ export default function HomePage() {
         <div className="container">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-dark mb-4">Lo que dicen nuestros clientes</h2>
-            <p className="text-lg text-gray-600">Experiencias reales de clientes satisfechos</p>
+            <p className="text-lg text-gray-600">Experiencias de criadores y acuaristas</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                name: 'María González',
-                role: 'Chef Profesional',
-                text: '¡Excelente calidad! Las gambas llegan frescas y el servicio es impecable.',
+                name: 'Kevin Morales',
+                role: 'Criador de neocaridinas',
+                text: 'Excelente coloración y adaptación. Las Bloody Mary llegaron en perfecto estado.',
                 rating: 5,
               },
               {
-                name: 'Carlos López',
-                role: 'Restaurante El Patio',
-                text: 'Proveedor confiable. Cumplen con los tiempos de entrega y la calidad es consistente.',
+                name: 'Andrea Castillo',
+                role: 'Acuarista',
+                text: 'Me ayudaron con insumos y parámetros para mis caridinas. Muy buena asesoría.',
                 rating: 5,
               },
               {
-                name: 'Ana Rodríguez',
-                role: 'Cliente Regular',
-                text: 'Las mejores gambas que he probado en Guatemala. Altamente recomendado.',
+                name: 'Luis Mejía',
+                role: 'Hobby Shrimp Keeper',
+                text: 'Los alimentos y bacterias sí se sienten en la salud de la colonia. Recomendados.',
                 rating: 5,
               },
             ].map((testimonial, idx) => (
@@ -157,9 +157,9 @@ export default function HomePage() {
       {/* CTA Section */}
       <section id="contact" className="py-16 md:py-24 bg-gradient-to-r from-primary to-red-700">
         <div className="container text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">¿Listo para pedir?</h2>
+          <h2 className="text-4xl font-bold text-white mb-6">¿Listo para mejorar tu gambario?</h2>
           <p className="text-xl text-red-50 mb-8">
-            Explora nuestro catálogo completo y realiza tu pedido. Primera compra con envío especial.
+            Revisa neocaridinas, caridinas y todos los insumos para mantener un acuario sano y estable.
           </p>
           <Button size="lg" className="bg-white text-primary hover:bg-gray-100" asChild>
             <Link href="/products">Ir al Catálogo →</Link>
