@@ -26,7 +26,8 @@ export async function GET() {
         'Categorias en modo local mientras configuras la base de datos'
       );
     }
-    return errorResponse('Error fetching categories', 500);
+    const detail = error instanceof Error ? error.message : 'Unknown error';
+    return errorResponse(`Error fetching categories: ${detail}`, 500);
   }
 }
 

@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
         'Catalogo en modo local mientras configuras la base de datos'
       );
     }
-    return errorResponse('Error fetching products', 500);
+    const detail = error instanceof Error ? error.message : 'Unknown error';
+    return errorResponse(`Error fetching products: ${detail}`, 500);
   }
 }
 
