@@ -7,136 +7,111 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Order {
-  id               String        @id @default(cuid())
-  customerName     String
-  whatsapp         String
-  city             String
-  notes            String?
-  items            Json
-  total            Float
-  createdAt        DateTime      @default(now())
-  status           OrderStatus   @default(PENDING)
-  departamento     String?
-  paymentMethod    PaymentMethod @default(PAGO_CONTRAENTREGA)
-  shippingCost     Float         @default(0)
-  email            String?
-  paymentProvider  String?
-  paymentReference String?
-  paymentStatus    PaymentStatus @default(PENDING)
-}
-
-model Cart {
+// Modelo para administradores del sistema
+model User {
   id        String   @id @default(cuid())
-  key       String   @unique
-  data      Json
+  email     String   @unique
+  password  String   // hash bcrypt
+  name      String
+  role      UserRole @default(ADMIN)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Customer {
-  id         String   @id @default(cuid())
-  fullName   String
-  whatsapp   String   @unique
-  email      String?
-  department String?
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+// Categorías de gambas (ej: Criadas, Silvestres, Premium, etc)
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  icon        String?   // emoji o nombre de icono
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
-model CRMProduct {
-  id          String   @id @default(cuid())
+// Productos (gambas)
+model Product {
+  id          String      @id @default(cuid())
   name        String
-  category    String
+  slug        String      @unique
   description String?
-  basePrice   Float
-  stock       Int?
-  active      Boolean  @default(true)
-  gradeLabel  String?
-  unitLabel   String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  price       Float       // precio en GTQ
+  stock       Int         @default(0) // cantidad disponible
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  image       String?     // URL o nombre del archivo de imagen
+  active      Boolean     @default(true)
+  featured    Boolean     @default(false) // para destacar en la página principal
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([categoryId])
+  @@index([slug])
 }
 
-model PaymentAttempt {
-  id                String        @id @default(cuid())
-  orderId           String?
-  provider          String        @default("CUBO")
-  providerReference String?
-  amount            Float
-  currency          String        @default("GTQ")
-  status            PaymentStatus @default(DRAFT)
-  customerName      String
-  customerWhatsapp  String
-  metadata          Json?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+// Órdenes de clientes
+model Order {
+  id              String      @id @default(cuid())
+  customerName    String
+  customerEmail   String
+  customerPhone   String      // WhatsApp o teléfono
+  city            String
+  department      String?     // departamento de Guatemala
+  address         String?     // dirección de entrega
+  notes           String?     // notas especiales
+  items           OrderItem[]
+  subtotal        Float       // suma de items
+  shippingCost    Float       @default(0)
+  total           Float       // subtotal + shipping
+  status          OrderStatus @default(PENDING)
+  paymentMethod   PaymentMethod @default(CONTRAENTREGA)
+  paymentStatus   PaymentStatus @default(PENDING)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }
 
-model CatalogVariantState {
-  productId      String
-  variantId      String
-  stockAvailable Int?
-  isActive       Boolean  @default(true)
-  updatedAt      DateTime @updatedAt
-  priceOverride  Float?
-
-  @@id([productId, variantId])
-}
-
-model CatalogProductState {
-  productId   String   @id
-  name        String?
-  category    String?
-  description String?
-  highlight   String?
-  note        String?
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
-}
-
-model MediaAsset {
+// Items dentro de cada orden
+model OrderItem {
   id        String   @id @default(cuid())
-  filename  String   @unique
-  mimeType  String
-  data      Bytes
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model MediaMapping {
-  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  product   Product  @relation(fields: [productId], references: [id])
   productId String
-  filename  String
-  grade     String?
-  slot      String?
-  title     String?
+  quantity  Int
+  price     Float    // precio al momento de la compra
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
+  @@index([orderId])
   @@index([productId])
-  @@index([productId, slot])
-  @@index([productId, filename])
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  OWNER
 }
 
 enum OrderStatus {
-  PENDING
-  CONFIRMED
-  DELIVERED
+  PENDING       // Pedido recibido, esperando confirmación
+  CONFIRMED     // Confirmado por admin
+  PROCESSING    // En preparación
+  SHIPPED       // Enviado
+  DELIVERED     // Entregado
+  CANCELLED     // Cancelado
 }
 
 enum PaymentMethod {
-  DEPOSITO_PREVIO
-  PAGO_CONTRAENTREGA
-  TARJETA_CUBO
+  CONTRAENTREGA      // Pago contra entrega
+  DEPOSITO_PREVIO    // Depósito previo
+  TARJETA           // Tarjeta de crédito/débito
 }
 
 enum PaymentStatus {
-  DRAFT
-  PENDING
-  PAID
-  FAILED
-  CANCELED
+  PENDING   // Esperando pago
+  PAID      // Pagado
+  FAILED    // Falló el pago
+  CANCELLED // Cancelado
 }
