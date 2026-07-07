@@ -19,6 +19,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [grade, setGrade] = useState<'ALTO' | 'NORMAL'>('ALTO');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -87,11 +88,21 @@ export default function ProductDetailPage() {
       return;
     }
 
+    const currentCategorySlug =
+      typeof product.category === 'string' ? '' : (product.category?.slug || '');
+    const hasGrade = currentCategorySlug === 'neocaridinas' || currentCategorySlug === 'caridinas';
+    const currentPrice =
+      hasGrade && grade === 'NORMAL'
+        ? Number((product.price * 0.85).toFixed(2))
+        : product.price;
+
     addToCart(
       {
         productId: product.id,
+        variantKey: `${product.id}:${hasGrade ? grade : 'STD'}`,
+        grade: hasGrade ? grade : undefined,
         quantity,
-        price: product.price,
+        price: currentPrice,
       },
       { maxStock: product.stock }
     );
@@ -119,6 +130,13 @@ export default function ProductDetailPage() {
 
   const imageUrl = product.image || '/placeholder-product.jpg';
   const isLowStock = product.stock > 0 && product.stock < 5;
+  const categorySlug =
+    typeof product.category === 'string' ? '' : (product.category?.slug || '');
+  const supportsGrade = categorySlug === 'neocaridinas' || categorySlug === 'caridinas';
+  const unitPrice =
+    supportsGrade && grade === 'NORMAL'
+      ? Number((product.price * 0.85).toFixed(2))
+      : product.price;
 
   return (
     <div className="space-y-8 py-8">
@@ -204,8 +222,13 @@ export default function ProductDetailPage() {
           <div className="space-y-1">
             <p className="text-sm text-gray-500">Precio</p>
             <p className="text-4xl font-bold text-primary">
-              Q{product.price.toFixed(2)}
+              Q{unitPrice.toFixed(2)}
             </p>
+            {supportsGrade && grade === 'NORMAL' && (
+              <p className="text-sm text-gray-500 line-through">
+                Precio grado alto: Q{product.price.toFixed(2)}
+              </p>
+            )}
           </div>
 
           {/* Stock Status */}
@@ -236,6 +259,36 @@ export default function ProductDetailPage() {
           {/* Add to Cart Section */}
           {product.stock > 0 ? (
             <div className="border-t pt-6 space-y-4">
+              {supportsGrade && (
+                <div>
+                  <label className="block text-sm font-semibold text-dark mb-3">Grado:</label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setGrade('ALTO')}
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+                        grade === 'ALTO'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      Grado alto (Q{product.price.toFixed(2)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGrade('NORMAL')}
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+                        grade === 'NORMAL'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      Grado normal (-15%) Q{(product.price * 0.85).toFixed(2)}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Quantity Selector */}
               <div>
                 <label className="block text-sm font-semibold text-dark mb-3">Cantidad:</label>

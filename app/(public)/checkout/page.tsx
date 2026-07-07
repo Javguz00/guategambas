@@ -100,8 +100,10 @@ export default function CheckoutPage() {
 
   const summaryItems = useMemo(() =>
     items.map((item) => ({
-      id: item.productId,
-      name: item.product?.name || `Producto ${item.productId.slice(0, 8)}`,
+      id: item.variantKey || item.productId,
+      name: item.grade
+        ? `${item.product?.name || `Producto ${item.productId.slice(0, 8)}`} (${item.grade === 'NORMAL' ? 'Grado normal' : 'Grado alto'})`
+        : item.product?.name || `Producto ${item.productId.slice(0, 8)}`,
       price: item.price,
       quantity: item.quantity,
       image: item.product?.image || undefined,
@@ -174,6 +176,8 @@ export default function CheckoutPage() {
     writeCart({
       items: items.map((item) => ({
         productId: item.productId,
+        variantKey: item.variantKey,
+        grade: item.grade,
         quantity: item.quantity,
         price: item.price,
       })),
@@ -196,12 +200,12 @@ export default function CheckoutPage() {
     setPageError(null);
   };
 
-  const handleQuantityChange = (productId: string, quantityValue: string) => {
+  const handleQuantityChange = (variantKey: string, quantityValue: string) => {
     const requestedQuantity = Number(quantityValue);
 
     setItems((currentItems) =>
       currentItems.map((item) => {
-        if (item.productId !== productId) {
+        if ((item.variantKey || item.productId) !== variantKey) {
           return item;
         }
 
@@ -222,8 +226,10 @@ export default function CheckoutPage() {
     }));
   };
 
-  const handleRemoveItem = (productId: string) => {
-    setItems((currentItems) => currentItems.filter((item) => item.productId !== productId));
+  const handleRemoveItem = (variantKey: string) => {
+    setItems((currentItems) =>
+      currentItems.filter((item) => (item.variantKey || item.productId) !== variantKey)
+    );
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -255,6 +261,7 @@ export default function CheckoutPage() {
           paymentMethod: formData.paymentMethod,
           items: items.map((item) => ({
             productId: item.productId,
+            grade: item.grade,
             quantity: item.quantity,
             price: item.price,
           })),
@@ -330,11 +337,16 @@ export default function CheckoutPage() {
                   </thead>
                   <tbody className="divide-y">
                     {items.map((item, index) => (
-                      <tr key={item.productId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <tr key={item.variantKey || item.productId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         <td className="px-6 py-4">
                           <div className="font-medium text-dark">
                             {item.product?.name || `Producto ${item.productId.slice(0, 8)}`}
                           </div>
+                          {item.grade && (
+                            <div className="text-xs text-primary mt-1 font-medium">
+                              {item.grade === 'NORMAL' ? 'Grado normal (-15%)' : 'Grado alto'}
+                            </div>
+                          )}
                           <div className="text-xs text-gray-500 mt-1">
                             {typeof item.product?.category === 'string' 
                               ? item.product.category 
@@ -350,7 +362,9 @@ export default function CheckoutPage() {
                             min={1}
                             max={item.product?.stock || undefined}
                             value={item.quantity}
-                            onChange={(event) => handleQuantityChange(item.productId, event.target.value)}
+                            onChange={(event) =>
+                              handleQuantityChange(item.variantKey || item.productId, event.target.value)
+                            }
                             className="w-16 rounded-lg border border-gray-300 px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-primary"
                           />
                         </td>
@@ -361,7 +375,7 @@ export default function CheckoutPage() {
                           <Button
                             size="sm"
                             variant="danger"
-                            onClick={() => handleRemoveItem(item.productId)}
+                            onClick={() => handleRemoveItem(item.variantKey || item.productId)}
                           >
                             Eliminar
                           </Button>

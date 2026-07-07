@@ -4,217 +4,389 @@ const now = new Date();
 
 const categories: Category[] = [
   {
-    id: 'cat-neocaridinas',
-    name: 'Neocaridinas',
-    slug: 'neocaridinas',
-    description: 'Líneas Neocaridina para gambarios plantados y de bajo mantenimiento.',
-    icon: '🦐',
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
     id: 'cat-caridinas',
     name: 'Caridinas',
     slug: 'caridinas',
-    description: 'Caridinas selectas para criadores y gambarios especializados.',
+    description: 'Caridinas ornamentales para gambarios especializados.',
     icon: '💎',
     createdAt: now,
     updatedAt: now,
   },
   {
-    id: 'cat-alimentos',
-    name: 'Alimentos y bacterias',
-    slug: 'alimentos-bacterias',
-    description: 'Nutricion y suplementos para mantener colonias saludables.',
-    icon: '🥬',
+    id: 'cat-neocaridinas',
+    name: 'Neocaridinas',
+    slug: 'neocaridinas',
+    description: 'Neocaridinas de grado alto y normal.',
+    icon: '🦐',
     createdAt: now,
     updatedAt: now,
   },
   {
-    id: 'cat-insumos',
-    name: 'Insumos para gambario y acuario',
-    slug: 'insumos-gambario-acuario',
-    description: 'Sustratos, minerales, filtros y accesorios para tus urnas.',
+    id: 'cat-suplementos',
+    name: 'Suplementos',
+    slug: 'suplementos',
+    description: 'Alimentos, bacterias y suplementos para gambas.',
+    icon: '🧪',
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: 'cat-accesorios',
+    name: 'Accesorios',
+    slug: 'accesorios',
+    description: 'Insumos para gambarios y acuarios.',
     icon: '⚙️',
     createdAt: now,
     updatedAt: now,
   },
 ];
 
-const findCategory = (slug: string): Category =>
+const categoryBySlug = (slug: string): Category =>
   categories.find((category) => category.slug === slug) || categories[0];
 
+const product = (
+  id: string,
+  name: string,
+  slug: string,
+  price: number,
+  stock: number,
+  categorySlug: string,
+  description: string,
+  image?: string,
+  featured = false
+): Product => ({
+  id,
+  name,
+  slug,
+  price,
+  stock,
+  categoryId: categoryBySlug(categorySlug).id,
+  category: categoryBySlug(categorySlug),
+  description,
+  image: image || null,
+  active: true,
+  featured,
+  createdAt: now,
+  updatedAt: now,
+});
+
 const products: Product[] = [
-  {
-    id: 'prod-bloody-mary',
-    name: 'Neocaridina Bloody Mary',
-    slug: 'neocaridina-bloody-mary',
-    description: 'Color rojo intenso, ideal para colonias vistosas en gambario plantado.',
-    price: 25,
-    stock: 45,
-    categoryId: 'cat-neocaridinas',
-    category: findCategory('neocaridinas'),
-    image: '/photos/cliente/bloody-mary-alto-grado.jpg',
-    active: true,
-    featured: true,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-green-jade',
-    name: 'Neocaridina Green Jade',
-    slug: 'neocaridina-green-jade',
-    description: 'Variedad verde vibrante, muy buscada para aquascaping.',
-    price: 28,
-    stock: 30,
-    categoryId: 'cat-neocaridinas',
-    category: findCategory('neocaridinas'),
-    image: '/photos/cliente/green-jade-1.jpg',
-    active: true,
-    featured: true,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-cherry',
-    name: 'Neocaridina Cherry',
-    slug: 'neocaridina-cherry',
-    description: 'Excelente opcion para iniciar en el mundo de las gambas ornamentales.',
-    price: 18,
-    stock: 60,
-    categoryId: 'cat-neocaridinas',
-    category: findCategory('neocaridinas'),
-    image: '/photos/cherries/cherrys.jpg',
-    active: true,
-    featured: false,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-crs',
-    name: 'Caridina CRS',
-    slug: 'caridina-crs',
-    description: 'Crystal Red Shrimp para gambarios maduros de parametros estables.',
-    price: 55,
-    stock: 24,
-    categoryId: 'cat-caridinas',
-    category: findCategory('caridinas'),
-    image: '/photos/cliente/crs.jpg',
-    active: true,
-    featured: true,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-blue-bolt',
-    name: 'Caridina Blue Bolt',
-    slug: 'caridina-blue-bolt',
-    description: 'Coloracion azul y blanca premium, excelente para lineas selectas.',
-    price: 75,
-    stock: 15,
-    categoryId: 'cat-caridinas',
-    category: findCategory('caridinas'),
-    image: '/photos/cliente/blue-bolt.jpg',
-    active: true,
-    featured: true,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-golden-bee',
-    name: 'Caridina Golden Bee',
-    slug: 'caridina-golden-bee',
-    description: 'Variedad clara y elegante para acuarios de exhibicion.',
-    price: 68,
-    stock: 20,
-    categoryId: 'cat-caridinas',
-    category: findCategory('caridinas'),
-    image: '/photos/golden-bee/golden-bee.jpg',
-    active: true,
-    featured: false,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-bacter-ae',
-    name: 'Bacter AE',
-    slug: 'bacter-ae',
-    description: 'Suplemento bacteriano para biofilm y mejor desarrollo de crias.',
-    price: 135,
-    stock: 18,
-    categoryId: 'cat-alimentos',
-    category: findCategory('alimentos-bacterias'),
-    image: '/photos/cliente/bacter-ae.jpg',
-    active: true,
-    featured: true,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-food-20g',
-    name: 'Alimento premium 20g',
-    slug: 'alimento-premium-20g',
-    description: 'Alimento balanceado para neocaridinas y caridinas.',
-    price: 45,
-    stock: 35,
-    categoryId: 'cat-alimentos',
-    category: findCategory('alimentos-bacterias'),
-    image: '/photos/cliente/alimento-20-gramos.jpg',
-    active: true,
-    featured: false,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-salty-shrimp',
-    name: 'Salty Shrimp GH+',
-    slug: 'salty-shrimp-gh-plus',
-    description: 'Mineralizador para preparar agua estable para caridinas.',
-    price: 160,
-    stock: 12,
-    categoryId: 'cat-insumos',
-    category: findCategory('insumos-gambario-acuario'),
-    image: '/photos/salty-shrimp-gh/salty-shrimp-gh.jpg',
-    active: true,
-    featured: false,
-    createdAt: now,
-    updatedAt: now,
-  },
-  {
-    id: 'prod-fluval-stratum',
-    name: 'Fluval Stratum',
-    slug: 'fluval-stratum',
-    description: 'Sustrato activo recomendado para gambarios y acuarios plantados.',
-    price: 230,
-    stock: 10,
-    categoryId: 'cat-insumos',
-    category: findCategory('insumos-gambario-acuario'),
-    image: '/photos/fluval-stratum/sustrato-fluval-stratum.jpg',
-    active: true,
-    featured: false,
-    createdAt: now,
-    updatedAt: now,
-  },
+  // Caridinas (precio base grado alto)
+  product(
+    'prod-car-golden-bee',
+    'Golden Bee (5 unidades)',
+    'golden-bee-5-unidades',
+    200,
+    20,
+    'caridinas',
+    'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/golden-bee/golden-bee.jpg',
+    true
+  ),
+  product(
+    'prod-car-tibee',
+    'TiBee (5 unidades)',
+    'tibee-5-unidades',
+    200,
+    15,
+    'caridinas',
+    'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/tibee/tibee.jpg'
+  ),
+  product(
+    'prod-car-crs',
+    'CRS (5 unidades)',
+    'crs-5-unidades',
+    200,
+    15,
+    'caridinas',
+    'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/cliente/crs.jpg'
+  ),
+  product(
+    'prod-car-cbs',
+    'CBS (5 unidades)',
+    'cbs-5-unidades',
+    200,
+    12,
+    'caridinas',
+    'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/taiwan-cbs/taiwan-cbs.jpg'
+  ),
+  product(
+    'prod-car-bluebolt',
+    'BlueBolt (5 unidades)',
+    'bluebolt-5-unidades',
+    1000,
+    8,
+    'caridinas',
+    'Pack de 5 por Q1000. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/cliente/blue-bolt.jpg',
+    true
+  ),
+
+  // Neocaridinas (precio base grado alto)
+  product(
+    'prod-neo-bloody-mary',
+    'Bloody Mary (5 unidades)',
+    'bloody-mary-5-unidades',
+    200,
+    30,
+    'neocaridinas',
+    'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/cliente/bloody-mary-alto-grado.jpg',
+    true
+  ),
+  product(
+    'prod-neo-green-jade',
+    'Green Jade (unidad)',
+    'green-jade-unidad',
+    125,
+    25,
+    'neocaridinas',
+    'Q125 cada una (5 por Q625). En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/cliente/green-jade-1.jpg'
+  ),
+  product(
+    'prod-neo-orange',
+    'Orange (5 unidades)',
+    'orange-5-unidades',
+    150,
+    20,
+    'neocaridinas',
+    'Pack de 5 por Q150. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/orange/orange.jpg'
+  ),
+  product(
+    'prod-neo-blue-diamond',
+    'Blue Diamond (5 unidades)',
+    'blue-diamond-5-unidades',
+    200,
+    15,
+    'neocaridinas',
+    'Pack de 5 por Q200. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/blue-velvet/blue-velvet.jpg'
+  ),
+  product(
+    'prod-neo-cherries',
+    'Cherries (unidad)',
+    'cherries-unidad',
+    15,
+    80,
+    'neocaridinas',
+    'Q15 cada una. Promocion: 10 por Q150. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/cherries/cherrys.jpg'
+  ),
+  product(
+    'prod-neo-black',
+    'Black (5 unidades)',
+    'black-5-unidades',
+    175,
+    20,
+    'neocaridinas',
+    'Pack de 5 por Q175. En detalle puedes elegir grado normal con 15% de descuento.',
+    '/photos/black-neocaridina/black.jpg'
+  ),
+
+  // Suplementos
+  product(
+    'prod-sup-salty-shrimp',
+    'Salty Shrimp GH+ (porcion 20 litros)',
+    'salty-shrimp-gh-20-litros',
+    10,
+    200,
+    'suplementos',
+    'Q10 por porcion. Promocion 3 porciones por Q25.',
+    '/photos/salty-shrimp-gh/salty-shrimp-gh.jpg',
+    true
+  ),
+  product(
+    'prod-sup-bacter-ae',
+    'Bacter AE (10 gramos)',
+    'bacter-ae-10-gramos',
+    35,
+    45,
+    'suplementos',
+    'Suplemento bacteriano para biofilm y desarrollo de crias.',
+    '/photos/cliente/bacter-ae.jpg'
+  ),
+  product(
+    'prod-sup-magic-powder',
+    'Magic Powder SL Aqua (10 gramos)',
+    'magic-powder-sl-aqua-10-gramos',
+    35,
+    40,
+    'suplementos',
+    'Alimento en polvo para juveniles y mantenimiento de colonia.',
+    '/photos/magic-powder/magic-powder.jpg'
+  ),
+
+  // Accesorios
+  product(
+    'prod-acc-cholla-restos',
+    'Tronco de Cholla (restos)',
+    'tronco-cholla-restos',
+    5,
+    100,
+    'accesorios',
+    'Restos de cholla para biofilm y refugio.'
+  ),
+  product(
+    'prod-acc-cholla-4',
+    'Tronco de Cholla 4 pulgadas',
+    'tronco-cholla-4-pulgadas',
+    10,
+    60,
+    'accesorios',
+    'Tronco de cholla 4 pulgadas.',
+    '/photos/tronco-cholla/tronco-cholla.jpg'
+  ),
+  product(
+    'prod-acc-cholla-5',
+    'Tronco de Cholla 5 pulgadas',
+    'tronco-cholla-5-pulgadas',
+    15,
+    60,
+    'accesorios',
+    'Tronco de cholla 5 pulgadas.'
+  ),
+  product(
+    'prod-acc-cholla-6',
+    'Tronco de Cholla 6 pulgadas',
+    'tronco-cholla-6-pulgadas',
+    20,
+    60,
+    'accesorios',
+    'Tronco de cholla 6 pulgadas.'
+  ),
+  product(
+    'prod-acc-cholla-6-grueso',
+    'Tronco de Cholla 6 pulgadas grueso',
+    'tronco-cholla-6-pulgadas-grueso',
+    25,
+    40,
+    'accesorios',
+    'Tronco de cholla 6 pulgadas version gruesa.'
+  ),
+  product(
+    'prod-acc-redes',
+    'Red expansible',
+    'red-expansible',
+    25,
+    30,
+    'accesorios',
+    'Red para manejo y traslado seguro de gambas.'
+  ),
+  product(
+    'prod-acc-valvula-aire',
+    'Valvula de flujo de aire',
+    'valvula-flujo-aire',
+    5,
+    80,
+    'accesorios',
+    'Valvula para regular oxigenacion.'
+  ),
+  product(
+    'prod-acc-hojas-almendro',
+    'Hojas de almendro (10 unidades)',
+    'hojas-almendro-10-unidades',
+    35,
+    40,
+    'accesorios',
+    'Pack de 10 hojas de almendro para acondicionar agua.',
+    '/photos/almendro-hojas-10/almendro-hojas-10.jpg'
+  ),
+  product(
+    'prod-acc-filtro-pulmon',
+    'Filtro de pulmon con material filtrante',
+    'filtro-pulmon-material-filtrante',
+    110,
+    20,
+    'accesorios',
+    'Filtro completo para gambarios.',
+    '/photos/filtro-pulmon-material/filtro-pulmon-material.jpg'
+  ),
+  product(
+    'prod-acc-bomba-sobo-1',
+    'Bomba de aire Sobo (1 salida)',
+    'bomba-aire-sobo-1-salida',
+    45,
+    25,
+    'accesorios',
+    'Bomba de aire de 1 salida.',
+    '/photos/bomba-sobo/bomba-sobo.jpg'
+  ),
+  product(
+    'prod-acc-bomba-sobo-2',
+    'Bomba de aire Sobo (2 salidas)',
+    'bomba-aire-sobo-2-salidas',
+    70,
+    20,
+    'accesorios',
+    'Bomba de aire de 2 salidas.'
+  ),
+  product(
+    'prod-acc-fluval-libra',
+    'Sustrato Fluval Stratum (libra)',
+    'sustrato-fluval-stratum-libra',
+    55,
+    100,
+    'accesorios',
+    'Q55 por libra.',
+    '/photos/fluval-stratum/sustrato-fluval-stratum.jpg',
+    true
+  ),
+  product(
+    'prod-acc-shrimp-sand-libra',
+    'Shrimp Sand (libra)',
+    'shrimp-sand-libra',
+    35,
+    120,
+    'accesorios',
+    'Q35 por libra.',
+    '/photos/shrimp-sand/shrimp-sand.jpg'
+  ),
+  product(
+    'prod-acc-wa-30',
+    'Lampara WA One Energy 30 cm',
+    'lampara-wa-one-energy-30-cm',
+    100,
+    35,
+    'accesorios',
+    'Lampara WA One Energy 30 cm.',
+    '/photos/wanenergy-30/wanenergy-30.jpg'
+  ),
+  product(
+    'prod-acc-wa-60',
+    'Lampara WA One Energy 60 cm',
+    'lampara-wa-one-energy-60-cm',
+    150,
+    35,
+    'accesorios',
+    'Lampara WA One Energy 60 cm.',
+    '/photos/wanenergy-60/wanenergy-60.jpg'
+  ),
 ];
 
 export function getFallbackCategories(): Array<Category & { _count: { products: number } }> {
   return categories.map((category) => ({
     ...category,
     _count: {
-      products: products.filter((product) => product.categoryId === category.id).length,
+      products: products.filter((item) => item.categoryId === category.id).length,
     },
   }));
 }
 
 export function getFallbackProducts(categorySlug?: string): Product[] {
-  const activeProducts = products.filter((product) => product.active);
+  const activeProducts = products.filter((item) => item.active);
   if (!categorySlug) {
     return activeProducts;
   }
 
-  return activeProducts.filter((product) => product.category?.slug === categorySlug);
+  return activeProducts.filter((item) => item.category?.slug === categorySlug);
 }
 
 export function getFallbackProductById(id: string): Product | null {
-  return products.find((product) => product.id === id) || null;
+  return products.find((item) => item.id === id) || null;
 }
+

@@ -3,6 +3,20 @@ import { prisma } from '@/lib/db';
 import { createdResponse, errorResponse } from '@/lib/api-helpers';
 import { validateEmail, validatePhone } from '@/lib/validators';
 
+interface CheckoutItem {
+  productId: string;
+  quantity: number;
+  price: number;
+  grade?: 'ALTO' | 'NORMAL';
+}
+
+const isDatabaseUnavailableError = (error: unknown) =>
+  error instanceof Error &&
+  (error.message.includes("Can't reach database server") ||
+    error.message.includes('PrismaClientInitializationError'));
+
+const toMoney = (value: number) => Number(value.toFixed(2));
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -43,9 +57,10 @@ export async function POST(request: NextRequest) {
     let subtotal = 0;
     const orderItems = [];
 
-    for (const item of items) {
+    for (const item of items as CheckoutItem[]) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
+        include: { category: true },
       });
 
       if (!product) {
@@ -59,17 +74,33 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const itemTotal = product.price * item.quantity;
+      const itemPrice = Number(item.price);
+      if (Number.isNaN(itemPrice) || itemPrice <= 0) {
+        return errorResponse(`Invalid price for ${product.name}`, 400);
+      }
+
+      const isOrnamentalCategory =
+        product.category.slug === 'neocaridinas' || product.category.slug === 'caridinas';
+      const highGradePrice = toMoney(product.price);
+      const normalGradePrice = toMoney(product.price * 0.85);
+      const expectedPrice =
+        isOrnamentalCategory && item.grade === 'NORMAL' ? normalGradePrice : highGradePrice;
+
+      if (toMoney(itemPrice) !== expectedPrice) {
+        return errorResponse(`Invalid selected grade price for ${product.name}`, 400);
+      }
+
+      const itemTotal = itemPrice * item.quantity;
       subtotal += itemTotal;
 
       orderItems.push({
         productId: product.id,
         quantity: item.quantity,
-        price: product.price,
+        price: itemPrice,
       });
     }
 
-    const shippingCost = 50; // Default shipping cost in GTQ
+    const shippingCost = 50;
     const total = subtotal + shippingCost;
 
     // Crear orden
@@ -108,6 +139,12 @@ export async function POST(request: NextRequest) {
     return createdResponse(order, 'Order created successfully');
   } catch (error) {
     console.error('Checkout error:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return errorResponse(
+        'Base de datos no disponible. Configura PostgreSQL para procesar pedidos.',
+        503
+      );
+    }
     return errorResponse('Error processing checkout', 500);
   }
 }

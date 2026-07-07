@@ -95,6 +95,8 @@ export interface Order {
 
 export interface CartItem {
   productId: string;
+  variantKey?: string;
+  grade?: 'ALTO' | 'NORMAL';
   quantity: number;
   price: number;
 }

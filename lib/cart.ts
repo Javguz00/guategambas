@@ -36,11 +36,21 @@ const normalizeCartItems = (value: unknown): CartItem[] => {
         return null;
       }
 
-      return {
+      const normalizedItem: CartItem = {
         productId: candidate.productId,
         quantity: Math.max(1, Math.floor(quantity)),
         price: Math.max(0, price),
       };
+
+      if (typeof candidate.variantKey === 'string' && candidate.variantKey.trim().length > 0) {
+        normalizedItem.variantKey = candidate.variantKey;
+      }
+
+      if (candidate.grade === 'ALTO' || candidate.grade === 'NORMAL') {
+        normalizedItem.grade = candidate.grade;
+      }
+
+      return normalizedItem;
     })
     .filter((item): item is CartItem => item !== null);
 };
@@ -87,7 +97,10 @@ export function addToCart(
   }
 ): StoredCart {
   const currentCart = readCart();
-  const existingItem = currentCart.items.find((cartItem) => cartItem.productId === item.productId);
+  const nextVariantKey = item.variantKey || item.productId;
+  const existingItem = currentCart.items.find(
+    (cartItem) => (cartItem.variantKey || cartItem.productId) === nextVariantKey
+  );
   const nextQuantity = (existingItem?.quantity || 0) + Math.max(1, Math.floor(item.quantity));
   const cappedQuantity = options?.maxStock
     ? Math.min(nextQuantity, Math.max(1, options.maxStock))
@@ -96,10 +109,13 @@ export function addToCart(
   const nextItems = existingItem
     ? currentCart.items.map((cartItem) =>
         cartItem.productId === item.productId
+          && (cartItem.variantKey || cartItem.productId) === nextVariantKey
           ? {
               ...cartItem,
               quantity: cappedQuantity,
               price: item.price,
+              grade: item.grade,
+              variantKey: nextVariantKey,
             }
           : cartItem
       )
@@ -107,6 +123,7 @@ export function addToCart(
         ...currentCart.items,
         {
           ...item,
+          variantKey: nextVariantKey,
           quantity: cappedQuantity,
         },
       ];

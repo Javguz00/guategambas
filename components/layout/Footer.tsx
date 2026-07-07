@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -16,46 +14,60 @@ export default function Footer() {
               <h3 className="font-bold text-lg">Guategambas</h3>
             </div>
             <p className="text-gray-400 text-sm">
-              Los mejores productos de calidad para tu cocina. Frescos, deliciosos y siempre disponibles.
+              Tienda especializada en gambas ornamentales (Neocaridinas y Caridinas) e insumos para gambarios.
             </p>
           </div>
 
-          {/* Contact Column */}
+          {/* Contacto */}
           <div>
             <h4 className="font-semibold mb-4 text-white">Contacto</h4>
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
-                <a href="tel:+502123456789" className="hover:text-primary transition-colors">
-                  📞 +502 1234-5678
+                <a
+                  href="https://wa.me/50243132549"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  📱 WhatsApp: +502 4313-2549
                 </a>
               </li>
               <li>
-                <a href="mailto:info@guategambas.com" className="hover:text-primary transition-colors">
-                  ✉️ info@guategambas.com
+                <a
+                  href="https://www.instagram.com/guategambas"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  📷 Instagram: @guategambas
                 </a>
               </li>
-              <li className="text-gray-500">📍 Guatemala, GT</li>
             </ul>
           </div>
 
-          {/* Links Column */}
+          {/* Redes */}
           <div>
-            <h4 className="font-semibold mb-4 text-white">Enlaces</h4>
+            <h4 className="font-semibold mb-4 text-white">Redes</h4>
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
-                <Link href="/products" className="hover:text-primary transition-colors">
-                  Catálogo
-                </Link>
+                <a
+                  href="https://www.instagram.com/guategambas"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  Instagram
+                </a>
               </li>
               <li>
-                <Link href="/privacy" className="hover:text-primary transition-colors">
-                  Privacidad
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-primary transition-colors">
-                  Términos
-                </Link>
+                <a
+                  href="https://wa.me/50243132549"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  WhatsApp
+                </a>
               </li>
             </ul>
           </div>
@@ -70,13 +82,20 @@ export default function Footer() {
             &copy; {currentYear} Guategambas. Todos los derechos reservados.
           </p>
           <div className="flex gap-4 mt-4 sm:mt-0">
-            <a href="#" className="hover:text-primary transition-colors">
-              Facebook
-            </a>
-            <a href="#" className="hover:text-primary transition-colors">
+            <a
+              href="https://www.instagram.com/guategambas"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-primary transition-colors"
+            >
               Instagram
             </a>
-            <a href="#" className="hover:text-primary transition-colors">
+            <a
+              href="https://wa.me/50243132549"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-primary transition-colors"
+            >
               WhatsApp
             </a>
           </div>
