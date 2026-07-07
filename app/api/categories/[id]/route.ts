@@ -1,17 +1,17 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse } from '@/lib/api-helpers';
 
-interface Params {
-  params: {
+interface RouteContext {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(_: Request, context: RouteContext) {
   try {
+    const { id } = await context.params;
     const category = await db.category.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { products: true },
     });
 
@@ -20,18 +20,19 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
 
     return successResponse(category);
-  } catch (error) {
+  } catch {
     return errorResponse('Error fetching category', 500);
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(request: Request, context: RouteContext) {
   try {
+    const { id } = await context.params;
     const body = await request.json();
     const { name, slug, description, icon } = body;
 
     const category = await db.category.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name,
         slug,
@@ -41,19 +42,20 @@ export async function PUT(request: NextRequest, { params }: Params) {
     });
 
     return successResponse(category, 'Category updated successfully');
-  } catch (error) {
+  } catch {
     return errorResponse('Error updating category', 500);
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(_: Request, context: RouteContext) {
   try {
+    const { id } = await context.params;
     const category = await db.category.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return successResponse(category, 'Category deleted successfully');
-  } catch (error) {
+  } catch {
     return errorResponse('Error deleting category', 500);
   }
 }

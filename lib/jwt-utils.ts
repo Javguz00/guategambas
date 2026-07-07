@@ -1,5 +1,4 @@
-// Simple JWT implementation without external dependencies
-// NOTE: For production, use a proper JWT library
+import { createHmac } from 'crypto';
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-key-guategambas';
 
@@ -25,10 +24,7 @@ function sign(payload: object): string {
   const encodedHeader = base64Encode(JSON.stringify(header));
   const encodedPayload = base64Encode(JSON.stringify(payload));
 
-  // Simple HMAC-SHA256 signature (simplified - just using a hash)
-  const crypto = require('crypto');
-  const signature = crypto
-    .createHmac('sha256', SECRET)
+  const signature = createHmac('sha256', SECRET)
     .update(`${encodedHeader}.${encodedPayload}`)
     .digest('base64')
     .replace(/\+/g, '-')
@@ -44,9 +40,7 @@ function verify(token: string): boolean {
     if (parts.length !== 3) return false;
 
     const [encodedHeader, encodedPayload, signature] = parts;
-    const crypto = require('crypto');
-    const expectedSignature = crypto
-      .createHmac('sha256', SECRET)
+    const expectedSignature = createHmac('sha256', SECRET)
       .update(`${encodedHeader}.${encodedPayload}`)
       .digest('base64')
       .replace(/\+/g, '-')
@@ -54,7 +48,7 @@ function verify(token: string): boolean {
       .replace(/=/g, '');
 
     return signature === expectedSignature;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -72,7 +66,7 @@ export function jwtDecode<T extends object>(token: string): T {
     const parts = token.split('.');
     const payload = JSON.parse(base64Decode(parts[1]));
     return payload as T;
-  } catch (error) {
+  } catch {
     throw new Error('Failed to decode token');
   }
 }

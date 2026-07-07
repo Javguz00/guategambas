@@ -1,9 +1,8 @@
-import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, createdResponse, errorResponse } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const categories = await prisma.category.findMany({
       include: { _count: { select: { products: true } } },
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     // Check admin authentication
     const isAdminUser = await isAdmin();

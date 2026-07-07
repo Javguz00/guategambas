@@ -3,7 +3,46 @@ import { prisma } from '@/lib/db';
 import { successResponse, createdResponse, errorResponse } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
 
-export async function GET(request: NextRequest) {
+interface OrderRequestItem {
+  productId: string;
+  quantity: number;
+  price: number;
+}
+
+const normalizeOrderItems = (value: unknown): OrderRequestItem[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const candidate = item as Partial<OrderRequestItem>;
+      const quantity = Number(candidate.quantity);
+      const price = Number(candidate.price);
+
+      if (
+        typeof candidate.productId !== 'string' ||
+        candidate.productId.trim().length === 0 ||
+        Number.isNaN(quantity) ||
+        Number.isNaN(price)
+      ) {
+        return null;
+      }
+
+      return {
+        productId: candidate.productId,
+        quantity: Math.max(1, Math.floor(quantity)),
+        price: Math.max(0, price),
+      };
+    })
+    .filter((item): item is OrderRequestItem => item !== null);
+};
+
+export async function GET() {
   try {
     // Only admin can see all orders
     const isAdminUser = await isAdmin();
@@ -33,12 +72,13 @@ export async function POST(request: NextRequest) {
       department,
       address,
       notes,
-      items,
+      items: rawItems,
       subtotal,
       shippingCost = 0,
       total,
       paymentMethod = 'CONTRAENTREGA',
     } = body;
+    const items = normalizeOrderItems(rawItems);
 
     // Validation
     if (
@@ -59,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and fetch products
-    const productIds = items.map((item: any) => item.productId);
+    const productIds = items.map((item) => item.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
     });
@@ -94,10 +134,10 @@ export async function POST(request: NextRequest) {
         total: parseFloat(total.toString()),
         paymentMethod,
         items: {
-          create: items.map((item: any) => ({
+          create: items.map((item) => ({
             productId: item.productId,
-            quantity: parseInt(item.quantity.toString()),
-            price: parseFloat(item.price.toString()),
+            quantity: item.quantity,
+            price: item.price,
           })),
         },
       },
@@ -110,7 +150,7 @@ export async function POST(request: NextRequest) {
         where: { id: item.productId },
         data: {
           stock: {
-            decrement: parseInt(item.quantity.toString()),
+            decrement: item.quantity,
           },
         },
       });

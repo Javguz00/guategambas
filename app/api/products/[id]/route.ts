@@ -7,16 +7,17 @@ import {
 } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
 
-interface Params {
-  params: {
+interface RouteContext {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
+    const { id } = await context.params;
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { category: true },
     });
 
@@ -31,8 +32,9 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(request: NextRequest, context: RouteContext) {
   try {
+    const { id } = await context.params;
     // Check admin authentication
     const isAdminUser = await isAdmin();
     if (!isAdminUser) {
@@ -45,7 +47,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     // Verify product exists
     const existing = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
@@ -63,13 +65,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const product = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(name && { name }),
         ...(slug && { slug }),
         ...(description !== undefined && { description }),
         ...(price !== undefined && { price: parseFloat(price.toString()) }),
-        ...(stock !== undefined && { stock: parseInt(stock.toString()) }),
+        ...(stock !== undefined && { stock: parseInt(stock.toString(), 10) }),
         ...(categoryId && { categoryId }),
         ...(image !== undefined && { image }),
         ...(active !== undefined && { active }),
@@ -85,8 +87,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
+    const { id } = await context.params;
     // Check admin authentication
     const isAdminUser = await isAdmin();
     if (!isAdminUser) {
@@ -94,7 +97,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     const product = await prisma.product.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return successResponse(product, 'Product deleted successfully');

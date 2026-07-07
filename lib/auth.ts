@@ -83,8 +83,7 @@ export async function getSession(): Promise<AuthSession | null> {
 
     const session = jwtDecode<AuthSession>(token);
     return session;
-  } catch (error) {
-    console.error('Session decode error:', error);
+  } catch {
     return null;
   }
 }

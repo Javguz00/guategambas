@@ -13,9 +13,8 @@ import {
   type Order,
   type Product,
 } from '@/lib/types';
+import { readCart, writeCart } from '@/lib/cart';
 import { validateEmail, validatePhone } from '@/lib/validators';
-
-const CART_STORAGE_KEY = 'cart';
 
 const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
   PaymentMethod.CONTRAENTREGA,
@@ -56,41 +55,6 @@ const currencyFormatter = new Intl.NumberFormat('es-GT', {
   currency: 'GTQ',
   minimumFractionDigits: 2,
 });
-
-const normalizeCartItems = (value: unknown): CartItem[] => {
-  const items = Array.isArray(value)
-    ? value
-    : value && typeof value === 'object' && Array.isArray((value as { items?: unknown[] }).items)
-      ? (value as { items: unknown[] }).items
-      : [];
-
-  return items
-    .map((item) => {
-      if (!item || typeof item !== 'object') {
-        return null;
-      }
-
-      const candidate = item as Partial<CartItem>;
-      const quantity = Number(candidate.quantity);
-      const price = Number(candidate.price);
-
-      if (
-        typeof candidate.productId !== 'string' ||
-        candidate.productId.trim().length === 0 ||
-        Number.isNaN(quantity) ||
-        Number.isNaN(price)
-      ) {
-        return null;
-      }
-
-      return {
-        productId: candidate.productId,
-        quantity: Math.max(1, Math.floor(quantity)),
-        price: Math.max(0, price),
-      };
-    })
-    .filter((item): item is CartItem => item !== null);
-};
 
 const validateForm = (formData: CheckoutFormState, items: CheckoutDisplayItem[]) => {
   const errors: CheckoutFormErrors = {};
@@ -153,9 +117,7 @@ export default function CheckoutPage() {
         setLoadingCart(true);
         setPageError(null);
 
-        const rawCart = window.localStorage.getItem(CART_STORAGE_KEY);
-        const parsedCart = rawCart ? JSON.parse(rawCart) : [];
-        const normalizedItems = normalizeCartItems(parsedCart);
+        const normalizedItems = readCart().items;
 
         if (normalizedItems.length === 0) {
           setItems([]);
@@ -207,20 +169,17 @@ export default function CheckoutPage() {
     }
 
     if (items.length === 0) {
-      window.localStorage.removeItem(CART_STORAGE_KEY);
+      writeCart({ items: [] });
       return;
     }
 
-    window.localStorage.setItem(
-      CART_STORAGE_KEY,
-      JSON.stringify(
-        items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price,
-        }))
-      )
-    );
+    writeCart({
+      items: items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    });
   }, [items, loadingCart]);
 
   const handleFieldChange = (
@@ -310,7 +269,7 @@ export default function CheckoutPage() {
         throw new Error(result.error || 'No se pudo completar la orden');
       }
 
-      window.localStorage.removeItem(CART_STORAGE_KEY);
+      writeCart({ items: [] });
       router.push(`/checkout/success?orderId=${result.data.id}`);
     } catch (err) {
       setPageError(err instanceof Error ? err.message : 'No se pudo completar la orden');

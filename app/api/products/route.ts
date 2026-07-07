@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const category = getQueryParam(request, 'category');
 
-    const where: any = { active: true };
+    const where: Prisma.ProductWhereInput = { active: true };
     if (category) {
       where.category = {
         slug: category,
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         slug,
         description,
         price: parseFloat(price.toString()),
-        stock: parseInt(stock.toString()),
+        stock: parseInt(stock.toString(), 10),
         categoryId,
         image,
       },

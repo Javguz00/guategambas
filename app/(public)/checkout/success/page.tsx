@@ -1,12 +1,16 @@
-'use client';
-
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import Button from '@/app/components/ui/Button';
 
-export default function CheckoutSuccessPage() {
-  const searchParams = useSearchParams();
-  const orderId = searchParams.get('orderId');
+interface CheckoutSuccessPageProps {
+  searchParams: Promise<{
+    orderId?: string;
+  }>;
+}
+
+export default async function CheckoutSuccessPage({
+  searchParams,
+}: CheckoutSuccessPageProps) {
+  const { orderId } = await searchParams;
 
   return (
     <div className="mx-auto max-w-2xl rounded-lg bg-white p-10 text-center shadow">

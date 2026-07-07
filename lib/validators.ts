@@ -1,3 +1,24 @@
+interface ProductInput {
+  name?: string;
+  slug?: string;
+  price?: number;
+  stock?: number;
+  categoryId?: string;
+}
+
+interface CategoryInput {
+  name?: string;
+  slug?: string;
+}
+
+interface OrderInput {
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  city?: string;
+  items?: unknown[];
+}
+
 // Validadores simples para datos de entrada
 
 export const validateEmail = (email: string): boolean => {
@@ -11,7 +32,7 @@ export const validatePhone = (phone: string): boolean => {
   return phoneRegex.test(phone.replace(/\s/g, ''));
 };
 
-export const validateProductInput = (data: any) => {
+export const validateProductInput = (data: ProductInput) => {
   const errors: string[] = [];
 
   if (!data.name || data.name.trim().length < 3) {
@@ -40,7 +61,7 @@ export const validateProductInput = (data: any) => {
   };
 };
 
-export const validateCategoryInput = (data: any) => {
+export const validateCategoryInput = (data: CategoryInput) => {
   const errors: string[] = [];
 
   if (!data.name || data.name.trim().length < 2) {
@@ -57,7 +78,7 @@ export const validateCategoryInput = (data: any) => {
   };
 };
 
-export const validateOrderInput = (data: any) => {
+export const validateOrderInput = (data: OrderInput) => {
   const errors: string[] = [];
 
   if (!data.customerName || data.customerName.trim().length < 2) {

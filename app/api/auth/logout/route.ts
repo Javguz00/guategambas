@@ -1,8 +1,7 @@
-import { NextRequest } from 'next/server';
 import { successResponse } from '@/lib/api-helpers';
 import { logout } from '@/lib/auth';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     await logout();
     return successResponse(null, 'Logged out successfully');
