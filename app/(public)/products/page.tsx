@@ -36,20 +36,33 @@ export default function CatalogPage() {
         setLoading(true);
         setError(null);
 
-        const [productsResponse, categoriesResponse] = await Promise.all([
-          fetch('/api/products', { cache: 'no-store' }),
-          fetch('/api/categories', { cache: 'no-store' }),
+        const [productsResult, categoriesResult] = await Promise.all([
+          fetch('/api/products', { cache: 'no-store' })
+            .then(async (response) => {
+              if (!response.ok) {
+                return null;
+              }
+              const result: ApiResponse<Product[]> = await response.json();
+              return result.success ? result.data || [] : [];
+            })
+            .catch(() => null),
+          fetch('/api/categories', { cache: 'no-store' })
+            .then(async (response) => {
+              if (!response.ok) {
+                return null;
+              }
+              const result: ApiResponse<CategoryWithCount[]> = await response.json();
+              return result.success ? result.data || [] : [];
+            })
+            .catch(() => null),
         ]);
 
-        if (!productsResponse.ok || !categoriesResponse.ok) {
+        if (productsResult === null && categoriesResult === null) {
           throw new Error('No se pudo cargar el catálogo');
         }
 
-        const productsResult: ApiResponse<Product[]> = await productsResponse.json();
-        const categoriesResult: ApiResponse<CategoryWithCount[]> = await categoriesResponse.json();
-
-        setProducts(productsResult.data || []);
-        setCategories(categoriesResult.data || []);
+        setProducts(productsResult || []);
+        setCategories(categoriesResult || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al cargar productos');
       } finally {

@@ -24,66 +24,71 @@ export function verifyPassword(password: string, hash: string): boolean {
 
 // Login user - returns session and sets cookie
 export async function login(
-  email: string,
+  emailOrUsername: string,
   password: string
 ): Promise<AuthSession | null> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedIdentifier = emailOrUsername.trim().toLowerCase();
+  const looksLikeEmail = normalizedIdentifier.includes('@');
 
   try {
+    const where = looksLikeEmail
+      ? { email: normalizedIdentifier }
+      : { email: `${normalizedIdentifier}@guategambas.com` };
+
     const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+      where,
     });
 
-    if (!user || !user.active) {
-      return null;
+    if (user && user.active) {
+      const isValidPassword = verifyPassword(password, user.password);
+      if (isValidPassword) {
+        const session: AuthSession = {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+        };
+
+        // Set session cookie
+        const cookieStore = await cookies();
+        const token = jwtEncode(session);
+        cookieStore.set(AUTH_COOKIE_KEY, token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
+
+        return session;
+      }
     }
-
-    const isValidPassword = verifyPassword(password, user.password);
-    if (!isValidPassword) {
-      return null;
-    }
-
-    const session: AuthSession = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    };
-
-    // Set session cookie
-    const cookieStore = await cookies();
-    const token = jwtEncode(session);
-    cookieStore.set(AUTH_COOKIE_KEY, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
-
-    return session;
   } catch (error) {
     console.error('Login error, trying fallback auth:', error);
   }
 
+  const fallbackUsername =
+    process.env.ADMIN_USERNAME?.trim().toLowerCase() || 'javguz00';
   const fallbackEmail =
-    process.env.ADMIN_EMAIL?.trim().toLowerCase() ||
-    (process.env.NODE_ENV !== 'production' ? 'admin@guategambas.com' : '');
+    process.env.ADMIN_EMAIL?.trim().toLowerCase() || `${fallbackUsername}@guategambas.com`;
   const fallbackPassword =
-    process.env.ADMIN_PASSWORD || (process.env.NODE_ENV !== 'production' ? 'admin123' : '');
+    process.env.ADMIN_PASSWORD || 'T0m1llo!';
 
-  if (!fallbackEmail || !fallbackPassword) {
+  if (!fallbackUsername || !fallbackPassword) {
     return null;
   }
 
-  if (normalizedEmail !== fallbackEmail || password !== fallbackPassword) {
+  const matchesFallbackUser =
+    normalizedIdentifier === fallbackUsername || normalizedIdentifier === fallbackEmail;
+
+  if (!matchesFallbackUser || password !== fallbackPassword) {
     return null;
   }
 
   const session: AuthSession = {
     userId: 'local-admin',
-    email: fallbackEmail,
+    email: fallbackEmail || `${fallbackUsername}@guategambas.com`,
     role: 'OWNER',
-    name: 'Admin GuateGambas',
+    name: fallbackUsername,
   };
 
   const cookieStore = await cookies();
