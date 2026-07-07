@@ -39,6 +39,14 @@ export default function AdminSidebar() {
 
   const isActive = (href: string) => pathname.startsWith(href);
 
+  const handleBackToSite = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      window.location.href = '/products';
+    }
+  };
+
   return (
     <>
       {/* Mobile Toggle */}
@@ -90,13 +98,14 @@ export default function AdminSidebar() {
 
         {/* Footer */}
         <div className="absolute bottom-0 w-full p-4 border-t border-gray-200 bg-gray-50">
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-primary rounded-lg transition-colors"
+          <button
+            type="button"
+            onClick={handleBackToSite}
+            className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-primary rounded-lg transition-colors text-left"
           >
             <span>🏠</span>
             <span>Volver al sitio</span>
-          </Link>
+          </button>
         </div>
       </aside>
 

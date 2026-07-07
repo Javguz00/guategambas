@@ -185,11 +185,8 @@ export default function Header() {
 
           {/* Desktop Buttons */}
           <div className="hidden sm:flex gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/login">Ingresar</Link>
-            </Button>
             <Button size="sm" asChild>
-              <Link href="/admin/dashboard">Admin</Link>
+              <Link href="/login">Ingresar</Link>
             </Button>
           </div>
 
@@ -216,11 +213,8 @@ export default function Header() {
               Contacto
             </Link>
             <hr className="my-2" />
-            <Button variant="outline" size="sm" className="w-full">
-              <Link href="/login">Ingresar</Link>
-            </Button>
             <Button size="sm" className="w-full">
-              <Link href="/admin/dashboard">Admin</Link>
+              <Link href="/login">Ingresar</Link>
             </Button>
           </div>
         </nav>

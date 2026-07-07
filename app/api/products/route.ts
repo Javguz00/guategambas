@@ -9,6 +9,7 @@ import {
   getQueryParam,
 } from '@/lib/api-helpers';
 import { isAdmin } from '@/lib/auth';
+import { ensureCatalogBootstrap } from '@/lib/catalog-bootstrap';
 import { getFallbackProducts } from '@/lib/fallback-catalog';
 
 const isDatabaseUnavailableError = (error: unknown) =>
@@ -20,6 +21,8 @@ export async function GET(request: NextRequest) {
   const category = getQueryParam(request, 'category') || undefined;
 
   try {
+    await ensureCatalogBootstrap();
+
     const where: Prisma.ProductWhereInput = { active: true };
     if (category) {
       where.category = {
