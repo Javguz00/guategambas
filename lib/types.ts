@@ -1,64 +1,122 @@
-export type ProductCategory = "neocaridinas" | "caridinas" | "insumos" | "suplementos" | "accesorios" | "plantas";
-export type OrderStatus = "PENDING" | "CONFIRMED" | "DELIVERED";
+// Tipos principales de la aplicación
 
-export interface ProductVariant {
-  id: string;
-  label: string;
-  unitLabel: string;
-  price: number;
-  highlight?: string;
-  stockAvailable?: number;
-  lowStockThreshold?: number;
-  shippingNote?: string;
-  isActive?: boolean;
-  gradeLabel?: string;
-  media?: ProductMedia;
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  OWNER = 'OWNER',
 }
 
-export interface ProductMedia {
-  photos: string[];
-  videos: string[];
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  PROCESSING = 'PROCESSING',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum PaymentMethod {
+  CONTRAENTREGA = 'CONTRAENTREGA',
+  DEPOSITO_PREVIO = 'DEPOSITO_PREVIO',
+  TARJETA = 'TARJETA',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Product {
   id: string;
   name: string;
-  category: ProductCategory;
-  variants: ProductVariant[];
-  description: string;
-  highlight?: string;
-  note?: string;
-  media?: ProductMedia;
-}
-
-export interface SocialPost {
-  id: string;
-  type: "reel" | "post";
-  title: string;
-  url: string;
-  thumbnailUrl?: string;
-  publishedAt: string;
+  slug: string;
+  description?: string | null;
+  price: number;
+  stock: number;
+  categoryId: string;
+  category?: Category;
+  image?: string | null;
+  active: boolean;
+  featured: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface OrderItem {
+  id: string;
+  orderId: string;
   productId: string;
-  variantId: string;
-  name: string;
-  variantLabel: string;
-  category: ProductCategory;
-  unit: string;
-  unitPrice: number;
+  product?: Product;
   quantity: number;
+  price: number;
+  createdAt: Date;
 }
 
 export interface Order {
   id: string;
   customerName: string;
-  whatsapp: string;
+  customerEmail: string;
+  customerPhone: string;
   city: string;
-  notes?: string;
+  department?: string | null;
+  address?: string | null;
+  notes?: string | null;
   items: OrderItem[];
+  subtotal: number;
+  shippingCost: number;
   total: number;
   status: OrderStatus;
-  createdAt: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CartItem {
+  productId: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Cart {
+  items: CartItem[];
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+}
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
