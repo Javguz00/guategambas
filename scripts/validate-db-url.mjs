@@ -1,19 +1,31 @@
 const runtimeUrl = process.env.DATABASE_URL;
 const migrationUrl = process.env.DIRECT_URL || runtimeUrl;
 
+function extractHost(value) {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    // Fallback for passwords with characters that break WHATWG URL parsing
+    // (for example # or invalid percent escape sequences).
+    const match = value.match(/^postgres(?:ql)?:\/\/(?:.*@)?([^\/:?#]+)(?::\d+)?(?:[\/?#]|$)/i);
+    return match?.[1] || '';
+  }
+}
+
 function validate(name, value) {
   if (!value) {
     throw new Error(`${name} is missing`);
   }
 
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch {
+  if (!/^postgres(?:ql)?:\/\//i.test(value)) {
+    throw new Error(`${name} must use postgres:// or postgresql://`);
+  }
+
+  const host = extractHost(value).toLowerCase();
+  if (!host) {
     throw new Error(`${name} is not a valid URL`);
   }
 
-  const host = parsed.hostname.toLowerCase();
   if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
     throw new Error(`${name} points to localhost (${host})`);
   }
