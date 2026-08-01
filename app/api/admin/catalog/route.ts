@@ -12,12 +12,35 @@ function normalizeText(value: unknown, maxLength: number) {
   return text.length > maxLength ? text.slice(0, maxLength) : text;
 }
 
-async function loadMergedCatalog() {
+type CatalogProductStateRow = {
+  productId: string;
+  name: string | null;
+  category: string | null;
+  description: string | null;
+  highlight: string | null;
+  note: string | null;
+};
+
+type CatalogVariantStateRow = {
+  productId: string;
+  variantLabel: string;
+  stock: number;
+  price: number | null;
+};
+
+async function loadCatalogState() {
   await ensureAdminStorage();
+
   const [variantRows, productRows] = await Promise.all([
-    prisma.catalogVariantState.findMany(),
-    prisma.catalogProductState.findMany()
+    prisma.$queryRawUnsafe<CatalogVariantStateRow[]>(`SELECT "productId", "variantLabel", "stock", "price" FROM "CatalogVariantState"`).catch(() => [] as CatalogVariantStateRow[]),
+    prisma.$queryRawUnsafe<CatalogProductStateRow[]>(`SELECT "productId", "name", "category", "description", "highlight", "note" FROM "CatalogProductState"`).catch(() => [] as CatalogProductStateRow[])
   ]);
+
+  return { variantRows, productRows };
+}
+
+async function loadMergedCatalog() {
+  const { variantRows, productRows } = await loadCatalogState();
 
   const inventory = inventoryToMap(variantRows);
   const overrides = productRows.reduce<Record<string, { name?: string | null; category?: string | null; description?: string | null; highlight?: string | null; note?: string | null }>>((acc, row) => {
@@ -45,19 +68,25 @@ async function handleGET() {
     return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
   }
 
-  const [catalog, productStates] = await Promise.all([loadMergedCatalog(), prisma.catalogProductState.findMany()]);
+  const [{ variantRows, productRows }, catalog] = await Promise.all([
+    loadCatalogState(),
+    loadMergedCatalog()
+  ]);
+
+  const productStates = productRows.reduce<Record<string, { name?: string | null; category?: string | null; description?: string | null; highlight?: string | null; note?: string | null }>>((acc, row) => {
+    acc[row.productId] = {
+      name: row.name,
+      category: row.category,
+      description: row.description,
+      highlight: row.highlight,
+      note: row.note
+    };
+    return acc;
+  }, {});
+
   return NextResponse.json({
     products: catalog,
-    productStates: productStates.reduce<Record<string, { name?: string | null; category?: string | null; description?: string | null; highlight?: string | null; note?: string | null }>>((acc, row) => {
-      acc[row.productId] = {
-        name: row.name,
-        category: row.category,
-        description: row.description,
-        highlight: row.highlight,
-        note: row.note
-      };
-      return acc;
-    }, {}),
+    productStates,
     inventory: extractInventoryRows(catalog)
   });
 }
@@ -96,32 +125,25 @@ async function handlePATCH(request: NextRequest) {
 
   const isEmpty = !name && !category && !description && !highlight && !note;
   if (isEmpty) {
-    await prisma.catalogProductState.deleteMany({ where: { productId } });
+    await prisma.$executeRaw`DELETE FROM "CatalogProductState" WHERE "productId" = ${productId}`;
     const catalog = await loadMergedCatalog();
     return NextResponse.json({ ok: true, productId, product: catalog.find((item) => item.id === productId) || null });
   }
 
-  const state = await prisma.catalogProductState.upsert({
-    where: { productId },
-    create: {
-      productId,
-      name: name || null,
-      category: category || null,
-      description: description || null,
-      highlight: highlight || null,
-      note: note || null
-    },
-    update: {
-      name: name || null,
-      category: category || null,
-      description: description || null,
-      highlight: highlight || null,
-      note: note || null
-    }
-  });
+  await prisma.$executeRaw`
+    INSERT INTO "CatalogProductState" ("productId", "name", "category", "description", "highlight", "note", "updatedAt", "createdAt")
+    VALUES (${productId}, ${name || null}, ${category || null}, ${description || null}, ${highlight || null}, ${note || null}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT ("productId") DO UPDATE SET
+      "name" = EXCLUDED."name",
+      "category" = EXCLUDED."category",
+      "description" = EXCLUDED."description",
+      "highlight" = EXCLUDED."highlight",
+      "note" = EXCLUDED."note",
+      "updatedAt" = CURRENT_TIMESTAMP
+  `;
 
   const catalog = await loadMergedCatalog();
-  return NextResponse.json({ ok: true, state, product: catalog.find((item) => item.id === productId) || null });
+  return NextResponse.json({ ok: true, productId, product: catalog.find((item) => item.id === productId) || null });
 }
 
 async function handleDELETE(request: NextRequest) {
@@ -137,7 +159,7 @@ async function handleDELETE(request: NextRequest) {
     return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
   }
 
-  await prisma.catalogProductState.deleteMany({ where: { productId } });
+  await prisma.$executeRaw`DELETE FROM "CatalogProductState" WHERE "productId" = ${productId}`;
   return NextResponse.json({ ok: true });
 }
 
