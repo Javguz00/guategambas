@@ -134,7 +134,7 @@ export default function CatalogPage() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
         {/* Sidebar */}
-        <aside className="card h-fit sticky top-24">
+        <aside className="card h-fit lg:sticky lg:top-24 lg:self-start">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-dark">Categorías</h2>
             {selectedCategory !== 'all' && (
