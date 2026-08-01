@@ -15,6 +15,40 @@ interface OrderRequestItem {
   price: number;
 }
 
+function buildWhatsAppOrderUrl(input: {
+  number: string;
+  customerName: string;
+  whatsapp: string;
+  city: string;
+  departamento?: string;
+  paymentMethod: string;
+  notes?: string;
+  items: Array<{ name: string; variantLabel: string; quantity: number }>;
+  subtotal: number;
+  shippingCost: number;
+  shippingMessage?: string;
+  orderId: string;
+}) {
+  const lines = [
+    'Hola, quiero confirmar este pedido:',
+    ...input.items.map((it) => `${it.name} - ${it.variantLabel} x ${it.quantity}`),
+    '',
+    `Pedido: ${input.orderId}`,
+    `Cliente: ${input.customerName}`,
+    `WhatsApp: ${input.whatsapp}`,
+    `Ciudad: ${input.city}`,
+    `Departamento: ${input.departamento || 'N/A'}`,
+    `Método de pago: ${input.paymentMethod === 'DEPOSITO_PREVIO' ? 'Depósito previo' : input.paymentMethod === 'PAGO_CONTRAENTREGA' ? 'Pago contra entrega' : 'Tarjeta'}`,
+    input.notes ? `Notas: ${input.notes}` : '',
+    '---',
+    `Subtotal: Q ${input.subtotal.toFixed(2)}`,
+    input.shippingMessage ? `Envío: ${input.shippingMessage}` : `Envío: Q ${input.shippingCost.toFixed(2)}`,
+    `Total: Q ${(input.subtotal + input.shippingCost).toFixed(2)}`,
+  ].filter(Boolean);
+
+  return `https://wa.me/${input.number.replace(/\D/g, '')}?text=${encodeURIComponent(lines.join('\n'))}`;
+}
+
 const normalizeOrderItems = (value: unknown): OrderRequestItem[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -50,7 +84,6 @@ const normalizeOrderItems = (value: unknown): OrderRequestItem[] => {
 
 export async function GET() {
   try {
-    // Only admin can see all orders
     const isAdminUser = await isAdmin();
     if (!isAdminUser) {
       return errorResponse('Unauthorized', 401);
@@ -89,25 +122,15 @@ export async function POST(request: NextRequest) {
     } = body;
     const items = normalizeOrderItems(rawItems);
 
-    // Validation
-    if (
-      !customerName ||
-      !customerEmail ||
-      !customerPhone ||
-      !city ||
-      !items ||
-      items.length === 0
-    ) {
+    if (!customerName || !customerEmail || !customerPhone || !city || items.length === 0) {
       return errorResponse('Missing required fields', 400);
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(customerEmail)) {
       return errorResponse('Invalid email format', 400);
     }
 
-    // Validate and fetch products
     const productIds = items.map((item) => item.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
@@ -117,18 +140,13 @@ export async function POST(request: NextRequest) {
       return errorResponse('One or more products not found', 400);
     }
 
-    // Check stock availability
     for (const item of items) {
       const product = products.find((p) => p.id === item.productId);
       if (!product || product.stock < item.quantity) {
-        return errorResponse(
-          `Insufficient stock for product: ${product?.name}`,
-          400
-        );
+        return errorResponse(`Insufficient stock for product: ${product?.name}`, 400);
       }
     }
 
-    // Create order
     const order = await prisma.order.create({
       data: {
         customerName,
@@ -153,7 +171,6 @@ export async function POST(request: NextRequest) {
       include: { items: { include: { product: true } } },
     });
 
-    // Update product stock
     for (const item of items) {
       await prisma.product.update({
         where: { id: item.productId },
@@ -165,14 +182,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const businessWhatsapp = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || process.env.ADMIN_WHATSAPP_NUMBER || '50243132549').trim();
+    const whatsappUrl = buildWhatsAppOrderUrl({
+      number: businessWhatsapp,
+      customerName,
+      whatsapp: customerPhone,
+      city,
+      departamento: department,
+      paymentMethod,
+      notes,
+      items: items.map((item, index) => ({
+        name: products[index]?.name || 'Producto',
+        variantLabel: products[index]?.slug || 'unidad',
+        quantity: item.quantity,
+      })),
+      subtotal: parseFloat(total.toString()),
+      shippingCost: parseFloat(shippingCost.toString()),
+      orderId: order.id,
+    });
+
+    console.info('WhatsApp order URL generated', whatsappUrl);
+
     return createdResponse(order, 'Order created successfully');
   } catch (error) {
     console.error('Error creating order:', error);
     if (isDatabaseUnavailableError(error)) {
-      return errorResponse(
-        'Base de datos no disponible. Configura PostgreSQL para guardar ordenes.',
-        503
-      );
+      return errorResponse('Base de datos no disponible. Configura PostgreSQL para guardar ordenes.', 503);
     }
     return errorResponse('Error creating order', 500);
   }
