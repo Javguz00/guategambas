@@ -26,7 +26,12 @@ function toSafePath(filename: string) {
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ filename: string[] }> }) {
-  await ensureAdminStorage();
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (GET /api/media/[...filename])", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
   const { filename } = await context.params;
   const relativeName = decodeURIComponent(filename.join("/"));
 

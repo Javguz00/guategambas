@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE_NAME, getAdminPassword } from "@/lib/admin-auth";
+import { withSchemaProtection } from "@/lib/middleware/with-schema-protection";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = (await request.json()) as { password?: string };
   const password = String(body.password || "");
+  const expected = getAdminPassword();
 
-  if (!password || password !== getAdminPassword()) {
+  if (!expected) {
+    return NextResponse.json({ error: "ADMIN_SECRET no está configurado en el servidor." }, { status: 503 });
+  }
+
+  if (!password || password !== expected) {
     return NextResponse.json({ error: "Contraseña invalida" }, { status: 401 });
   }
 
@@ -19,3 +25,5 @@ export async function POST(request: Request) {
   });
   return response;
 }
+
+export const POST = withSchemaProtection(handlePOST);

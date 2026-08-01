@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE_NAME } from "@/lib/admin-auth";
+import { withSchemaProtection } from "@/lib/middleware/with-schema-protection";
 
-export async function POST() {
+async function handlePOST() {
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_COOKIE_NAME, "", {
     httpOnly: true,
@@ -12,3 +13,8 @@ export async function POST() {
   });
   return response;
 }
+
+export const POST = withSchemaProtection(async (request) => {
+  void request;
+  return handlePOST();
+});

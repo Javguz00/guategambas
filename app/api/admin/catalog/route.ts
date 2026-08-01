@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { withSchemaProtection } from "@/lib/middleware/with-schema-protection";
 import { products } from "@/lib/data";
 import { extractInventoryRows, inventoryToMap, mergeCatalogInventory, mergeCatalogProductState } from "@/lib/catalog";
 
@@ -33,12 +34,17 @@ async function loadMergedCatalog() {
   return mergeCatalogProductState(mergeCatalogInventory(products, inventory), overrides);
 }
 
-export async function GET() {
+async function handleGET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (GET /api/admin/catalog)", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
 
-  await ensureAdminStorage();
   const [catalog, productStates] = await Promise.all([loadMergedCatalog(), prisma.catalogProductState.findMany()]);
   return NextResponse.json({
     products: catalog,
@@ -56,12 +62,17 @@ export async function GET() {
   });
 }
 
-export async function PATCH(request: NextRequest) {
+async function handlePATCH(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  await ensureAdminStorage();
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (PATCH /api/admin/catalog)", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
 
   const body = (await request.json()) as {
     productId?: unknown;
@@ -113,7 +124,7 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ ok: true, state, product: catalog.find((item) => item.id === productId) || null });
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDELETE(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
@@ -129,3 +140,10 @@ export async function DELETE(request: NextRequest) {
   await prisma.catalogProductState.deleteMany({ where: { productId } });
   return NextResponse.json({ ok: true });
 }
+
+export const GET = withSchemaProtection(async (request) => {
+  void request;
+  return handleGET();
+});
+export const PATCH = withSchemaProtection(async (request) => handlePATCH(request as NextRequest));
+export const DELETE = withSchemaProtection(async (request) => handleDELETE(request as NextRequest));

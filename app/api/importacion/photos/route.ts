@@ -41,7 +41,7 @@ export async function GET() {
     terrario.sort();
     
     return NextResponse.json({ gambas, bucephalandras, terrario });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ gambas: [], bucephalandras: [], terrario: [] });
   }
 }

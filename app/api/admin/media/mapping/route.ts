@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { withSchemaProtection } from "@/lib/middleware/with-schema-protection";
 
 function groupMappings(rows: Array<{ productId: string; filename: string; grade?: string | null; slot?: string | null; title?: string | null }>) {
   return rows.reduce<Record<string, Array<{ filename: string; grade?: string; slot?: string; title?: string }>>>((acc, row) => {
@@ -16,16 +17,26 @@ function groupMappings(rows: Array<{ productId: string; filename: string; grade?
   }, {});
 }
 
-export async function GET() {
+async function handleGET() {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  await ensureAdminStorage();
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (GET /api/admin/media/mapping)", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
   const rows = await prisma.mediaMapping.findMany({ orderBy: { updatedAt: "desc" } });
   return NextResponse.json({ mapping: groupMappings(rows) });
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  await ensureAdminStorage();
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (POST /api/admin/media/mapping)", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
   const body = await request.json();
   const { productId, filename, grade, slot, title } = body as { productId?: unknown; filename?: unknown; grade?: unknown; slot?: unknown; title?: unknown };
   if (!productId || typeof productId !== "string" || !filename || typeof filename !== "string") return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
@@ -55,12 +66,24 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true, mapping: rows, productId });
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDELETE(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  await ensureAdminStorage();
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (DELETE /api/admin/media/mapping)", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
   const body = await request.json();
   const { productId, filename } = body as { productId?: unknown; filename?: unknown };
   if (!productId || typeof productId !== "string" || !filename || typeof filename !== "string") return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
   await prisma.mediaMapping.deleteMany({ where: { productId, filename } });
   return NextResponse.json({ ok: true });
 }
+
+export const GET = withSchemaProtection(async (request) => {
+  void request;
+  return handleGET();
+});
+export const POST = withSchemaProtection(async (request) => handlePOST(request as NextRequest));
+export const DELETE = withSchemaProtection(async (request) => handleDELETE(request as NextRequest));

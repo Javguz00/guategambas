@@ -4,8 +4,11 @@ import path from "path";
 import { ensureAdminStorage } from "@/lib/admin-storage";
 import { prisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { withSchemaProtection } from "@/lib/middleware/with-schema-protection";
 
 const PHOTOS_DIR = path.join(process.cwd(), "public", "photos");
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const allowedMimePrefixes = ["image/", "video/"];
 
 function toMediaUrl(filename: string) {
   return `/api/media/${filename.split("/").map(encodeURIComponent).join("/")}`;
@@ -28,7 +31,15 @@ function safeFilename(value: string) {
   return value.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
-async function readUploadPayload(request: NextRequest) {
+type UploadPayloadResult =
+  | { ok: true; filename: string; mimeType: string; buffer: Buffer }
+  | { ok: false; error: string; status: number };
+
+function isAllowedMimeType(mimeType: string) {
+  return allowedMimePrefixes.some((prefix) => mimeType.startsWith(prefix));
+}
+
+async function readUploadPayload(request: NextRequest): Promise<UploadPayloadResult> {
   const contentType = request.headers.get("content-type") || "";
 
   if (contentType.includes("multipart/form-data")) {
@@ -37,12 +48,22 @@ async function readUploadPayload(request: NextRequest) {
     const filename = formData.get("filename");
 
     if (!(file instanceof File) || typeof filename !== "string" || !filename) {
-      return null;
+      return { ok: false, error: "Datos invalidos", status: 400 };
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return { ok: false, error: "Archivo demasiado grande. Maximo permitido: 5MB.", status: 413 };
+    }
+
+    const mimeType = file.type || mimeTypeFromFilename(filename);
+    if (!isAllowedMimeType(mimeType)) {
+      return { ok: false, error: "Tipo de archivo no permitido. Solo imagenes o video.", status: 400 };
     }
 
     return {
+      ok: true,
       filename: safeFilename(filename),
-      mimeType: file.type || mimeTypeFromFilename(filename),
+      mimeType,
       buffer: Buffer.from(await file.arrayBuffer())
     };
   }
@@ -51,17 +72,26 @@ async function readUploadPayload(request: NextRequest) {
   const { filename, data } = body as { filename?: unknown; data?: unknown };
 
   if (!filename || typeof filename !== "string" || !data || typeof data !== "string") {
-    return null;
+    return { ok: false, error: "Datos invalidos", status: 400 };
   }
 
   const match = data.match(/^data:((?:image|video)\/[^;]+);base64,(.+)$/);
   const mimeType = match?.[1] || mimeTypeFromFilename(filename);
   const b64 = match ? match[2] : data;
 
+  const buffer = Buffer.from(b64, "base64");
+  if (buffer.byteLength > MAX_UPLOAD_BYTES) {
+    return { ok: false, error: "Archivo demasiado grande. Maximo permitido: 5MB.", status: 413 };
+  }
+  if (!isAllowedMimeType(mimeType)) {
+    return { ok: false, error: "Tipo de archivo no permitido. Solo imagenes o video.", status: 400 };
+  }
+
   return {
+    ok: true,
     filename: safeFilename(filename),
     mimeType,
-    buffer: Buffer.from(b64, "base64")
+    buffer
   };
 }
 
@@ -80,9 +110,14 @@ function listImagesRecursive(dir: string, baseDir: string): string[] {
   });
 }
 
-export async function GET() {
+async function handleGET() {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  await ensureAdminStorage();
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (GET /api/admin/media)", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
   const [dbAssets, mappingRows] = await Promise.all([
     prisma.mediaAsset.findMany({ orderBy: { createdAt: "desc" }, select: { filename: true, mimeType: true, createdAt: true } }),
     prisma.mediaMapping.findMany({ orderBy: { updatedAt: "desc" }, select: { productId: true, filename: true, grade: true, slot: true, title: true } })
@@ -104,11 +139,16 @@ export async function GET() {
   return NextResponse.json({ files, assets, mapping });
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  await ensureAdminStorage();
+  try {
+    await ensureAdminStorage();
+  } catch (err) {
+    console.error("ensureAdminStorage failed (POST /api/admin/media)", err);
+    return NextResponse.json({ error: "Fallo de esquema en la base de datos. Ejecuta las migraciones (prisma migrate deploy) o habilita permisos DDL." }, { status: 500 });
+  }
   const upload = await readUploadPayload(request);
-  if (!upload) return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
+  if (!upload.ok) return NextResponse.json({ error: upload.error }, { status: upload.status });
   await prisma.mediaAsset.upsert({
     where: { filename: upload.filename },
     create: { filename: upload.filename, mimeType: upload.mimeType, data: upload.buffer },
@@ -116,3 +156,9 @@ export async function POST(request: NextRequest) {
   });
   return NextResponse.json({ ok: true, filename: upload.filename, url: toMediaUrl(upload.filename), mimeType: upload.mimeType });
 }
+
+export const GET = withSchemaProtection(async (request) => {
+  void request;
+  return handleGET();
+});
+export const POST = withSchemaProtection(async (request) => handlePOST(request as NextRequest));

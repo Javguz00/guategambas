@@ -19,6 +19,7 @@ const CART_OPEN_STORAGE_KEY = "gg_cart_open_v1";
 const CART_SESSION_STORAGE_KEY = "gg_cart_session_v1";
 const LAST_WHATSAPP_STORAGE_KEY = "gg_last_whatsapp_v1";
 const WHATSAPP_CART_PREFIX = "gg_cart_whatsapp_";
+const LAST_ORDER_STORAGE_KEY = "gg_last_order_v1";
 
 function createCartSessionKey() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -51,6 +52,8 @@ type MediaAsset = {
 };
 
 type PaymentMethod = "DEPOSITO_PREVIO" | "PAGO_CONTRAENTREGA";
+
+const catalogSkeletonCards = Array.from({ length: 4 }, (_, index) => index);
 
 const WHATSAPP_NUMBER = "50243132549";
 
@@ -102,9 +105,11 @@ export default function HomePage() {
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<null | { payload: ConfirmPayload; whatsappUrl: string; finalTotal: number }>(null);
+  const [confirmModal, setConfirmModal] = useState<null | { payload: ConfirmPayload; finalTotal: number }>(null);
   const [message, setMessage] = useState("");
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "info" } | null>(null);
   const [catalogProducts, setCatalogProducts] = useState(products);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [departamento, setDepartamento] = useState("Guatemala");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PAGO_CONTRAENTREGA");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(() =>
@@ -117,9 +122,24 @@ export default function HomePage() {
   const [quickViewSlide, setQuickViewSlide] = useState(0);
   const [quickViewQty, setQuickViewQty] = useState(1);
   const [mediaMapping, setMediaMapping] = useState<Record<string, MediaAsset[]>>({});
-  const [activeFilter, setActiveFilter] = useState<"all" | "neocaridinas" | "caridinas" | "suplementos" | "accesorios">("all");
+  const [activeFilter, setActiveFilter] = useState<string>("all");
   const [cartReady, setCartReady] = useState(false);
   const loadedWhatsappCartRef = useRef("");
+
+  async function readErrorResponse(response: Response, context: string, payload?: unknown) {
+    const text = await response.text();
+    console.error(`Storefront fetch failed: ${context}`, {
+      status: response.status,
+      statusText: response.statusText,
+      payload,
+      body: text
+    });
+    return text;
+  }
+
+  function showToast(message: string, variant: "success" | "info" = "success") {
+    setToast({ message, variant });
+  }
 
   const quickViewProduct = useMemo(
     () => catalogProducts.find((item) => item.id === quickViewProductId) || null,
@@ -128,19 +148,29 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
+    setCatalogLoading(true);
 
     async function loadCatalog() {
       try {
         const response = await fetch("/api/catalog");
-        if (!response.ok) return;
+        if (!response.ok) {
+          await readErrorResponse(response, "GET /api/catalog");
+          if (!cancelled) {
+            setCatalogProducts(products);
+            setCatalogLoading(false);
+          }
+          return;
+        }
 
         const data = (await response.json()) as { products?: Product[] };
         if (!cancelled && Array.isArray(data.products)) {
           setCatalogProducts(data.products);
+          setCatalogLoading(false);
         }
       } catch {
         if (!cancelled) {
           setCatalogProducts(products);
+          setCatalogLoading(false);
         }
       }
     }
@@ -150,7 +180,10 @@ export default function HomePage() {
     (async () => {
       try {
         const response = await fetch("/api/site-media");
-        if (!response.ok) return;
+        if (!response.ok) {
+          await readErrorResponse(response, "GET /api/site-media");
+          return;
+        }
         const json = (await response.json()) as { mapping?: Record<string, MediaAsset[]> };
         if (!cancelled) {
           setMediaMapping(json.mapping || {});
@@ -164,7 +197,10 @@ export default function HomePage() {
     (async () => {
       try {
         const resp = await fetch("/api/social");
-        if (!resp.ok) return;
+        if (!resp.ok) {
+          await readErrorResponse(resp, "GET /api/social");
+          return;
+        }
         await resp.json();
       } catch {
         // ignore
@@ -175,6 +211,12 @@ export default function HomePage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     try {
@@ -213,6 +255,8 @@ export default function HomePage() {
             }
 
             loadedWhatsappCartRef.current = whatsappKey;
+          } else {
+            await readErrorResponse(whatsappResponse, "GET /api/cart (whatsapp cart)", { whatsappKey });
           }
         }
 
@@ -224,6 +268,8 @@ export default function HomePage() {
           if (!cancelled && sessionCart.length > 0) {
             setCart(sessionCart);
           }
+        } else {
+          await readErrorResponse(sessionResponse, "GET /api/cart (session cart)", { cartSessionKey });
         }
       } catch {
         // ignore hydration issues and fall back to local state
@@ -262,13 +308,18 @@ export default function HomePage() {
     if (!cartReady) return;
 
     const timer = window.setTimeout(() => {
-      void fetch("/api/cart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ key: cartSessionKey, data: cart })
-      });
+      void (async () => {
+        const response = await fetch("/api/cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ key: cartSessionKey, data: cart })
+        });
+        if (!response.ok) {
+          await readErrorResponse(response, "POST /api/cart (session save)", { cartSessionKey, items: cart.length });
+        }
+      })();
     }, 250);
 
     return () => {
@@ -290,13 +341,18 @@ export default function HomePage() {
         return;
       }
 
-      void fetch("/api/cart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ key: whatsappKey, data: cart })
-      });
+      void (async () => {
+        const response = await fetch("/api/cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ key: whatsappKey, data: cart })
+        });
+        if (!response.ok) {
+          await readErrorResponse(response, "POST /api/cart (whatsapp save)", { whatsappKey, items: cart.length });
+        }
+      })();
     }, 300);
 
     return () => {
@@ -342,38 +398,27 @@ export default function HomePage() {
 
   const finalTotal = useMemo(() => total + (shippingInfo.isValid ? shippingInfo.shippingCost : 0), [total, shippingInfo]);
 
-  const totalItems = useMemo(
-    () => cartDetail.reduce((acc, item) => acc + item.qty, 0),
-    [cartDetail]
-  );
+  const totalItems = useMemo(() => cart.reduce((acc, item) => acc + item.qty, 0), [cart]);
 
   const contactWhatsappHref = `https://wa.me/${WHATSAPP_NUMBER}`;
 
-  const catalogSections = useMemo(
-    () => [
-      {
-        id: "neocaridinas",
-        title: "Neocaridinas",
-        description: "Líneas resistentes y variadas para acuarios plantados."
-      },
-      {
-        id: "caridinas",
-        title: "Caridinas",
-        description: "Selección de caridinas para coleccionistas y proyectos especializados."
-      },
-      {
-        id: "suplementos",
-        title: "Suplementos",
-        description: "Aditivos, bacterias y polvos para mantenimiento y salud de colonias."
-      },
-      {
-        id: "accesorios",
-        title: "Accesorios",
-        description: "Equipos, sustratos, redes y accesorios esenciales."
-      }
-    ],
-    []
-  );
+  const catalogSections = useMemo(() => {
+    const descriptions: Record<string, string> = {
+      neocaridinas: "Líneas resistentes y variadas para acuarios plantados.",
+      caridinas: "Selección de caridinas para coleccionistas y proyectos especializados.",
+      suplementos: "Aditivos, bacterias y polvos para mantenimiento y salud de colonias.",
+      accesorios: "Equipos, sustratos, redes y accesorios esenciales.",
+      insumos: "Materiales de apoyo para mantener el acuario en óptimas condiciones.",
+      plantas: "Plantas y elementos vivos para ecosistemas más estables."
+    };
+
+    const categories = Array.from(new Set(catalogProducts.map((product) => product.category)));
+    return categories.map((category) => ({
+      id: category,
+      title: category.charAt(0).toUpperCase() + category.slice(1),
+      description: descriptions[category] || "Categoría gestionada desde el panel admin."
+    }));
+  }, [catalogProducts]);
 
   const categoryAnchors = useMemo(
     () =>
@@ -464,6 +509,7 @@ export default function HomePage() {
   }
 
   function addProduct(productId: string, variantId: string) {
+    let toastMessage = "";
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === productId && item.variantId === variantId);
       const product = catalogProducts.find((item) => item.id === productId);
@@ -480,18 +526,22 @@ export default function HomePage() {
       }
 
       if (existing) {
+        toastMessage = `Agregaste ${product.name} - ${variant.label} al carrito.`;
         return prev.map((item) =>
           item.productId === productId && item.variantId === variantId
             ? { ...item, qty: item.qty + 1 }
             : item
         );
       }
+      toastMessage = `Agregaste ${product.name} - ${variant.label} al carrito.`;
       return [...prev, { productId, variantId, qty: 1 }];
     });
+    if (toastMessage) showToast(toastMessage);
   }
 
   function addProductQuantity(productId: string, variantId: string, quantity: number) {
     if (quantity <= 0) return;
+    let toastMessage = "";
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === productId && item.variantId === variantId);
       const product = catalogProducts.find((item) => item.id === productId);
@@ -508,6 +558,7 @@ export default function HomePage() {
       }
 
       if (existing) {
+        toastMessage = `Agregaste ${quantity} unidades de ${product.name}.`;
         return prev.map((item) =>
           item.productId === productId && item.variantId === variantId
             ? { ...item, qty: item.qty + quantity }
@@ -515,8 +566,10 @@ export default function HomePage() {
         );
       }
 
+      toastMessage = `Agregaste ${quantity} unidades de ${product.name}.`;
       return [...prev, { productId, variantId, qty: quantity }];
     });
+    if (toastMessage) showToast(toastMessage);
   }
 
   function decreaseProduct(productId: string, variantId: string) {
@@ -568,7 +621,8 @@ export default function HomePage() {
     const form = new FormData(event.currentTarget);
     const customerName = String(form.get("customerName") || "");
     const customerWhatsapp = String(form.get("whatsapp") || checkoutWhatsapp || "").trim();
-    const city = String(form.get("city") || "");
+    const address = String(form.get("address") || "").trim();
+    const email = String(form.get("email") || "").trim();
     const notes = String(form.get("notes") || "");
 
     if (!customerWhatsapp) {
@@ -591,44 +645,19 @@ export default function HomePage() {
     const payload = {
       customerName,
       whatsapp: customerWhatsapp,
-      city,
+      city: address,
       departamento,
       paymentMethod,
-      notes,
+      notes: email ? `${notes}\nEmail: ${email}`.trim() : notes,
       items,
       total,
       shippingCost: shippingInfo.shippingCost
     };
 
-    const shippingLine =
-      shippingInfo.message ||
-      (shippingInfo.shippingCost > 0
-        ? `Recargo por pago contra entrega: Q ${shippingInfo.shippingCost.toFixed(2)}`
-        : "Envío: Incluido / Depósito previo");
-
-    const whatsappLines = [
-      "Hola, quiero confirmar este pedido:",
-      ...cartDetail.map((item) => `${item.product.name} - ${getVariantDisplayLabel(item.variant)} x ${item.qty}`),
-      "",
-      `Cliente: ${customerName}`,
-      `WhatsApp: ${customerWhatsapp}`,
-      `Ciudad: ${city}`,
-      `Departamento: ${departamento}`,
-      `Método de pago: ${paymentMethod === "DEPOSITO_PREVIO" ? "Depósito previo" : "Pago contra entrega"}`,
-      notes ? `Notas: ${notes}` : "",
-      "---",
-      `Subtotal: Q ${total.toFixed(2)}`,
-      shippingLine,
-      `Total: Q ${finalTotal.toFixed(2)}`
-    ].filter(Boolean);
-
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappLines.join("\n"))}`;
-
-    // open confirmation modal with payload
-    setConfirmModal({ payload, whatsappUrl, finalTotal });
+    setConfirmModal({ payload, finalTotal });
   }
 
-  async function confirmAndSend(payload: ConfirmPayload, whatsappUrl: string) {
+  async function confirmAndSend(payload: ConfirmPayload) {
     setIsSubmitting(true);
     setMessage("");
     try {
@@ -641,17 +670,35 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        const txt = await response.text();
+        const txt = await readErrorResponse(response, "POST /api/orders", payload);
         throw new Error(txt || "Error al crear pedido");
       }
 
-      await response.json();
+      const result = (await response.json()) as { whatsappUrl?: string; order?: { id?: string } };
+      const whatsappUrl = typeof result.whatsappUrl === "string" ? result.whatsappUrl : "";
+      const orderId = typeof result.order?.id === "string" ? result.order.id : "";
 
       const shouldOpenWhatsapp = true;
 
-      if (shouldOpenWhatsapp) {
+      if (shouldOpenWhatsapp && whatsappUrl) {
         const popup = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
         if (!popup) window.location.assign(whatsappUrl);
+      }
+
+      try {
+        window.localStorage.setItem(
+          LAST_ORDER_STORAGE_KEY,
+          JSON.stringify({
+            orderId,
+            payload,
+            finalTotal,
+            whatsappUrl,
+            createdAt: new Date().toISOString(),
+            shippingMessage: shippingInfo.message || ""
+          })
+        );
+      } catch {
+        // ignore
       }
 
       setMessage("Pedido registrado.");
@@ -659,8 +706,11 @@ export default function HomePage() {
       setDepartamento("Guatemala");
       setPaymentMethod("PAGO_CONTRAENTREGA");
       setConfirmModal(null);
+      if (orderId) {
+        window.location.assign(`/pedido-confirmado?orderId=${encodeURIComponent(orderId)}`);
+      }
     } catch (err) {
-      setMessage(String(err) || "No se pudo enviar el pedido. Intenta de nuevo.");
+      setMessage(err instanceof Error ? err.message : "No se pudo enviar el pedido. Intenta de nuevo.");
     } finally {
       setIsSubmitting(false);
     }
@@ -668,6 +718,11 @@ export default function HomePage() {
 
   return (
     <>
+      {toast ? (
+        <div className={`toast-banner ${toast.variant}`} role="status" aria-live="polite">
+          {toast.message}
+        </div>
+      ) : null}
       <header className="header">
         <div className="container header-inner">
           <Link href="/" className="brand">Guate<span>Gambas</span></Link>
@@ -693,8 +748,8 @@ export default function HomePage() {
               <a className="btn-ghost" href="#checkout">Escribir por WhatsApp</a>
             </div>
             <div className="hero-trust">
-              <div className="trust-item"><span className="mono">23</span> productos activos</div>
-              <div className="trust-item"><span className="mono">Q 0</span> envío desde Q 50</div>
+              <div className="trust-item"><span className="mono">{catalogProducts.length}</span> productos activos</div>
+              <div className="trust-item"><span className="mono">Q 50</span> envío local desde</div>
               <div className="trust-item"><span className="mono">2</span> grados por línea</div>
             </div>
           </div>
@@ -721,7 +776,6 @@ export default function HomePage() {
           </div>
           <div className="strip-item">
             <span className="tag">Pedido</span>
-            <h3>Confirma por WhatsApp</h3>
             <p>Agrega al carrito, confirma por WhatsApp y paga al retirar o por depósito previo.</p>
           </div>
         </section>
@@ -751,18 +805,12 @@ export default function HomePage() {
 
         <section className="section storefront-filters">
           <div className="filter-row">
-            {[
-              { id: "all", label: "Todas" },
-              { id: "neocaridinas", label: "Neocaridinas" },
-              { id: "caridinas", label: "Caridinas" },
-              { id: "suplementos", label: "Suplementos" },
-              { id: "accesorios", label: "Accesorios" }
-            ].map((filter) => (
+            {[{ id: "all", label: "Todas" }, ...catalogSections.map((section) => ({ id: section.id, label: section.title }))].map((filter) => (
               <button
                 key={filter.id}
                 type="button"
                 className={`chip${activeFilter === filter.id ? " active" : ""}`}
-                onClick={() => setActiveFilter(filter.id as typeof activeFilter)}
+                onClick={() => setActiveFilter(filter.id)}
               >
                 {filter.label}
               </button>
@@ -803,7 +851,28 @@ export default function HomePage() {
             </div>
           </div>
 
-          {catalogSections.map((section) => {
+          {catalogLoading ? (
+            <div className="product-grid" aria-busy="true" aria-live="polite">
+              {catalogSkeletonCards.map((index) => (
+                <article key={index} className="storefront-product-card skeleton-card">
+                  <div className="skeleton skeleton-media" />
+                  <div className="storefront-card-copy">
+                    <div className="storefront-card-labels">
+                      <span className="skeleton skeleton-pill" />
+                      <span className="skeleton skeleton-pill short" />
+                    </div>
+                    <div className="skeleton skeleton-line title" />
+                    <div className="skeleton skeleton-line" />
+                    <div className="skeleton skeleton-line short" />
+                  </div>
+                  <div className="storefront-card-footer">
+                    <div className="skeleton skeleton-line short" />
+                    <div className="skeleton skeleton-line button" />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : catalogSections.map((section) => {
             const sectionProducts = filteredCatalogProducts.filter((product) => product.category === section.id);
             if (sectionProducts.length === 0) return null;
             return (
@@ -841,7 +910,7 @@ export default function HomePage() {
                             ) : null}
                             <div className="storefront-card-copy">
                               <div className="storefront-card-labels">
-                                <span className="line-tag">{product.category === "neocaridinas" ? "Neocaridina" : product.category === "caridinas" ? "Caridina" : "Accesorio"}</span>
+                                <span className="line-tag">{product.category}</span>
                                 <span className="product-price">Q {selectedVariant.price.toFixed(2)}</span>
                               </div>
                               <h3>{product.name}</h3>
@@ -903,6 +972,13 @@ export default function HomePage() {
               </div>
             );
           })}
+
+          {filteredCatalogProducts.length === 0 ? (
+            <article className="card" style={{ marginTop: 12 }}>
+              <h3>Próximamente</h3>
+              <p className="muted">No hay productos publicados todavía para este filtro. Vuelve pronto para ver nuevas gambas y accesorios.</p>
+            </article>
+          ) : null}
         </section>
 
         {getSiteMedia("banner") ? (
@@ -928,7 +1004,7 @@ export default function HomePage() {
                 required
               />
               <input name="email" placeholder="Correo electrónico (opcional)" />
-              <input name="city" placeholder="Ciudad o zona" required />
+              <input name="address" placeholder="Dirección (zona/colonia/referencia)" required />
               
               <fieldset>
                 <legend>Departamento</legend>
@@ -1010,7 +1086,7 @@ export default function HomePage() {
                       <p className="muted">Total a pagar: Q {confirmModal.finalTotal.toFixed(2)}</p>
                       <p className="muted">Revisa los datos antes de confirmar. El pedido quedará registrado en el sistema.</p>
                       <div className="actions">
-                        <button type="button" onClick={() => confirmAndSend(confirmModal.payload, confirmModal.whatsappUrl)} disabled={isSubmitting}>
+                        <button type="button" onClick={() => confirmAndSend(confirmModal.payload)} disabled={isSubmitting}>
                           {isSubmitting ? "Enviando..." : "Confirmar y enviar pedido"}
                         </button>
                         <button type="button" className="secondary" onClick={() => setConfirmModal(null)}>Volver</button>
@@ -1093,7 +1169,7 @@ export default function HomePage() {
           <article className="modal-card storefront-detail-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <span className="eyebrow">{quickViewProduct.category === "neocaridinas" ? "Neocaridina" : quickViewProduct.category === "caridinas" ? "Caridina" : "Accesorio"}</span>
+                <span className="eyebrow">{quickViewProduct.category}</span>
                 <h3>{quickViewProduct.name}</h3>
                 <p className="muted">{quickViewProduct.description}</p>
               </div>

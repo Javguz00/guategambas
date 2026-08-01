@@ -8,6 +8,40 @@ import { sendWhatsAppNotification } from "@/lib/notify";
 
 const allowedStatus = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
 
+function buildWhatsAppOrderUrl(input: {
+  number: string;
+  customerName: string;
+  whatsapp: string;
+  city: string;
+  departamento?: string;
+  paymentMethod: string;
+  notes?: string;
+  items: Array<{ name: string; variantLabel: string; quantity: number }>;
+  subtotal: number;
+  shippingCost: number;
+  shippingMessage?: string;
+  orderId: string;
+}) {
+  const lines = [
+    "Hola, quiero confirmar este pedido:",
+    ...input.items.map((it) => `${it.name} - ${it.variantLabel} x ${it.quantity}`),
+    "",
+    `Pedido: ${input.orderId}`,
+    `Cliente: ${input.customerName}`,
+    `WhatsApp: ${input.whatsapp}`,
+    `Ciudad: ${input.city}`,
+    `Departamento: ${input.departamento || "N/A"}`,
+    `Método de pago: ${input.paymentMethod === "DEPOSITO_PREVIO" ? "Depósito previo" : input.paymentMethod === "PAGO_CONTRAENTREGA" ? "Pago contra entrega" : "Tarjeta"}`,
+    input.notes ? `Notas: ${input.notes}` : "",
+    "---",
+    `Subtotal: Q ${input.subtotal.toFixed(2)}`,
+    input.shippingMessage ? `Envío: ${input.shippingMessage}` : `Envío: Q ${input.shippingCost.toFixed(2)}`,
+    `Total: Q ${(input.subtotal + input.shippingCost).toFixed(2)}`
+  ].filter(Boolean);
+
+  return `https://wa.me/${input.number.replace(/\D/g, "")}?text=${encodeURIComponent(lines.join("\n"))}`;
+}
+
 function buildDate(value: string | null) {
   if (!value) return undefined;
   const date = new Date(value);
@@ -183,7 +217,29 @@ export async function POST(request: Request) {
     // ignore
   }
 
-  return NextResponse.json({ ok: true, order }, { status: 201 });
+  const businessWhatsapp =
+    (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || process.env.ADMIN_WHATSAPP_NUMBER || "50243132549").trim();
+
+  const whatsappUrl = buildWhatsAppOrderUrl({
+    number: businessWhatsapp,
+    customerName: sanitized.customerName,
+    whatsapp: sanitized.whatsapp,
+    city: sanitized.city,
+    departamento: sanitized.departamento,
+    paymentMethod: sanitized.paymentMethod,
+    notes: sanitized.notes,
+    items: sanitized.items.map((item) => ({
+      name: item.name,
+      variantLabel: item.variantLabel,
+      quantity: item.quantity
+    })),
+    subtotal: sanitized.total,
+    shippingCost,
+    shippingMessage: shippingCheck.message,
+    orderId: order.id
+  });
+
+  return NextResponse.json({ ok: true, order, whatsappUrl }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {

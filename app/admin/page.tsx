@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 const statusOptions = ["PENDING", "CONFIRMED", "DELIVERED"] as const;
 type OrderStatus = (typeof statusOptions)[number];
@@ -119,6 +119,7 @@ type MediaAsset = {
 };
 
 type SiteMediaSlot = "hero" | "banner" | "promo";
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 const adminTabs = [
   { id: "overview", label: "Resumen" },
@@ -142,6 +143,17 @@ function createWizardVariantDraft(overrides?: Partial<ProductVariantDraft>): Pro
   };
 }
 
+async function readErrorResponse(response: Response, context: string, payload?: unknown) {
+  const text = await response.text();
+  console.error(`Admin fetch failed: ${context}`, {
+    status: response.status,
+    statusText: response.statusText,
+    payload,
+    body: text
+  });
+  return text;
+}
+
 export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
@@ -154,7 +166,7 @@ export default function AdminPage() {
   const [catalogMetaDirty, setCatalogMetaDirty] = useState<Record<string, true>>({});
   const [productDrafts, setProductDrafts] = useState<Record<string, ProductDraft>>({});
   const [productDirty, setProductDirty] = useState<Record<string, true>>({});
-  const [newProductDraft, setNewProductDraft] = useState<ProductDraft>({
+  const [newProductDraft] = useState<ProductDraft>({
     name: "",
     category: "neocaridinas",
     description: "",
@@ -189,7 +201,7 @@ export default function AdminPage() {
   const [to, setTo] = useState("");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
 
-  async function loadOrders(filters?: { city?: string; from?: string; to?: string; q?: string; paymentMethod?: string }) {
+  const loadOrders = useCallback(async (filters?: { city?: string; from?: string; to?: string; q?: string; paymentMethod?: string }) => {
     setLoading(true);
     setError("");
     try {
@@ -216,12 +228,16 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function loadCatalog() {
+  const loadCatalog = useCallback(async () => {
     try {
       const response = await fetch("/api/catalog", { credentials: "same-origin" });
-      if (!response.ok) return;
+      if (!response.ok) {
+        const text = await readErrorResponse(response, "GET /api/catalog");
+        setError(text || "No autorizado");
+        return;
+      }
       const data = (await response.json()) as { products?: CatalogProduct[] };
       if (!Array.isArray(data.products)) return;
       setCatalog(data.products);
@@ -255,16 +271,20 @@ export default function AdminPage() {
       setCatalogMetaDrafts({});
       setCatalogMetaDirty({});
     }
-  }
+  }, []);
 
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     try {
       const response = await fetch("/api/crm/products", { credentials: "same-origin" });
       if (response.status === 401) {
         setAuthenticated(false);
         return;
       }
-      if (!response.ok) return;
+      if (!response.ok) {
+        const text = await readErrorResponse(response, "GET /api/crm/products");
+        setError(text || "No se pudo cargar productos.");
+        return;
+      }
       const data = (await response.json()) as { products?: ProductRecord[] };
       if (!Array.isArray(data.products)) return;
       setProducts(data.products);
@@ -289,15 +309,7 @@ export default function AdminPage() {
       setProductDrafts({});
       setProductDirty({});
     }
-  }
-
-  function getWizardPrice(variant: ProductVariantDraft) {
-    return Number(variant.unitPrice) > 0 ? Number(variant.unitPrice) : 0;
-  }
-
-  function getWizardPackPrice(variant: ProductVariantDraft) {
-    return Number(variant.packPrice) > 0 ? Number(variant.packPrice) : 0;
-  }
+  }, []);
 
   function createProductWizardState(mode: "new" | "edit", product?: ProductRecord): ProductWizardState {
     if (mode === "edit" && product) {
@@ -455,7 +467,13 @@ export default function AdminPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error("No se pudo crear el producto.");
+        if (!response.ok) {
+          const text = await readErrorResponse(response, "POST /api/crm/products (wizard)", {
+            name: payload.name,
+            category: payload.category
+          });
+          throw new Error(text || "No se pudo crear el producto.");
+        }
         const data = (await response.json()) as { product?: ProductRecord };
         if (!data.product) throw new Error("No se pudo crear el producto.");
         await uploadWizardPhotos(data.product.id, productWizard);
@@ -469,7 +487,14 @@ export default function AdminPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: productWizard.productId, ...payload })
         });
-        if (!response.ok) throw new Error("No se pudo actualizar el producto.");
+        if (!response.ok) {
+          const text = await readErrorResponse(response, "PATCH /api/crm/products (wizard)", {
+            id: productWizard.productId,
+            name: payload.name,
+            category: payload.category
+          });
+          throw new Error(text || "No se pudo actualizar el producto.");
+        }
         await uploadWizardPhotos(productWizard.productId, productWizard);
         await loadProducts();
         await loadMedia();
@@ -483,10 +508,14 @@ export default function AdminPage() {
     }
   }
 
-  async function loadMedia() {
+  const loadMedia = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/media", { credentials: "same-origin" });
-      if (!response.ok) return;
+      if (!response.ok) {
+        const text = await readErrorResponse(response, "GET /api/admin/media");
+        setError(text || "No autorizado");
+        return;
+      }
       const data = (await response.json()) as { files?: string[]; mapping?: Record<string, MediaAsset[]> };
       setMediaFiles(Array.isArray(data.files) ? data.files : []);
       setMediaMapping(data.mapping || {});
@@ -494,20 +523,20 @@ export default function AdminPage() {
       setMediaFiles([]);
       setMediaMapping({});
     }
-  }
+  }, []);
 
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     await Promise.all([
       loadOrders({ q, city: city || undefined, from: from || undefined, to: to || undefined, paymentMethod: paymentMethodFilter || undefined }),
       loadCatalog(),
       loadProducts(),
       loadMedia()
     ]);
-  }
+  }, [city, from, loadCatalog, loadMedia, loadOrders, loadProducts, paymentMethodFilter, q, to]);
 
   useEffect(() => {
     void loadAll();
-  }, [q, city, from, to, paymentMethodFilter]);
+  }, [loadAll]);
 
   function handleFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -526,7 +555,10 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password })
       });
-      if (!response.ok) throw new Error("Contraseña invalida");
+      if (!response.ok) {
+        const text = await readErrorResponse(response, "POST /api/admin/login");
+        throw new Error(text || "Contraseña inválida");
+      }
       setAuthenticated(true);
       setPassword("");
       await loadAll();
@@ -633,7 +665,16 @@ export default function AdminPage() {
             priceOverride: draft.priceOverride === "" ? null : Number(draft.priceOverride)
           })
         });
-        if (!response.ok) throw new Error(`No se pudo guardar la variante ${variantId}`);
+        if (!response.ok) {
+          const text = await readErrorResponse(response, "PATCH /api/catalog", {
+            productId,
+            variantId,
+            stockAvailable: draft.stockAvailable,
+            isActive: draft.isActive,
+            priceOverride: draft.priceOverride
+          });
+          throw new Error(text || `No se pudo guardar la variante ${variantId}`);
+        }
       }
 
       for (const productId of dirtyProductIds) {
@@ -652,7 +693,10 @@ export default function AdminPage() {
             note: draft.note
           })
         });
-        if (!response.ok) throw new Error(`No se pudo guardar ${draft.name || productId}`);
+        if (!response.ok) {
+          const text = await readErrorResponse(response, "PATCH /api/admin/catalog", { productId, name: draft.name, category: draft.category });
+          throw new Error(text || `No se pudo guardar ${draft.name || productId}`);
+        }
       }
 
       await loadCatalog();
@@ -702,7 +746,10 @@ export default function AdminPage() {
             notes: draft.notes
           })
         });
-        if (!response.ok) throw new Error(`No se pudo guardar ${draft.name || id}`);
+        if (!response.ok) {
+          const text = await readErrorResponse(response, "PATCH /api/crm/products", { id, name: draft.name, category: draft.category });
+          throw new Error(text || `No se pudo guardar ${draft.name || id}`);
+        }
       }
       await loadProducts();
       setNotice(`Productos actualizados (${dirtyIds.length} cambios).`);
@@ -710,45 +757,6 @@ export default function AdminPage() {
       setError(err instanceof Error ? err.message : "No se pudieron guardar los productos.");
     } finally {
       setSavingProducts(false);
-    }
-  }
-
-  async function createProduct() {
-    setError("");
-    setNotice("");
-    try {
-      const response = await fetch("/api/crm/products", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newProductDraft.name,
-          category: newProductDraft.category,
-          description: newProductDraft.description,
-          basePrice: Number(newProductDraft.basePrice),
-          stock: newProductDraft.stock === "" ? null : Number(newProductDraft.stock),
-          active: newProductDraft.active,
-          gradeLabel: newProductDraft.gradeLabel,
-          unitLabel: newProductDraft.unitLabel,
-          notes: newProductDraft.notes
-        })
-      });
-      if (!response.ok) throw new Error("No se pudo crear el producto");
-      await loadProducts();
-      setNewProductDraft({
-        name: "",
-        category: "neocaridinas",
-        description: "",
-        basePrice: "0",
-        stock: "",
-        active: true,
-        gradeLabel: "",
-        unitLabel: "",
-        notes: ""
-      });
-      setNotice("Producto creado correctamente.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo crear el producto.");
     }
   }
 
@@ -762,7 +770,10 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id })
       });
-      if (!response.ok) throw new Error("No se pudo eliminar el producto");
+      if (!response.ok) {
+        const text = await readErrorResponse(response, "DELETE /api/crm/products", { id });
+        throw new Error(text || "No se pudo eliminar el producto");
+      }
       await loadProducts();
       setNotice("Producto eliminado.");
     } catch (err) {
@@ -787,32 +798,47 @@ export default function AdminPage() {
   }
 
   async function assignMedia(productId: string, filename: string, grade?: string, title?: string) {
-    await fetch("/api/admin/media/mapping", {
+    const response = await fetch("/api/admin/media/mapping", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId, filename, grade, slot: "gallery", title })
     });
+    if (!response.ok) {
+      const text = await readErrorResponse(response, "POST /api/admin/media/mapping", { productId, filename, grade, title });
+      setError(text || "No se pudo asignar el archivo.");
+      return;
+    }
     await loadMedia();
   }
 
   async function removeMedia(productId: string, filename: string) {
-    await fetch("/api/admin/media/mapping", {
+    const response = await fetch("/api/admin/media/mapping", {
       method: "DELETE",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId, filename })
     });
+    if (!response.ok) {
+      const text = await readErrorResponse(response, "DELETE /api/admin/media/mapping", { productId, filename });
+      setError(text || "No se pudo eliminar el archivo.");
+      return;
+    }
     await loadMedia();
   }
 
   async function assignSiteMedia(filename: string, slot: "hero" | "banner" | "promo", title?: string) {
-    await fetch("/api/admin/media/mapping", {
+    const response = await fetch("/api/admin/media/mapping", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId: "__site__", filename, slot, title })
     });
+    if (!response.ok) {
+      const text = await readErrorResponse(response, "POST /api/admin/media/mapping (site)", { filename, slot, title });
+      setError(text || "No se pudo asignar el archivo al sitio.");
+      return;
+    }
     await loadMedia();
   }
 
@@ -842,7 +868,12 @@ export default function AdminPage() {
     });
 
     if (!response.ok) {
-      throw new Error(await response.text());
+      const text = await readErrorResponse(response, "POST /api/admin/media", {
+        filename,
+        size: file.size,
+        mimeType: file.type
+      });
+      throw new Error(text || "No se pudo subir el archivo.");
     }
 
     return (await response.json()) as { filename: string; url: string; mimeType: string };
@@ -861,13 +892,18 @@ export default function AdminPage() {
       return;
     }
 
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError("Archivo demasiado grande. Máximo permitido: 5MB.");
+      return;
+    }
+
     setUploadingSiteSlot(slot);
     try {
       const filename = `site-${slot}-${Date.now()}-${file.name}`;
       const uploaded = await uploadMediaFile(file, filename);
       await assignSiteMedia(uploaded.filename, slot, title);
-    } catch {
-      setError("No se pudo subir el archivo.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo subir el archivo.");
     } finally {
       setUploadingSiteSlot((current) => (current === slot ? "" : current));
     }
@@ -890,6 +926,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError("Archivo demasiado grande. Máximo permitido: 5MB.");
+      return;
+    }
+
     setUploading(true);
     setUploadingProductId(productId);
 
@@ -900,8 +941,8 @@ export default function AdminPage() {
       setSelectedGradeByProduct((prev) => ({ ...prev, [productId]: grade }));
       setNotice("Archivo subido y asignado al grado seleccionado.");
       await loadMedia();
-    } catch {
-      setError("Error al procesar archivo");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al procesar archivo");
     } finally {
       setUploading(false);
       setUploadingProductId("");
@@ -960,6 +1001,7 @@ export default function AdminPage() {
     if (isVideoFile(filename)) {
       return <video className={className} src={getMediaUrl(filename)} aria-label={alt} muted loop playsInline controls={false} preload="metadata" />;
     }
+    // eslint-disable-next-line @next/next/no-img-element
     return <img className={className} src={getMediaUrl(filename)} alt={alt} />;
   }
 
@@ -1268,7 +1310,10 @@ export default function AdminPage() {
                                         {isVideoFile(asset.filename) ? (
                                           <video src={getMediaUrl(asset.filename)} aria-label={asset.title || asset.filename} muted loop playsInline controls={false} />
                                         ) : (
-                                          <img src={getMediaUrl(asset.filename)} alt={asset.title || asset.filename} />
+                                          <>
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={getMediaUrl(asset.filename)} alt={asset.title || asset.filename} />
+                                          </>
                                         )}
                                     <div>
                                       <strong>{asset.grade || "Sin grado"}</strong>
@@ -1510,7 +1555,10 @@ export default function AdminPage() {
                                       {isVideoFile(filename) ? (
                                         <video src={getMediaUrl(filename)} aria-label={filename} muted loop playsInline controls={false} />
                                       ) : (
-                                        <img src={getMediaUrl(filename)} alt={filename} />
+                                        <>
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img src={getMediaUrl(filename)} alt={filename} />
+                                        </>
                                       )}
                                     </div>
                                   ))}
@@ -1519,7 +1567,10 @@ export default function AdminPage() {
                                       {photo.file && photo.file.type.startsWith("video/") ? (
                                         <video src={photo.src} aria-label="Archivo seleccionado" muted loop playsInline controls={false} />
                                       ) : (
-                                        <img src={photo.src} alt="Foto seleccionada" />
+                                        <>
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img src={photo.src} alt="Foto seleccionada" />
+                                        </>
                                       )}
                                       <button type="button" className="thumb-remove" onClick={() => removeWizardPhoto(photo.id)}>×</button>
                                     </div>
@@ -1697,7 +1748,10 @@ export default function AdminPage() {
                                     {isVideoFile(asset.filename) ? (
                                       <video src={getMediaUrl(asset.filename)} aria-label={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} muted loop playsInline controls={false} />
                                     ) : (
-                                      <img src={getMediaUrl(asset.filename)} alt={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} />
+                                      <>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={getMediaUrl(asset.filename)} alt={asset.title || asset.filename} style={{ width: 84, height: 84, borderRadius: 10, objectFit: "cover" }} />
+                                      </>
                                     )}
                                     <div>
                                       <strong>{asset.grade || "Sin grado"}</strong>
