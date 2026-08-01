@@ -53,6 +53,18 @@ function extractHost(value) {
   }
 }
 
+function safeDebugPrefix(value) {
+  // Only ever show text that appears before "://" (the scheme), which never
+  // contains credentials. If there's no "://" at all, show a short, redacted
+  // prefix so we can see stray characters (quotes, CR, BOM) without leaking
+  // any part of the connection string itself.
+  const schemeIdx = value.indexOf('://');
+  if (schemeIdx > 0 && schemeIdx <= 20) {
+    return JSON.stringify(value.slice(0, schemeIdx));
+  }
+  return JSON.stringify(value.slice(0, 4)) + '...(redacted)';
+}
+
 function validate(name, value) {
   const normalizedValue = normalizeValue(value);
   if (!normalizedValue) {
@@ -66,6 +78,9 @@ function validate(name, value) {
 
   if (!allowedSchemes.has(scheme)) {
     const allowedList = Array.from(allowedSchemes).map((item) => `${item}://`).join(' or ');
+    console.error(
+      `${name} debug: length=${normalizedValue.length}, prefix=${safeDebugPrefix(normalizedValue)}`
+    );
     throw new Error(`${name} must use ${allowedList}`);
   }
 
