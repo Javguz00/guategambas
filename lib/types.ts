@@ -57,6 +57,8 @@ export interface Product {
   categoryId: string;
   category?: Category;
   image?: string | null;
+  images?: string[];
+  brand?: string | null;
   active: boolean;
   featured: boolean;
   createdAt: Date;

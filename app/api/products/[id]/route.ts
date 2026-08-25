@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
-    const { name, slug, description, price, stock, categoryId, image, active, featured } =
+    const { name, slug, description, price, stock, categoryId, image, images, brand, active, featured } =
       body;
 
     // Verify product exists
@@ -78,6 +78,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       }
     }
 
+    const normalizedImages = Array.isArray(images)
+      ? images.filter((url: unknown): url is string => typeof url === 'string' && url.trim().length > 0)
+      : undefined;
+
     const product = await prisma.product.update({
       where: { id },
       data: {
@@ -87,7 +91,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         ...(price !== undefined && { price: parseFloat(price.toString()) }),
         ...(stock !== undefined && { stock: parseInt(stock.toString(), 10) }),
         ...(categoryId && { categoryId }),
-        ...(image !== undefined && { image }),
+        ...(normalizedImages !== undefined
+          ? { images: normalizedImages, image: normalizedImages[0] || null }
+          : image !== undefined && { image }),
+        ...(brand !== undefined && { brand: brand?.trim() || null }),
         ...(active !== undefined && { active }),
         ...(featured !== undefined && { featured }),
       },

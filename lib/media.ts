@@ -9,3 +9,17 @@ export function isVideoMediaUrl(url?: string | null): boolean {
   return VIDEO_EXTENSIONS.some((ext) => normalized.endsWith(ext));
 }
 
+interface ProductLikeMedia {
+  image?: string | null;
+  images?: string[] | null;
+}
+
+// Devuelve la galería completa de un producto, con respaldo al campo legacy `image`.
+export function getProductMediaList(product: ProductLikeMedia): string[] {
+  if (product.images && product.images.length > 0) {
+    return product.images;
+  }
+
+  return product.image ? [product.image] : [];
+}
+

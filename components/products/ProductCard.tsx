@@ -3,12 +3,13 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/components/ui';
 import { addToCart, openCartDrawer } from '@/lib/cart';
-import { isVideoMediaUrl } from '@/lib/media';
+import { getProductMediaList, isVideoMediaUrl } from '@/lib/media';
 import type { Product } from '@/lib/types';
 
 export default function ProductCard(product: Product) {
-  const { id, name, price, image, stock, category } = product;
-  const [imageSrc, setImageSrc] = useState(image || '/placeholder-product.svg');
+  const { id, name, price, brand, stock, category } = product;
+  const thumbnail = getProductMediaList(product)[0] || '/placeholder-product.svg';
+  const [imageSrc, setImageSrc] = useState(thumbnail);
   const [showGradePicker, setShowGradePicker] = useState(false);
   const [feedback, setFeedback] = useState('');
   const isLowStock = stock < 5;
@@ -42,9 +43,9 @@ export default function ProductCard(product: Product) {
   };
 
   return (
-    <div className="card group overflow-hidden hover:shadow-hover transition-shadow">
+    <div className="card overflow-hidden hover:shadow-hover transition-shadow">
       {/* Image Container */}
-      <div className="relative h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
+      <div className="group relative h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
         {isVideo ? (
           <video
             src={imageSrc}
@@ -86,6 +87,9 @@ export default function ProductCard(product: Product) {
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
             {typeof category === 'string' ? category : category.name}
           </p>
+        )}
+        {brand && (
+          <p className="text-xs font-semibold text-gray-400 mb-1">{brand}</p>
         )}
         <h3 className="font-semibold text-lg text-dark line-clamp-2 mb-2">
           {name}

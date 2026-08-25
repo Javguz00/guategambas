@@ -11,7 +11,7 @@ import {
   readCart,
   writeCart,
 } from '@/lib/cart';
-import { isVideoMediaUrl } from '@/lib/media';
+import { getProductMediaList, isVideoMediaUrl } from '@/lib/media';
 import type { ApiResponse, CartItem, Product } from '@/lib/types';
 
 interface DrawerItem extends CartItem {
@@ -224,7 +224,7 @@ export default function Header() {
       <div className="fixed inset-0 z-50">
         <button
           type="button"
-          className="absolute inset-0 bg-black/40"
+          className="absolute inset-0 bg-transparent"
           onClick={() => setCartOpen(false)}
           aria-label="Cerrar carrito"
         />
@@ -250,7 +250,7 @@ export default function Header() {
               <div className="space-y-4">
                 {cartItems.map((item) => {
                   const key = item.variantKey || item.productId;
-                  const mediaUrl = item.product?.image || '/placeholder-product.svg';
+                  const mediaUrl = getProductMediaList(item.product || {})[0] || '/placeholder-product.svg';
                   const mediaIsVideo = isVideoMediaUrl(mediaUrl);
 
                   return (

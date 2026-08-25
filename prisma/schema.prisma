@@ -43,7 +43,9 @@ model Product {
   stock       Int         @default(0) // cantidad disponible
   category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId  String
-  image       String?     // URL o nombre del archivo de imagen
+  image       String?     // URL o nombre del archivo de imagen (compatibilidad, = images[0])
+  images      String[]    @default([]) // galería completa de imágenes/videos
+  brand       String?     // marca del producto
   active      Boolean     @default(true)
   featured    Boolean     @default(false) // para destacar en la página principal
   orderItems  OrderItem[]

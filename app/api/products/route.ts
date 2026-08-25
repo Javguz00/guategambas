@@ -62,11 +62,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, description, price, stock, categoryId, image } = body;
+    const { name, slug, description, price, stock, categoryId, image, images, brand } = body;
 
     if (!name || !slug || !categoryId || price === undefined || stock === undefined) {
       return errorResponse('Missing required fields', 400);
     }
+
+    const normalizedImages = Array.isArray(images)
+      ? images.filter((url: unknown): url is string => typeof url === 'string' && url.trim().length > 0)
+      : image
+        ? [image]
+        : [];
 
     // Check if slug already exists
     const existing = await prisma.product.findUnique({
@@ -84,7 +90,9 @@ export async function POST(request: NextRequest) {
         price: parseFloat(price.toString()),
         stock: parseInt(stock.toString(), 10),
         categoryId,
-        image,
+        image: normalizedImages[0] || null,
+        images: normalizedImages,
+        brand: brand?.trim() || null,
       },
       include: { category: true },
     });

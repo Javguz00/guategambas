@@ -15,7 +15,8 @@ interface ProductFormState {
   price: string;
   stock: string;
   categoryId: string;
-  image: string;
+  brand: string;
+  images: string[];
 }
 
 type ProductFormErrors = Partial<Record<keyof ProductFormState, string>>;
@@ -27,7 +28,8 @@ const initialFormState: ProductFormState = {
   price: '',
   stock: '',
   categoryId: '',
-  image: '',
+  brand: '',
+  images: [],
 };
 
 const slugify = (value: string) =>
@@ -91,10 +93,6 @@ const validateForm = (formData: ProductFormState): ProductFormErrors => {
     errors.description = 'La descripción debe tener al menos 10 caracteres o quedar vacía.';
   }
 
-  if (!isValidImageUrl(formData.image)) {
-    errors.image = 'Ingresa una URL válida para la imagen.';
-  }
-
   return errors;
 };
 
@@ -108,6 +106,7 @@ export default function CreateProductPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [mediaUrlInput, setMediaUrlInput] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
 
   useEffect(() => {
@@ -190,7 +189,8 @@ export default function CreateProductPage() {
           price: Number(formData.price),
           stock: Number(formData.stock),
           categoryId: formData.categoryId,
-          image: formData.image.trim() || null,
+          brand: formData.brand.trim() || null,
+          images: formData.images,
         }),
       });
 
@@ -219,14 +219,14 @@ export default function CreateProductPage() {
       setUploadingImage(true);
       setPageError(null);
 
-      const formData = new FormData();
-      formData.append('file', selectedImageFile);
-      formData.append('scope', 'product');
-      formData.append('title', selectedImageFile.name || '');
+      const uploadData = new FormData();
+      uploadData.append('file', selectedImageFile);
+      uploadData.append('scope', 'product');
+      uploadData.append('title', selectedImageFile.name || '');
 
       const response = await fetch('/api/media/upload', {
         method: 'POST',
-        body: formData,
+        body: uploadData,
       });
       const result = await response.json();
 
@@ -236,7 +236,7 @@ export default function CreateProductPage() {
 
       setFormData((current) => ({
         ...current,
-        image: result.data.url,
+        images: [...current.images, result.data.url],
       }));
       setSelectedImageFile(null);
     } catch (err) {
@@ -244,6 +244,29 @@ export default function CreateProductPage() {
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleAddMediaUrl = () => {
+    const trimmed = mediaUrlInput.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    if (!isValidImageUrl(trimmed)) {
+      setErrors((current) => ({ ...current, images: 'Ingresa una URL válida.' }));
+      return;
+    }
+
+    setFormData((current) => ({ ...current, images: [...current.images, trimmed] }));
+    setMediaUrlInput('');
+    setErrors((current) => ({ ...current, images: undefined }));
+  };
+
+  const handleRemoveMediaAt = (index: number) => {
+    setFormData((current) => ({
+      ...current,
+      images: current.images.filter((_, currentIndex) => currentIndex !== index),
+    }));
   };
 
   if (loadingCategories) {
@@ -342,6 +365,17 @@ export default function CreateProductPage() {
           </div>
 
           <div className="admin-form-group">
+            <Input
+              label="Marca"
+              name="brand"
+              value={formData.brand}
+              onChange={handleChange}
+              placeholder="Ej. Guategambas"
+              helperText="Opcional."
+            />
+          </div>
+
+          <div className="admin-form-group">
             <label className="block text-sm font-medium text-gray-700">Categoría</label>
             <select
               name="categoryId"
@@ -370,38 +404,44 @@ export default function CreateProductPage() {
           </div>
 
           <div className="admin-form-group">
-            <Input
-              label="URL de imagen o video"
-              name="image"
-              value={formData.image}
-              onChange={handleChange}
-              error={errors.image}
-              placeholder="https://..."
-            />
-            {formData.image && (
-              <div className="mt-3">
-                {isVideoMediaUrl(formData.image) ? (
-                  <video
-                    src={formData.image}
-                    className="h-32 w-32 rounded-lg object-cover border border-gray-200"
-                    controls
-                    muted
-                    playsInline
-                  />
-                ) : (
-                  <img
-                    src={formData.image}
-                    alt="Vista previa"
-                    className="h-32 w-32 rounded-lg object-cover border border-gray-200"
-                  />
-                )}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Imágenes y videos</label>
+            {formData.images.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-3">
+                {formData.images.map((url, index) => (
+                  <div key={url + index} className="relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200">
+                    {isVideoMediaUrl(url) ? (
+                      <video src={url} className="h-full w-full object-cover" muted playsInline />
+                    ) : (
+                      <img src={url} alt={`Vista previa ${index + 1}`} className="h-full w-full object-cover" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMediaAt(index)}
+                      className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs text-white hover:bg-black/80"
+                      aria-label={`Quitar imagen ${index + 1}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+            {errors.images && <p className="mb-2 text-sm text-red-500">{errors.images}</p>}
 
-          <div className="admin-form-group">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subir multimedia</label>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                value={mediaUrlInput}
+                onChange={(event) => setMediaUrlInput(event.target.value)}
+                placeholder="https://..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              />
+              <Button type="button" variant="secondary" onClick={handleAddMediaUrl}>
+                Agregar URL
+              </Button>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center">
               <input
                 type="file"
                 accept="image/*,video/*"
@@ -415,9 +455,12 @@ export default function CreateProductPage() {
                 isLoading={uploadingImage}
                 disabled={!selectedImageFile}
               >
-                Subir
+                Subir y agregar
               </Button>
             </div>
+            <p className="mt-1 text-sm text-gray-500">
+              Agrega una o varias imágenes o videos. El primero de la lista se usará como portada.
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">

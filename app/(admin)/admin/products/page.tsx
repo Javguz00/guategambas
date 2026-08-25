@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Badge from '@/app/components/ui/Badge';
 import Button from '@/app/components/ui/Button';
+import Input from '@/app/components/ui/Input';
 import Loading from '@/app/components/ui/Loading';
 import type { ApiResponse, Product } from '@/lib/types';
 
@@ -20,6 +21,7 @@ export default function AdminProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const fetchProducts = async () => {
     try {
@@ -90,6 +92,10 @@ export default function AdminProductsPage() {
     return <Loading size="lg" message="Cargando productos..." />;
   }
 
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(search.trim().toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -101,6 +107,15 @@ export default function AdminProductsPage() {
         </div>
 
         <Button onClick={() => router.push('/admin/products/new')}>Crear producto</Button>
+      </div>
+
+      <div className="max-w-sm">
+        <Input
+          label="Buscar por nombre"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Ej. Camarón jumbo"
+        />
       </div>
 
       {feedback && (
@@ -130,8 +145,8 @@ export default function AdminProductsPage() {
             </tr>
           </thead>
           <tbody>
-            {products.length > 0 ? (
-              products.map((product) => (
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
                 <tr key={product.id}>
                   <td>
                     <div className="font-medium text-gray-900">{product.name}</div>
@@ -164,7 +179,9 @@ export default function AdminProductsPage() {
             ) : (
               <tr>
                 <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
-                  No hay productos registrados todavía.
+                  {products.length > 0
+                    ? 'Ningún producto coincide con la búsqueda.'
+                    : 'No hay productos registrados todavía.'}
                 </td>
               </tr>
             )}

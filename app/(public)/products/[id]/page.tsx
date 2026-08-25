@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 import ProductGrid from '@/components/products/ProductGrid';
 import { Button, Input, Loading } from '@/components/ui';
 import { addToCart, openCartDrawer } from '@/lib/cart';
-import { isVideoMediaUrl } from '@/lib/media';
+import { getProductMediaList, isVideoMediaUrl } from '@/lib/media';
 import type { ApiResponse, Product } from '@/lib/types';
 
 export default function ProductDetailPage() {
@@ -21,6 +21,7 @@ export default function ProductDetailPage() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [grade, setGrade] = useState<'ALTO' | 'NORMAL'>('ALTO');
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [imageSrc, setImageSrc] = useState('/placeholder-product.svg');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +45,9 @@ export default function ProductDetailPage() {
         const productResult: ApiResponse<Product> = await productResponse.json();
         const nextProduct = productResult.data || null;
         setProduct(nextProduct);
-        setImageSrc(nextProduct?.image || '/placeholder-product.svg');
+        const media = nextProduct ? getProductMediaList(nextProduct) : [];
+        setActiveMediaIndex(0);
+        setImageSrc(media[0] || '/placeholder-product.svg');
         setQuantity(1);
 
         if (!nextProduct?.category?.slug) {
@@ -134,6 +137,7 @@ export default function ProductDetailPage() {
 
   const imageUrl = imageSrc || '/placeholder-product.svg';
   const isVideo = isVideoMediaUrl(imageUrl);
+  const mediaList = getProductMediaList(product);
   const isLowStock = product.stock > 0 && product.stock < 5;
   const categorySlug =
     typeof product.category === 'string' ? '' : (product.category?.slug || '');
@@ -214,6 +218,31 @@ export default function ProductDetailPage() {
               </div>
             )}
           </div>
+
+          {mediaList.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {mediaList.map((mediaUrl, index) => (
+                <button
+                  key={mediaUrl + index}
+                  type="button"
+                  onClick={() => {
+                    setActiveMediaIndex(index);
+                    setImageSrc(mediaUrl);
+                  }}
+                  className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-gray-100 transition-colors ${
+                    index === activeMediaIndex ? 'border-primary' : 'border-transparent hover:border-gray-300'
+                  }`}
+                  aria-label={`Ver imagen ${index + 1}`}
+                >
+                  {isVideoMediaUrl(mediaUrl) ? (
+                    <video src={mediaUrl} className="h-full w-full object-cover" muted playsInline />
+                  ) : (
+                    <Image src={mediaUrl} alt={`${product.name} ${index + 1}`} fill className="object-cover" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product Info */}
@@ -224,6 +253,9 @@ export default function ProductDetailPage() {
               <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
                 {typeof product.category === 'string' ? product.category : product.category.name}
               </p>
+            )}
+            {product.brand && (
+              <p className="text-sm font-semibold text-gray-500">{product.brand}</p>
             )}
             <h1 className="text-3xl lg:text-4xl font-bold text-dark">
               {product.name}
